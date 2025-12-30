@@ -133,7 +133,14 @@ func (c *PlanCmd) Run(ctx *Context) error {
 			return err
 		}
 
-		fmt.Printf("Plan accepted and saved as revision %d!\n", plan.Revision)
+		// Get the saved plan to display the correct revision number
+		savedPlan, err := ctx.Store.GetPlan(dateStr)
+		if err != nil {
+			// Fallback to displaying without revision number
+			fmt.Println("Plan accepted and saved!")
+		} else {
+			fmt.Printf("Plan accepted and saved as revision %d!\n", savedPlan.Revision)
+		}
 	} else {
 		fmt.Println("Plan discarded. You can modify tasks and regenerate.")
 	}
