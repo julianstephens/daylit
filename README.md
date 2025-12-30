@@ -354,6 +354,51 @@ Backup retention:
 - Keeps the 14 most recent backups
 - Automatically deletes older backups
 
+### `daylit migrate`
+
+Run database schema migrations explicitly. This command applies any pending migrations to bring the database schema up to date.
+
+```bash
+daylit migrate
+```
+
+**How Migrations Work:**
+
+- Migrations are stored in the `migrations/` directory as numbered SQL files (e.g., `001_init.sql`, `002_add_feature.sql`)
+- Each migration is applied in a transaction - if any part fails, the entire migration is rolled back
+- The current schema version is tracked in the `schema_version` table
+- Migrations are automatically applied on `daylit init`
+- The application checks schema version on startup and refuses to run if the database is newer than supported
+
+**Schema Version Safety:**
+
+If you try to use a database with a newer schema version than your application supports, you'll see an error:
+
+```
+Error: database schema version (5) is newer than supported version (3) - please upgrade the application
+```
+
+This prevents data corruption from using an older version of the application with a newer database.
+
+**Example:**
+
+```bash
+# Explicitly run migrations
+daylit migrate
+
+# Output when up to date:
+Database schema is up to date (version 1)
+No migrations to apply. Database is up to date.
+
+# Output when migrations are applied:
+Current schema version: 1
+Target schema version: 2
+Applying 1 migration(s)...
+  Applying migration 2: add_feature
+  ✓ Migration 2 applied successfully
+Applied 1 migration(s) in 2.14ms
+```
+
 ## Configuration
 
 The default configuration file is located at `~/.config/daylit/daylit.db`.
@@ -368,12 +413,19 @@ daylit --config /path/to/config.db init
 
 The application uses SQLite for storage. The database contains tables for:
 
+- `schema_version`: Schema version tracking for migrations
 - `tasks`: Task templates
 - `plans`: Daily plans
 - `slots`: Time slots within plans
 - `settings`: Application settings
 
+The schema is managed through migrations stored in the `migrations/` directory. See the `daylit migrate` command for more details.
+
 ```sql
+CREATE TABLE schema_version (
+    version INTEGER PRIMARY KEY
+);
+
 CREATE TABLE tasks (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,

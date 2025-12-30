@@ -66,6 +66,10 @@ func (r *Runner) GetCurrentVersion() (int, error) {
 
 // SetVersion sets the current schema version in the database
 func (r *Runner) SetVersion(version int) error {
+	if err := r.EnsureSchemaVersionTable(); err != nil {
+		return fmt.Errorf("failed to ensure schema_version table: %w", err)
+	}
+
 	// Delete any existing version and insert the new one
 	_, err := r.db.Exec("DELETE FROM schema_version")
 	if err != nil {
@@ -196,21 +200,19 @@ func (r *Runner) ApplyMigrations(logFn func(string)) (int, error) {
 		if err != nil {
 			return appliedCount, fmt.Errorf("failed to begin transaction for migration %d: %w", migration.Version, err)
 		}
+		defer tx.Rollback() // Safe to call after Commit()
 
 		// Execute the migration SQL
 		if _, err := tx.Exec(migration.SQL); err != nil {
-			tx.Rollback()
 			return appliedCount, fmt.Errorf("failed to apply migration %d (%s): %w", migration.Version, migration.Name, err)
 		}
 
 		// Update the schema version within the same transaction
 		if _, err := tx.Exec("DELETE FROM schema_version"); err != nil {
-			tx.Rollback()
 			return appliedCount, fmt.Errorf("failed to clear version in migration %d: %w", migration.Version, err)
 		}
 
 		if _, err := tx.Exec("INSERT INTO schema_version (version) VALUES (?)", migration.Version); err != nil {
-			tx.Rollback()
 			return appliedCount, fmt.Errorf("failed to set version in migration %d: %w", migration.Version, err)
 		}
 

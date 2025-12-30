@@ -109,6 +109,15 @@ func (s *SQLiteStore) validateSchemaVersion() error {
 }
 
 func (s *SQLiteStore) getMigrationsPath() string {
+	// Check if environment variable is set
+	if envPath := os.Getenv("DAYLIT_MIGRATIONS_PATH"); envPath != "" {
+		if absPath, err := filepath.Abs(envPath); err == nil {
+			if _, err := os.Stat(absPath); err == nil {
+				return absPath
+			}
+		}
+	}
+
 	// Try to find migrations directory relative to the executable or in common paths
 	paths := []string{
 		"migrations",
@@ -127,7 +136,7 @@ func (s *SQLiteStore) getMigrationsPath() string {
 		}
 	}
 
-	// Default to "migrations" in current directory
+	// Default to "migrations" in current directory (will fail gracefully if not found)
 	return "migrations"
 }
 
