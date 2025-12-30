@@ -18,6 +18,7 @@ var CLI struct {
 	Config  string `help:"Config file path." type:"path" default:"~/.config/daylit/daylit.db"`
 
 	Init     cli.InitCmd     `cmd:"" help:"Initialize daylit storage."`
+	Migrate  cli.MigrateCmd  `cmd:"" help:"Run database migrations."`
 	Tui      cli.TuiCmd      `cmd:"" help:"Launch the interactive TUI." default:"1"`
 	Plan     cli.PlanCmd     `cmd:"" help:"Generate day plans."`
 	Now      cli.NowCmd      `cmd:"" help:"Show current task."`

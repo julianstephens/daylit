@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/julianstephens/daylit/internal/migration"
 	"github.com/julianstephens/daylit/internal/models"
 	_ "modernc.org/sqlite"
 )
@@ -37,9 +38,9 @@ func (s *SQLiteStore) Init() error {
 	}
 	s.db = db
 
-	// Create tables
-	if err := s.createTables(); err != nil {
-		return fmt.Errorf("failed to create tables: %w", err)
+	// Run migrations
+	if err := s.runMigrations(); err != nil {
+		return fmt.Errorf("failed to run migrations: %w", err)
 	}
 
 	// Initialize default settings if not present
@@ -72,6 +73,11 @@ func (s *SQLiteStore) Load() error {
 	}
 	s.db = db
 
+	// Validate schema version
+	if err := s.validateSchemaVersion(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -82,55 +88,47 @@ func (s *SQLiteStore) Close() error {
 	return nil
 }
 
-func (s *SQLiteStore) createTables() error {
-	queries := []string{
-		`CREATE TABLE IF NOT EXISTS settings (
-			key TEXT PRIMARY KEY,
-			value TEXT
-		);`,
-		`CREATE TABLE IF NOT EXISTS tasks (
-			id TEXT PRIMARY KEY,
-			name TEXT,
-			kind TEXT,
-			duration_min INTEGER,
-			earliest_start TEXT,
-			latest_end TEXT,
-			fixed_start TEXT,
-			fixed_end TEXT,
-			recurrence_type TEXT,
-			recurrence_interval INTEGER,
-			recurrence_weekdays TEXT,
-			priority INTEGER,
-			energy_band TEXT,
-			active BOOLEAN,
-			last_done TEXT,
-			success_streak INTEGER,
-			avg_actual_duration REAL
-		);`,
-		`CREATE TABLE IF NOT EXISTS plans (
-			date TEXT PRIMARY KEY
-		);`,
-		`CREATE TABLE IF NOT EXISTS slots (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			plan_date TEXT,
-			start_time TEXT,
-			end_time TEXT,
-			task_id TEXT,
-			status TEXT,
-			feedback_rating TEXT,
-			feedback_note TEXT,
-			FOREIGN KEY(plan_date) REFERENCES plans(date),
-			FOREIGN KEY(task_id) REFERENCES tasks(id)
-		);`,
+func (s *SQLiteStore) runMigrations() error {
+	// Get the migrations directory path (relative to the binary or in the repository)
+	migrationsPath := s.getMigrationsPath()
+
+	// Create migration runner
+	runner := migration.NewRunner(s.db, migrationsPath)
+
+	// Apply all pending migrations
+	_, err := runner.ApplyMigrations(func(msg string) {
+		fmt.Println(msg)
+	})
+	return err
+}
+
+func (s *SQLiteStore) validateSchemaVersion() error {
+	migrationsPath := s.getMigrationsPath()
+	runner := migration.NewRunner(s.db, migrationsPath)
+	return runner.ValidateVersion()
+}
+
+func (s *SQLiteStore) getMigrationsPath() string {
+	// Try to find migrations directory relative to the executable or in common paths
+	paths := []string{
+		"migrations",
+		"./migrations",
+		"../migrations",
+		"../../migrations",
+		filepath.Join(filepath.Dir(os.Args[0]), "migrations"),
+		filepath.Join(filepath.Dir(os.Args[0]), "..", "migrations"),
 	}
 
-	for _, query := range queries {
-		if _, err := s.db.Exec(query); err != nil {
-			return err
+	for _, path := range paths {
+		if absPath, err := filepath.Abs(path); err == nil {
+			if _, err := os.Stat(absPath); err == nil {
+				return absPath
+			}
 		}
 	}
 
-	return nil
+	// Default to "migrations" in current directory
+	return "migrations"
 }
 
 func (s *SQLiteStore) GetSettings() (Settings, error) {
@@ -411,4 +409,17 @@ func (s *SQLiteStore) GetPlan(date string) (models.DayPlan, error) {
 
 func (s *SQLiteStore) GetConfigPath() string {
 	return s.path
+}
+
+// GetDB returns the underlying database connection
+func (s *SQLiteStore) GetDB() (*sql.DB, error) {
+	if s.db == nil {
+		return nil, fmt.Errorf("database not initialized")
+	}
+	return s.db, nil
+}
+
+// GetMigrationsPath returns the path to the migrations directory
+func (s *SQLiteStore) GetMigrationsPath() string {
+	return s.getMigrationsPath()
 }
