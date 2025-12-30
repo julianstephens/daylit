@@ -1,0 +1,376 @@
+package validation
+
+import (
+	"fmt"
+	"sort"
+	"time"
+
+	"github.com/julianstephens/daylit/internal/models"
+)
+
+// ConflictType represents the type of validation conflict
+type ConflictType string
+
+const (
+	ConflictOverlappingFixedTasks ConflictType = "overlapping_fixed_tasks"
+	ConflictOverlappingSlots      ConflictType = "overlapping_slots"
+	ConflictExceedsWakingWindow   ConflictType = "exceeds_waking_window"
+	ConflictOvercommitted         ConflictType = "overcommitted"
+	ConflictMissingTaskID         ConflictType = "missing_task_id"
+	ConflictDuplicateTaskName     ConflictType = "duplicate_task_name"
+	ConflictInvalidDateTime       ConflictType = "invalid_datetime"
+)
+
+// Conflict represents a detected conflict in tasks or plans
+type Conflict struct {
+	Type        ConflictType
+	Description string
+	Date        string   // YYYY-MM-DD format (if applicable)
+	Items       []string // Task/slot names involved
+	TimeRange   string   // Human-readable time range (if applicable)
+}
+
+// ValidationResult contains all detected conflicts
+type ValidationResult struct {
+	Conflicts []Conflict
+}
+
+// HasConflicts returns true if there are any conflicts
+func (vr *ValidationResult) HasConflicts() bool {
+	return len(vr.Conflicts) > 0
+}
+
+// FormatReport returns a human-readable report of all conflicts
+func (vr *ValidationResult) FormatReport() string {
+	if !vr.HasConflicts() {
+		return "No conflicts detected."
+	}
+
+	report := "Conflicts detected:\n"
+	for _, conflict := range vr.Conflicts {
+		report += fmt.Sprintf("- %s\n", conflict.Description)
+	}
+	return report
+}
+
+// Validator validates tasks and plans for conflicts
+type Validator struct{}
+
+// New creates a new Validator
+func New() *Validator {
+	return &Validator{}
+}
+
+// ValidateTasks checks tasks for conflicts
+func (v *Validator) ValidateTasks(tasks []models.Task) ValidationResult {
+	result := ValidationResult{Conflicts: []Conflict{}}
+
+	// Check for duplicate task names
+	nameCount := make(map[string][]string)
+	for _, task := range tasks {
+		if task.DeletedAt != nil {
+			continue // Skip deleted tasks
+		}
+		nameCount[task.Name] = append(nameCount[task.Name], task.ID)
+	}
+
+	for name, ids := range nameCount {
+		if len(ids) > 1 {
+			result.Conflicts = append(result.Conflicts, Conflict{
+				Type:        ConflictDuplicateTaskName,
+				Description: fmt.Sprintf("Duplicate task name: \"%s\" (IDs: %v)", name, ids),
+				Items:       []string{name},
+			})
+		}
+	}
+
+	// Check for invalid time values in tasks
+	for _, task := range tasks {
+		if task.DeletedAt != nil {
+			continue
+		}
+
+		if task.EarliestStart != "" {
+			if !isValidTimeFormat(task.EarliestStart) {
+				result.Conflicts = append(result.Conflicts, Conflict{
+					Type:        ConflictInvalidDateTime,
+					Description: fmt.Sprintf("Task \"%s\" has invalid earliest_start time: %s", task.Name, task.EarliestStart),
+					Items:       []string{task.Name},
+				})
+			}
+		}
+
+		if task.LatestEnd != "" {
+			if !isValidTimeFormat(task.LatestEnd) {
+				result.Conflicts = append(result.Conflicts, Conflict{
+					Type:        ConflictInvalidDateTime,
+					Description: fmt.Sprintf("Task \"%s\" has invalid latest_end time: %s", task.Name, task.LatestEnd),
+					Items:       []string{task.Name},
+				})
+			}
+		}
+
+		if task.FixedStart != "" {
+			if !isValidTimeFormat(task.FixedStart) {
+				result.Conflicts = append(result.Conflicts, Conflict{
+					Type:        ConflictInvalidDateTime,
+					Description: fmt.Sprintf("Task \"%s\" has invalid fixed_start time: %s", task.Name, task.FixedStart),
+					Items:       []string{task.Name},
+				})
+			}
+		}
+
+		if task.FixedEnd != "" {
+			if !isValidTimeFormat(task.FixedEnd) {
+				result.Conflicts = append(result.Conflicts, Conflict{
+					Type:        ConflictInvalidDateTime,
+					Description: fmt.Sprintf("Task \"%s\" has invalid fixed_end time: %s", task.Name, task.FixedEnd),
+					Items:       []string{task.Name},
+				})
+			}
+		}
+	}
+
+	// Check for overlapping fixed appointments (across all tasks)
+	var fixedTasks []models.Task
+	for _, task := range tasks {
+		if task.DeletedAt != nil {
+			continue
+		}
+		if task.Kind == models.TaskKindAppointment && task.FixedStart != "" && task.FixedEnd != "" {
+			fixedTasks = append(fixedTasks, task)
+		}
+	}
+
+	// Sort by start time for overlap detection
+	sort.Slice(fixedTasks, func(i, j int) bool {
+		return fixedTasks[i].FixedStart < fixedTasks[j].FixedStart
+	})
+
+	// Check for overlaps in fixed appointments (they could be on different days due to recurrence)
+	for i := 0; i < len(fixedTasks); i++ {
+		for j := i + 1; j < len(fixedTasks); j++ {
+			t1 := fixedTasks[i]
+			t2 := fixedTasks[j]
+
+			// Check if times overlap (ignoring dates since these are time-of-day based)
+			if timesOverlap(t1.FixedStart, t1.FixedEnd, t2.FixedStart, t2.FixedEnd) {
+				result.Conflicts = append(result.Conflicts, Conflict{
+					Type: ConflictOverlappingFixedTasks,
+					Description: fmt.Sprintf("Fixed appointments overlap: \"%s\" (%s-%s) and \"%s\" (%s-%s)",
+						t1.Name, t1.FixedStart, t1.FixedEnd, t2.Name, t2.FixedStart, t2.FixedEnd),
+					Items:     []string{t1.Name, t2.Name},
+					TimeRange: fmt.Sprintf("%s-%s", t1.FixedStart, t2.FixedEnd),
+				})
+			}
+		}
+	}
+
+	return result
+}
+
+// ValidatePlan checks a plan for conflicts
+func (v *Validator) ValidatePlan(plan models.DayPlan, tasks []models.Task, dayStart, dayEnd string) ValidationResult {
+	result := ValidationResult{Conflicts: []Conflict{}}
+
+	// Build task map for quick lookup
+	taskMap := make(map[string]models.Task)
+	for _, task := range tasks {
+		if task.DeletedAt == nil {
+			taskMap[task.ID] = task
+		}
+	}
+
+	// Check for invalid date
+	planDate, err := time.Parse("2006-01-02", plan.Date)
+	if err != nil {
+		result.Conflicts = append(result.Conflicts, Conflict{
+			Type:        ConflictInvalidDateTime,
+			Description: fmt.Sprintf("Invalid plan date: %s", plan.Date),
+			Date:        plan.Date,
+		})
+		return result // Can't continue validation without valid date
+	}
+
+	// Parse day boundaries
+	dayStartMinutes, err := parseTimeToMinutes(dayStart)
+	if err != nil {
+		result.Conflicts = append(result.Conflicts, Conflict{
+			Type:        ConflictInvalidDateTime,
+			Description: fmt.Sprintf("Invalid day start time: %s", dayStart),
+		})
+	}
+
+	dayEndMinutes, err := parseTimeToMinutes(dayEnd)
+	if err != nil {
+		result.Conflicts = append(result.Conflicts, Conflict{
+			Type:        ConflictInvalidDateTime,
+			Description: fmt.Sprintf("Invalid day end time: %s", dayEnd),
+		})
+	}
+
+	wakingWindowMinutes := dayEndMinutes - dayStartMinutes
+	if wakingWindowMinutes <= 0 {
+		result.Conflicts = append(result.Conflicts, Conflict{
+			Type:        ConflictInvalidDateTime,
+			Description: fmt.Sprintf("Invalid waking window: day_start (%s) must be before day_end (%s)", dayStart, dayEnd),
+		})
+		return result // Can't continue validation
+	}
+
+	// Check each slot
+	totalPlannedMinutes := 0
+	for _, slot := range plan.Slots {
+		if slot.DeletedAt != nil {
+			continue
+		}
+
+		// Check for invalid time format in slots
+		if !isValidTimeFormat(slot.Start) {
+			result.Conflicts = append(result.Conflicts, Conflict{
+				Type:        ConflictInvalidDateTime,
+				Description: fmt.Sprintf("%s: Invalid slot start time: %s", formatDate(planDate), slot.Start),
+				Date:        plan.Date,
+			})
+		}
+		if !isValidTimeFormat(slot.End) {
+			result.Conflicts = append(result.Conflicts, Conflict{
+				Type:        ConflictInvalidDateTime,
+				Description: fmt.Sprintf("%s: Invalid slot end time: %s", formatDate(planDate), slot.End),
+				Date:        plan.Date,
+			})
+		}
+
+		// Check for missing task ID
+		_, exists := taskMap[slot.TaskID]
+		if !exists {
+			result.Conflicts = append(result.Conflicts, Conflict{
+				Type:        ConflictMissingTaskID,
+				Description: fmt.Sprintf("%s: Slot references missing task ID: %s", formatDate(planDate), slot.TaskID),
+				Date:        plan.Date,
+			})
+		}
+
+		// Calculate slot duration
+		slotStart, err := parseTimeToMinutes(slot.Start)
+		if err != nil {
+			continue // Already reported as invalid time
+		}
+		slotEnd, err := parseTimeToMinutes(slot.End)
+		if err != nil {
+			continue // Already reported as invalid time
+		}
+		slotDuration := slotEnd - slotStart
+		totalPlannedMinutes += slotDuration
+	}
+
+	// Check for overlapping slots
+	nonDeletedSlots := make([]models.Slot, 0)
+	for _, slot := range plan.Slots {
+		if slot.DeletedAt == nil {
+			nonDeletedSlots = append(nonDeletedSlots, slot)
+		}
+	}
+
+	sort.Slice(nonDeletedSlots, func(i, j int) bool {
+		return nonDeletedSlots[i].Start < nonDeletedSlots[j].Start
+	})
+
+	for i := 0; i < len(nonDeletedSlots); i++ {
+		for j := i + 1; j < len(nonDeletedSlots); j++ {
+			slot1 := nonDeletedSlots[i]
+			slot2 := nonDeletedSlots[j]
+
+			if timesOverlap(slot1.Start, slot1.End, slot2.Start, slot2.End) {
+				task1Name := "Unknown"
+				task2Name := "Unknown"
+				if t, ok := taskMap[slot1.TaskID]; ok {
+					task1Name = t.Name
+				}
+				if t, ok := taskMap[slot2.TaskID]; ok {
+					task2Name = t.Name
+				}
+
+				result.Conflicts = append(result.Conflicts, Conflict{
+					Type: ConflictOverlappingSlots,
+					Description: fmt.Sprintf("%s: %s-%s \"%s\" overlaps \"%s\"",
+						formatDate(planDate), slot1.Start, slot1.End, task1Name, task2Name),
+					Date:      plan.Date,
+					Items:     []string{task1Name, task2Name},
+					TimeRange: fmt.Sprintf("%s-%s", slot1.Start, slot2.End),
+				})
+			}
+		}
+	}
+
+	// Check if plan exceeds waking window
+	if totalPlannedMinutes > wakingWindowMinutes {
+		hoursScheduled := float64(totalPlannedMinutes) / 60.0
+		hoursAvailable := float64(wakingWindowMinutes) / 60.0
+		result.Conflicts = append(result.Conflicts, Conflict{
+			Type: ConflictExceedsWakingWindow,
+			Description: fmt.Sprintf("%s: %.1fh scheduled exceeds %.1fh waking window",
+				formatDate(planDate), hoursScheduled, hoursAvailable),
+			Date: plan.Date,
+		})
+	}
+
+	// Check if plan is overcommitted (more than 80% of waking window as a warning)
+	overcommitThreshold := int(float64(wakingWindowMinutes) * 0.8)
+	if totalPlannedMinutes > overcommitThreshold && totalPlannedMinutes <= wakingWindowMinutes {
+		hoursScheduled := float64(totalPlannedMinutes) / 60.0
+		hoursAvailable := float64(wakingWindowMinutes) / 60.0
+		result.Conflicts = append(result.Conflicts, Conflict{
+			Type: ConflictOvercommitted,
+			Description: fmt.Sprintf("%s: %.1fh scheduled in %.1fh waking window (>80%% capacity)",
+				formatDate(planDate), hoursScheduled, hoursAvailable),
+			Date: plan.Date,
+		})
+	}
+
+	return result
+}
+
+// Helper functions
+
+func isValidTimeFormat(timeStr string) bool {
+	_, err := time.Parse("15:04", timeStr)
+	return err == nil
+}
+
+func parseTimeToMinutes(timeStr string) (int, error) {
+	t, err := time.Parse("15:04", timeStr)
+	if err != nil {
+		return 0, err
+	}
+	return t.Hour()*60 + t.Minute(), nil
+}
+
+// timesOverlap checks if two time ranges overlap
+// Assumes all times are in HH:MM format
+func timesOverlap(start1, end1, start2, end2 string) bool {
+	s1, err := parseTimeToMinutes(start1)
+	if err != nil {
+		return false
+	}
+	e1, err := parseTimeToMinutes(end1)
+	if err != nil {
+		return false
+	}
+	s2, err := parseTimeToMinutes(start2)
+	if err != nil {
+		return false
+	}
+	e2, err := parseTimeToMinutes(end2)
+	if err != nil {
+		return false
+	}
+
+	// Two ranges overlap if: start1 < end2 AND start2 < end1
+	return s1 < e2 && s2 < e1
+}
+
+func formatDate(t time.Time) string {
+	// Format as "Mon" for day of week abbreviation
+	return t.Format("Mon")
+}
