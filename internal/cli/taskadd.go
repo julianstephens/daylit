@@ -69,7 +69,7 @@ func (c *TaskAddCmd) Validate() error {
 		start, _ := time.Parse("15:04", c.FixedStart) // Already validated above, won't fail
 		end, _ := time.Parse("15:04", c.FixedEnd)     // Already validated above, won't fail
 		if !start.Before(end) {
-			return fmt.Errorf("FixedStart must be before FixedEnd")
+			return fmt.Errorf("fixedStart must be before FixedEnd")
 		}
 	}
 
@@ -78,9 +78,9 @@ func (c *TaskAddCmd) Validate() error {
 		earliest, _ := time.Parse("15:04", c.Earliest) // Already validated above, won't fail
 		latest, _ := time.Parse("15:04", c.Latest)     // Already validated above, won't fail
 		if !earliest.Before(latest) {
-			return fmt.Errorf("Earliest must be before Latest")
+			return fmt.Errorf("earliest must be before Latest")
 		}
-		
+
 		// Validate duration fits within time window
 		windowMinutes := int(latest.Sub(earliest).Minutes())
 		if c.Duration > windowMinutes {
