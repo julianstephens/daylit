@@ -73,9 +73,28 @@ func (s *SQLiteStore) Load() error {
 	}
 	s.db = db
 
-	// Validate schema version
-	if err := s.validateSchemaVersion(); err != nil {
-		return err
+	// Validate schema version if migrations directory is available.
+	// If the migrations directory is missing (e.g. not shipped in production),
+	// skip validation but still allow using the already-initialized database.
+	migrationsPath := s.getMigrationsPath()
+	if infoErr := func() error {
+		_, statErr := os.Stat(migrationsPath)
+		if statErr == nil {
+			return nil
+		}
+		if os.IsNotExist(statErr) {
+			// Migrations directory is not present; skip schema validation.
+			return nil
+		}
+		// Any other error accessing the directory is treated as fatal.
+		return fmt.Errorf("failed to access migrations directory %q: %w", migrationsPath, statErr)
+	}(); infoErr != nil {
+		return infoErr
+	} else if migrationsPath != "" {
+		// Only attempt validation when migrations are accessible.
+		if err := s.validateSchemaVersion(); err != nil {
+			return err
+		}
 	}
 
 	return nil
