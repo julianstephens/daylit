@@ -367,7 +367,7 @@ func (s *SQLiteStore) RestoreTask(id string) error {
 		}
 		return fmt.Errorf("failed to check task existence: %w", err)
 	}
-	
+
 	if !deletedAt.Valid {
 		return fmt.Errorf("cannot restore a task that is not deleted: %s", id)
 	}

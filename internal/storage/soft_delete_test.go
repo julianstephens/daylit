@@ -384,23 +384,23 @@ func TestSoftDeletePreservesData(t *testing.T) {
 
 	// Create a task with all fields populated
 	task := models.Task{
-		ID:          "task-8",
-		Name:        "Full Task",
-		Kind:        models.TaskKindAppointment,
-		DurationMin: 60,
+		ID:            "task-8",
+		Name:          "Full Task",
+		Kind:          models.TaskKindAppointment,
+		DurationMin:   60,
 		EarliestStart: "09:00",
 		LatestEnd:     "17:00",
 		FixedStart:    "10:00",
 		FixedEnd:      "11:00",
 		Recurrence: models.Recurrence{
-			Type:         models.RecurrenceWeekly,
-			WeekdayMask:  []time.Weekday{time.Monday, time.Wednesday, time.Friday},
+			Type:        models.RecurrenceWeekly,
+			WeekdayMask: []time.Weekday{time.Monday, time.Wednesday, time.Friday},
 		},
-		Priority:       3,
-		EnergyBand:     models.EnergyHigh,
-		Active:         true,
-		LastDone:       "2024-01-10",
-		SuccessStreak:  5,
+		Priority:             3,
+		EnergyBand:           models.EnergyHigh,
+		Active:               true,
+		LastDone:             "2024-01-10",
+		SuccessStreak:        5,
 		AvgActualDurationMin: 55.5,
 	}
 
@@ -648,7 +648,7 @@ func TestRestorePlanTimestampMatching(t *testing.T) {
 	}
 
 	earlyDeleteTime := "2024-02-03T08:00:00Z"
-	_, err = db.Exec("UPDATE slots SET deleted_at = ? WHERE plan_date = ? AND start_time = ?", 
+	_, err = db.Exec("UPDATE slots SET deleted_at = ? WHERE plan_date = ? AND start_time = ?",
 		earlyDeleteTime, plan.Date, "09:00")
 	if err != nil {
 		t.Fatalf("failed to manually delete slot: %v", err)

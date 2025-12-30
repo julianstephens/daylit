@@ -278,14 +278,14 @@ func (s *JSONStore) DeletePlan(date string) error {
 	// Soft delete: set deleted_at timestamp for plan and all its slots
 	now := time.Now().UTC().Format(time.RFC3339)
 	plan.DeletedAt = &now
-	
+
 	// Soft delete all slots in the plan
 	for i := range plan.Slots {
 		if plan.Slots[i].DeletedAt == nil {
 			plan.Slots[i].DeletedAt = &now
 		}
 	}
-	
+
 	s.store.Plans[date] = plan
 	return s.save()
 }
@@ -318,7 +318,7 @@ func (s *JSONStore) RestorePlan(date string) error {
 			}
 		}
 	}
-	
+
 	s.store.Plans[date] = plan
 	return s.save()
 }
