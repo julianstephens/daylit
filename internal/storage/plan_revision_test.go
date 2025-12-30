@@ -251,12 +251,12 @@ func TestGetLatestPlanRevision(t *testing.T) {
 		t.Fatalf("failed to add task: %v", err)
 	}
 
-	// Create multiple accepted revisions
+	// Create multiple accepted revisions using Revision=0 to test auto-assignment
 	for i := 1; i <= 3; i++ {
 		now := time.Now().UTC().Format(time.RFC3339)
 		plan := models.DayPlan{
 			Date:       "2024-03-04",
-			Revision:   i,
+			Revision:   0, // Let SavePlan auto-assign
 			AcceptedAt: &now,
 			Slots: []models.Slot{
 				{

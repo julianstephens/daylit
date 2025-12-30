@@ -239,6 +239,25 @@ func (s *JSONStore) SavePlan(plan models.DayPlan) error {
 				plan.Revision = latestRev
 			}
 		}
+	} else {
+		// If revision is manually set, validate that it doesn't overwrite an accepted plan
+		// unless it's the same plan being updated (same accepted_at timestamp)
+		if revisions, ok := s.store.Plans[plan.Date]; ok {
+			if existingPlan, ok := revisions[plan.Revision]; ok && existingPlan.DeletedAt == nil && existingPlan.AcceptedAt != nil {
+				// Check if we're updating the same plan (same accepted_at timestamp)
+				planAcceptedAtStr := ""
+				if plan.AcceptedAt != nil {
+					planAcceptedAtStr = *plan.AcceptedAt
+				}
+				existingAcceptedAtStr := ""
+				if existingPlan.AcceptedAt != nil {
+					existingAcceptedAtStr = *existingPlan.AcceptedAt
+				}
+				if planAcceptedAtStr != existingAcceptedAtStr {
+					return fmt.Errorf("cannot overwrite accepted plan: %s revision %d", plan.Date, plan.Revision)
+				}
+			}
+		}
 	}
 
 	// Check if the specific revision is deleted

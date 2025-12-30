@@ -12,7 +12,7 @@ import (
 
 type PlanCmd struct {
 	Date        string `arg:"" help:"Date to plan (YYYY-MM-DD or 'today')." default:"today"`
-	NewRevision bool   `help:"Force creation of a new revision even if current plan is not accepted." name:"new-revision"`
+	NewRevision bool   `help:"Create a new revision instead of being blocked when an accepted plan exists." name:"new-revision"`
 }
 
 func (c *PlanCmd) Run(ctx *Context) error {
@@ -39,7 +39,6 @@ func (c *PlanCmd) Run(ctx *Context) error {
 
 	// Check if a plan already exists for this date
 	existingPlan, err := ctx.Store.GetPlan(dateStr)
-	var shouldCreateNewRevision bool
 
 	if err == nil && len(existingPlan.Slots) > 0 {
 		if existingPlan.AcceptedAt != nil {
@@ -49,7 +48,6 @@ func (c *PlanCmd) Run(ctx *Context) error {
 				fmt.Printf("To create a new revision, use: daylit plan %s --new-revision\n", dateStr)
 				return nil
 			}
-			shouldCreateNewRevision = true
 			fmt.Printf("Creating new revision of plan for %s (will be revision %d)\n\n", dateStr, existingPlan.Revision+1)
 		} else {
 			// Plan exists but not accepted - can regenerate
@@ -87,13 +85,8 @@ func (c *PlanCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	// Set revision to 0 so SavePlan will auto-assign it
+	// Set revision to 0 so SavePlan will auto-assign it and perform immutability checks
 	plan.Revision = 0
-
-	// If user explicitly requested new revision, force it
-	if shouldCreateNewRevision {
-		plan.Revision = existingPlan.Revision + 1
-	}
 
 	// Display plan
 	fmt.Printf("Proposed plan for %s:\n\n", dateStr)

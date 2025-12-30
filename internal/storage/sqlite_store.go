@@ -424,6 +424,22 @@ func (s *SQLiteStore) SavePlan(plan models.DayPlan) error {
 				}
 			}
 		}
+	} else {
+		// If revision is manually set, validate that it doesn't overwrite an accepted plan
+		// unless it's the same plan being updated (same accepted_at timestamp)
+		var existingAcceptedAt sql.NullString
+		err = tx.QueryRow("SELECT accepted_at FROM plans WHERE date = ? AND revision = ? AND deleted_at IS NULL", plan.Date, plan.Revision).Scan(&existingAcceptedAt)
+		if err == nil && existingAcceptedAt.Valid {
+			// Check if we're updating the same plan (same accepted_at timestamp)
+			planAcceptedAtStr := ""
+			if plan.AcceptedAt != nil {
+				planAcceptedAtStr = *plan.AcceptedAt
+			}
+			if planAcceptedAtStr != existingAcceptedAt.String {
+				return fmt.Errorf("cannot overwrite accepted plan: %s revision %d", plan.Date, plan.Revision)
+			}
+		}
+		// If the query returns no rows or accepted_at is NULL, it's safe to proceed
 	}
 
 	// Check if plan is deleted - forbid adding slots to deleted plans

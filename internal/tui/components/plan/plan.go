@@ -22,14 +22,19 @@ var (
 	statusStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("240")).
 			Italic(true)
+
+	warningStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("214")).
+			Bold(true)
 )
 
 type Model struct {
-	viewport viewport.Model
-	Plan     *models.DayPlan
-	Tasks    map[string]models.Task
-	width    int
-	height   int
+	viewport       viewport.Model
+	Plan           *models.DayPlan
+	Tasks          map[string]models.Task
+	LatestRevision int // Track the latest revision number for warning display
+	width          int
+	height         int
 }
 
 func New(width, height int) Model {
@@ -67,9 +72,16 @@ func (m *Model) SetSize(width, height int) {
 
 func (m *Model) SetPlan(plan models.DayPlan, tasks []models.Task) {
 	m.Plan = &plan
+	m.LatestRevision = plan.Revision // Assume this is the latest when set
 	for _, t := range tasks {
 		m.Tasks[t.ID] = t
 	}
+	m.Render()
+}
+
+// SetLatestRevision updates the latest revision number for warning display
+func (m *Model) SetLatestRevision(latestRev int) {
+	m.LatestRevision = latestRev
 	m.Render()
 }
 
@@ -82,7 +94,12 @@ func (m *Model) Render() {
 	var b strings.Builder
 
 	// Add revision badge at the top
-	b.WriteString(fmt.Sprintf("Revision %d\n\n", m.Plan.Revision))
+	revisionText := fmt.Sprintf("Revision %d", m.Plan.Revision)
+	if m.LatestRevision > 0 && m.Plan.Revision < m.LatestRevision {
+		// Viewing an older revision - show warning
+		revisionText += warningStyle.Render(fmt.Sprintf(" ⚠ Not latest (Rev %d available)", m.LatestRevision))
+	}
+	b.WriteString(revisionText + "\n\n")
 
 	for _, slot := range m.Plan.Slots {
 		taskName := "Unknown Task"
