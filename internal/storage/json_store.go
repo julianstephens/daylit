@@ -219,6 +219,17 @@ func (s *JSONStore) GetPlan(date string) (models.DayPlan, error) {
 		return models.DayPlan{}, fmt.Errorf("no plan found for date: %s", date)
 	}
 
+	// Filter out soft-deleted slots before returning the plan
+	if len(plan.Slots) > 0 {
+		filteredSlots := make([]models.Slot, 0, len(plan.Slots))
+		for _, slot := range plan.Slots {
+			if slot.DeletedAt == nil {
+				filteredSlots = append(filteredSlots, slot)
+			}
+		}
+		plan.Slots = filteredSlots
+	}
+
 	return plan, nil
 }
 
@@ -232,9 +243,17 @@ func (s *JSONStore) DeletePlan(date string) error {
 		return fmt.Errorf("plan not found for date: %s", date)
 	}
 
-	// Soft delete: set deleted_at timestamp
+	// Soft delete: set deleted_at timestamp for plan and all its slots
 	now := time.Now().UTC().Format(time.RFC3339)
 	plan.DeletedAt = &now
+	
+	// Soft delete all slots in the plan
+	for i := range plan.Slots {
+		if plan.Slots[i].DeletedAt == nil {
+			plan.Slots[i].DeletedAt = &now
+		}
+	}
+	
 	s.store.Plans[date] = plan
 	return s.save()
 }
@@ -249,8 +268,12 @@ func (s *JSONStore) RestorePlan(date string) error {
 		return fmt.Errorf("plan not found for date: %s", date)
 	}
 
-	// Restore by clearing deleted_at
+	// Restore by clearing deleted_at on the plan and all its slots
 	plan.DeletedAt = nil
+	for i := range plan.Slots {
+		plan.Slots[i].DeletedAt = nil
+	}
+	
 	s.store.Plans[date] = plan
 	return s.save()
 }

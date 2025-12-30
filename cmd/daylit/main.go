@@ -35,6 +35,9 @@ var CLI struct {
 		Delete cli.TaskDeleteCmd `cmd:"" help:"Delete a task."`
 		List   cli.TaskListCmd   `cmd:"" help:"List all tasks."`
 	} `cmd:"" help:"Manage tasks."`
+	Plans struct {
+		Delete cli.PlanDeleteCmd `cmd:"" help:"Delete a plan."`
+	} `cmd:"" help:"Manage plans."`
 	Restore struct {
 		Task cli.TaskRestoreCmd `cmd:"" help:"Restore a deleted task."`
 		Plan cli.PlanRestoreCmd `cmd:"" help:"Restore a deleted plan."`

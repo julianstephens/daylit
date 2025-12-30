@@ -462,16 +462,49 @@ func (s *SQLiteStore) GetPlan(date string) (models.DayPlan, error) {
 }
 
 func (s *SQLiteStore) DeletePlan(date string) error {
-	// Soft delete: set deleted_at timestamp for the plan
+	// Soft delete: set deleted_at timestamp for the plan and its slots
 	now := time.Now().UTC().Format(time.RFC3339)
-	_, err := s.db.Exec("UPDATE plans SET deleted_at = ? WHERE date = ?", now, date)
-	return err
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	// Soft delete the plan
+	if _, err := tx.Exec("UPDATE plans SET deleted_at = ? WHERE date = ?", now, date); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Soft delete associated slots that are not already soft-deleted
+	if _, err := tx.Exec("UPDATE slots SET deleted_at = ? WHERE plan_date = ? AND deleted_at IS NULL", now, date); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (s *SQLiteStore) RestorePlan(date string) error {
-	// Restore a soft-deleted plan by clearing deleted_at
-	_, err := s.db.Exec("UPDATE plans SET deleted_at = NULL WHERE date = ?", date)
-	return err
+	// Restore a soft-deleted plan (and its slots) by clearing deleted_at
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	// Restore the plan
+	if _, err := tx.Exec("UPDATE plans SET deleted_at = NULL WHERE date = ?", date); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Restore any soft-deleted slots associated with the plan
+	if _, err := tx.Exec("UPDATE slots SET deleted_at = NULL WHERE plan_date = ?", date); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (s *SQLiteStore) GetConfigPath() string {
