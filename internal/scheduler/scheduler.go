@@ -50,7 +50,8 @@ func (s *Scheduler) GeneratePlan(date string, tasks []models.Task, dayStart, day
 	var flexibleTasks []models.Task
 
 	for _, task := range activeTasks {
-		if task.Kind == models.TaskKindAppointment {
+		switch task.Kind {
+		case models.TaskKindAppointment:
 			// Appointments must have both fixed start and end times
 			if task.FixedStart != "" && task.FixedEnd != "" {
 				fixedSlots = append(fixedSlots, models.Slot{
@@ -63,7 +64,7 @@ func (s *Scheduler) GeneratePlan(date string, tasks []models.Task, dayStart, day
 				// Treat incomplete appointments as flexible tasks
 				flexibleTasks = append(flexibleTasks, task)
 			}
-		} else if task.Kind == models.TaskKindFlexible {
+		case models.TaskKindFlexible:
 			flexibleTasks = append(flexibleTasks, task)
 		}
 	}
@@ -93,7 +94,7 @@ func (s *Scheduler) GeneratePlan(date string, tasks []models.Task, dayStart, day
 
 	// Step 4: Find free blocks and schedule flexible tasks
 	freeBlocks := findFreeBlocks(startTime, endTime, fixedSlots)
-	
+
 	scheduledSlots := make([]models.Slot, 0)
 	usedTasks := make(map[string]bool)
 
@@ -122,20 +123,20 @@ func (s *Scheduler) GeneratePlan(date string, tasks []models.Task, dayStart, day
 				// Update blocks: remove current block and add up to 2 new blocks
 				slotStart, _ := parseTime(slot.Start)
 				slotEnd, _ := parseTime(slot.End)
-				
+
 				// Remove the current block
 				freeBlocks = append(freeBlocks[:blockIdx], freeBlocks[blockIdx+1:]...)
-				
+
 				// Add block before the task if there's space
 				if block.start < slotStart {
 					freeBlocks = append(freeBlocks, timeBlock{start: block.start, end: slotStart})
 				}
-				
+
 				// Add block after the task if there's space
 				if slotEnd < block.end {
 					freeBlocks = append(freeBlocks, timeBlock{start: slotEnd, end: block.end})
 				}
-				
+
 				break // Move to next task
 			}
 		}
@@ -216,7 +217,7 @@ func calculateLateness(task models.Task, date time.Time) float64 {
 	}
 
 	daysSince := date.Sub(lastDone).Hours() / 24
-	
+
 	interval := float64(task.Recurrence.IntervalDays)
 	if interval == 0 {
 		interval = 1

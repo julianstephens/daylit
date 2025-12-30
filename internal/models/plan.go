@@ -23,14 +23,14 @@ type Feedback struct {
 }
 
 type Slot struct {
-	Start    string      `json:"start"`    // HH:MM format
-	End      string      `json:"end"`      // HH:MM format
-	TaskID   string      `json:"task_id"`
-	Status   SlotStatus  `json:"status"`
-	Feedback *Feedback   `json:"feedback,omitempty"`
+	Start    string     `json:"start"` // HH:MM format
+	End      string     `json:"end"`   // HH:MM format
+	TaskID   string     `json:"task_id"`
+	Status   SlotStatus `json:"status"`
+	Feedback *Feedback  `json:"feedback,omitempty"`
 }
 
 type DayPlan struct {
-	Date  string  `json:"date"` // YYYY-MM-DD format
-	Slots []Slot  `json:"slots"`
+	Date  string `json:"date"` // YYYY-MM-DD format
+	Slots []Slot `json:"slots"`
 }

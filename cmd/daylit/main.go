@@ -11,6 +11,7 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/google/uuid"
+
 	"github.com/julianstephens/daylit/internal/models"
 	"github.com/julianstephens/daylit/internal/scheduler"
 	"github.com/julianstephens/daylit/internal/storage"
@@ -24,14 +25,15 @@ const (
 )
 
 var CLI struct {
-	Config string `help:"Config file path." type:"path" default:"~/.config/daylit/state.json"`
+	Version kong.VersionFlag
+	Config  string `help:"Config file path." type:"path" default:"~/.config/daylit/state.json"`
 
-	Init InitCmd `cmd:"" help:"Initialize daylit storage."`
-	Task TaskCmd `cmd:"" help:"Manage tasks."`
-	Plan PlanCmd `cmd:"" help:"Generate day plans."`
-	Now  NowCmd  `cmd:"" help:"Show current task."`
+	Init     InitCmd     `cmd:"" help:"Initialize daylit storage."`
+	Task     TaskCmd     `cmd:"" help:"Manage tasks."`
+	Plan     PlanCmd     `cmd:"" help:"Generate day plans."`
+	Now      NowCmd      `cmd:"" help:"Show current task."`
 	Feedback FeedbackCmd `cmd:"" help:"Provide feedback on a slot."`
-	Day  DayCmd  `cmd:"" help:"Show plan for a day."`
+	Day      DayCmd      `cmd:"" help:"Show plan for a day."`
 }
 
 type InitCmd struct{}
@@ -74,7 +76,7 @@ func (c *TaskAddCmd) Run(ctx *Context) error {
 	}
 
 	// Parse recurrence
-	recType := models.RecurrenceAdHoc
+	var recType models.RecurrenceType
 	switch c.Recurrence {
 	case "daily":
 		recType = models.RecurrenceDaily
@@ -463,6 +465,7 @@ func main() {
 		kong.Name("daylit"),
 		kong.Description("Daily structure scheduler / time-blocking companion"),
 		kong.UsageOnError(),
+		kong.Vars{"version": "v0.1.0"},
 	)
 
 	// Expand home directory in config path

@@ -1,7 +1,7 @@
 .PHONY: build install clean test help
 
 BINARY_NAME=daylit
-BUILD_DIR=.
+BUILD_DIR=bin
 INSTALL_PATH=/usr/local/bin
 
 help: ## Show this help message
@@ -20,9 +20,12 @@ install: build ## Install the binary to system path
 clean: ## Remove built binary
 	rm -f $(BUILD_DIR)/$(BINARY_NAME)
 
+lint: ## Run golangci-lint
+	golangci-lint run ./... --fix	
+
 test: ## Run tests
 	go test -v ./...
 
 run: build ## Build and run with example
 	@echo "Building and running daylit..."
-	./$(BINARY_NAME) --help
+	./$(BUILD_DIR)/$(BINARY_NAME) --help

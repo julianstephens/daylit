@@ -315,7 +315,6 @@ go test ./...
 Future enhancements (v0.2+):
 
 - [ ] SQLite storage for better querying
-- [ ] Calendar integration (import/export)
 - [ ] TUI (Terminal UI) interface
 - [ ] Natural language parsing for task creation
 - [ ] Notification daemon
@@ -323,11 +322,3 @@ Future enhancements (v0.2+):
 - [ ] Task dependencies
 - [ ] Weekly/monthly planning views
 - [ ] Habit tracking integration
-
-## License
-
-[Add your license here]
-
-## Contributing
-
-[Add contribution guidelines here]

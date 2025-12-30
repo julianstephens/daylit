@@ -1,0 +1,23 @@
+version: "2"
+
+run:
+  timeout: 3m
+  tests: true
+
+linters:
+  default: none
+
+  enable:
+    - govet # built-in: suspicious constructs
+    - staticcheck # high-signal static analysis
+    - ineffassign # detect unused assignments
+
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+issues:
+  max-same-issues: 5
+  max-issues-per-linter: 20
