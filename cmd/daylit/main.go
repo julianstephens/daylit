@@ -41,7 +41,7 @@ func main() {
 		kong.Name("daylit"),
 		kong.Description("Daily structure scheduler / time-blocking companion"),
 		kong.UsageOnError(),
-		kong.Vars{"version": "v0.1.0"},
+		kong.Vars{"version": "v0.2.0"},
 	)
 
 	// Determine storage type based on extension
