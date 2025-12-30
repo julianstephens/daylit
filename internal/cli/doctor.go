@@ -16,6 +16,7 @@ func (cmd *DoctorCmd) Run(ctx *Context) error {
 	fmt.Println()
 
 	hasError := false
+	dbReachable := false
 
 	// Check 1: DB reachable
 	if err := checkDBReachable(ctx); err != nil {
@@ -24,6 +25,7 @@ func (cmd *DoctorCmd) Run(ctx *Context) error {
 		hasError = true
 	} else {
 		fmt.Printf("✓ Database reachable: OK\n")
+		dbReachable = true
 	}
 
 	// Check 2: Schema version valid
@@ -52,13 +54,17 @@ func (cmd *DoctorCmd) Run(ctx *Context) error {
 		fmt.Printf("✓ Backups present: OK\n")
 	}
 
-	// Check 5: Validation passes
-	if err := checkValidation(ctx); err != nil {
-		fmt.Printf("❌ Data validation: FAIL\n")
-		fmt.Printf("   Error: %v\n", err)
-		hasError = true
+	// Check 5: Validation passes (only if DB is reachable)
+	if dbReachable {
+		if err := checkValidation(ctx); err != nil {
+			fmt.Printf("❌ Data validation: FAIL\n")
+			fmt.Printf("   Error: %v\n", err)
+			hasError = true
+		} else {
+			fmt.Printf("✓ Data validation: OK\n")
+		}
 	} else {
-		fmt.Printf("✓ Data validation: OK\n")
+		fmt.Printf("⊘ Data validation: SKIPPED (database not reachable)\n")
 	}
 
 	// Check 6: Clock/timezone sanity
