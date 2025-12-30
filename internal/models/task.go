@@ -48,4 +48,5 @@ type Task struct {
 	LastDone             string     `json:"last_done,omitempty"` // YYYY-MM-DD format
 	SuccessStreak        int        `json:"success_streak"`
 	AvgActualDurationMin float64    `json:"avg_actual_duration_min"`
+	DeletedAt            *string    `json:"deleted_at,omitempty"` // RFC3339 timestamp
 }

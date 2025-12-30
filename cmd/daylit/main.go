@@ -35,6 +35,10 @@ var CLI struct {
 		Delete cli.TaskDeleteCmd `cmd:"" help:"Delete a task."`
 		List   cli.TaskListCmd   `cmd:"" help:"List all tasks."`
 	} `cmd:"" help:"Manage tasks."`
+	Restore struct {
+		Task cli.TaskRestoreCmd `cmd:"" help:"Restore a deleted task."`
+		Plan cli.PlanRestoreCmd `cmd:"" help:"Restore a deleted plan."`
+	} `cmd:"" help:"Restore deleted items."`
 }
 
 func main() {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/julianstephens/daylit/internal/models"
 )
@@ -126,7 +127,7 @@ func (s *JSONStore) GetTask(id string) (models.Task, error) {
 	}
 
 	task, ok := s.store.Tasks[id]
-	if !ok {
+	if !ok || task.DeletedAt != nil {
 		return models.Task{}, fmt.Errorf("task not found: %s", id)
 	}
 
@@ -140,7 +141,9 @@ func (s *JSONStore) GetAllTasks() ([]models.Task, error) {
 
 	tasks := make([]models.Task, 0, len(s.store.Tasks))
 	for _, task := range s.store.Tasks {
-		tasks = append(tasks, task)
+		if task.DeletedAt == nil {
+			tasks = append(tasks, task)
+		}
 	}
 
 	return tasks, nil
@@ -164,17 +167,42 @@ func (s *JSONStore) DeleteTask(id string) error {
 		return fmt.Errorf("storage not loaded")
 	}
 
-	if _, ok := s.store.Tasks[id]; !ok {
+	task, ok := s.store.Tasks[id]
+	if !ok {
 		return fmt.Errorf("task not found: %s", id)
 	}
 
-	delete(s.store.Tasks, id)
+	// Soft delete: set deleted_at timestamp
+	now := time.Now().UTC().Format(time.RFC3339)
+	task.DeletedAt = &now
+	s.store.Tasks[id] = task
+	return s.save()
+}
+
+func (s *JSONStore) RestoreTask(id string) error {
+	if s.store == nil {
+		return fmt.Errorf("storage not loaded")
+	}
+
+	task, ok := s.store.Tasks[id]
+	if !ok {
+		return fmt.Errorf("task not found: %s", id)
+	}
+
+	// Restore by clearing deleted_at
+	task.DeletedAt = nil
+	s.store.Tasks[id] = task
 	return s.save()
 }
 
 func (s *JSONStore) SavePlan(plan models.DayPlan) error {
 	if s.store == nil {
 		return fmt.Errorf("storage not loaded")
+	}
+
+	// Check if plan is deleted - forbid adding slots to deleted plans
+	if existingPlan, ok := s.store.Plans[plan.Date]; ok && existingPlan.DeletedAt != nil {
+		return fmt.Errorf("cannot save slots to a deleted plan: %s", plan.Date)
 	}
 
 	s.store.Plans[plan.Date] = plan
@@ -187,11 +215,44 @@ func (s *JSONStore) GetPlan(date string) (models.DayPlan, error) {
 	}
 
 	plan, ok := s.store.Plans[date]
-	if !ok {
+	if !ok || plan.DeletedAt != nil {
 		return models.DayPlan{}, fmt.Errorf("no plan found for date: %s", date)
 	}
 
 	return plan, nil
+}
+
+func (s *JSONStore) DeletePlan(date string) error {
+	if s.store == nil {
+		return fmt.Errorf("storage not loaded")
+	}
+
+	plan, ok := s.store.Plans[date]
+	if !ok {
+		return fmt.Errorf("plan not found for date: %s", date)
+	}
+
+	// Soft delete: set deleted_at timestamp
+	now := time.Now().UTC().Format(time.RFC3339)
+	plan.DeletedAt = &now
+	s.store.Plans[date] = plan
+	return s.save()
+}
+
+func (s *JSONStore) RestorePlan(date string) error {
+	if s.store == nil {
+		return fmt.Errorf("storage not loaded")
+	}
+
+	plan, ok := s.store.Plans[date]
+	if !ok {
+		return fmt.Errorf("plan not found for date: %s", date)
+	}
+
+	// Restore by clearing deleted_at
+	plan.DeletedAt = nil
+	s.store.Plans[date] = plan
+	return s.save()
 }
 
 func (s *JSONStore) GetConfigPath() string {
