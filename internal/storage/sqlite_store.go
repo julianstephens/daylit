@@ -671,6 +671,7 @@ func (s *SQLiteStore) GetDB() *sql.DB {
 	return s.db
 }
 
+// GetMigrationsPath returns the path to the migrations directory.
 func (s *SQLiteStore) GetMigrationsPath() string {
 	return s.getMigrationsPath()
 }
