@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/julianstephens/daylit/internal/validation"
 )
@@ -37,11 +38,8 @@ func (cmd *ValidateCmd) Run(ctx *Context) error {
 	// For plan validation, we'll only validate today's plan if it exists
 	fmt.Println("Validating today's plan...")
 	// Get today's date
-	today := "today"
-	dateStr, err := parseDateArgument(today)
-	if err != nil {
-		return fmt.Errorf("failed to get today's date: %w", err)
-	}
+	today := time.Now()
+	dateStr := today.Format("2006-01-02")
 
 	plan, err := ctx.Store.GetPlan(dateStr)
 	var planResult validation.ValidationResult

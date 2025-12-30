@@ -26,10 +26,16 @@ func (m Model) View() string {
 		content = m.viewConfirmDelete()
 	}
 
+	var statusBar string
+	if m.validationWarning != "" {
+		statusBar = warningStyle.Render(m.validationWarning)
+	}
+
 	ui := lipgloss.JoinVertical(
 		lipgloss.Left,
 		m.viewTabs(),
 		content,
+		statusBar,
 		m.help.View(m),
 	)
 

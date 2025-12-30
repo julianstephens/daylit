@@ -17,5 +17,9 @@ var (
 			Foreground(lipgloss.Color("196")).
 			Bold(true)
 
+	warningStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("214")).
+			Italic(true)
+
 	docStyle = lipgloss.NewStyle().Padding(1, 2)
 )

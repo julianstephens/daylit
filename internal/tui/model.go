@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/charmbracelet/bubbles/help"
@@ -14,6 +15,7 @@ import (
 	"github.com/julianstephens/daylit/internal/tui/components/now"
 	"github.com/julianstephens/daylit/internal/tui/components/plan"
 	"github.com/julianstephens/daylit/internal/tui/components/tasklist"
+	"github.com/julianstephens/daylit/internal/validation"
 )
 
 type SessionState int
@@ -37,23 +39,24 @@ type TaskFormModel struct {
 }
 
 type Model struct {
-	store          storage.Provider
-	scheduler      *scheduler.Scheduler
-	state          SessionState
-	previousState  SessionState
-	keys           KeyMap
-	help           help.Model
-	taskList       tasklist.Model
-	planModel      plan.Model
-	nowModel       now.Model
-	form           *huh.Form
-	taskForm       *TaskFormModel
-	editingTask    *models.Task
-	quitting       bool
-	width          int
-	height         int
-	feedbackSlotID int // Index of the slot being rated
-	taskToDeleteID string
+	store             storage.Provider
+	scheduler         *scheduler.Scheduler
+	state             SessionState
+	previousState     SessionState
+	keys              KeyMap
+	help              help.Model
+	taskList          tasklist.Model
+	planModel         plan.Model
+	nowModel          now.Model
+	form              *huh.Form
+	taskForm          *TaskFormModel
+	editingTask       *models.Task
+	quitting          bool
+	width             int
+	height            int
+	feedbackSlotID    int // Index of the slot being rated
+	taskToDeleteID    string
+	validationWarning string // Validation warning message to display
 }
 
 func NewModel(store storage.Provider, sched *scheduler.Scheduler) Model {
@@ -71,7 +74,7 @@ func NewModel(store storage.Provider, sched *scheduler.Scheduler) Model {
 		nm.SetPlan(planData, tasks)
 	}
 
-	return Model{
+	m := Model{
 		store:     store,
 		scheduler: sched,
 		state:     StateNow,
@@ -81,6 +84,11 @@ func NewModel(store storage.Provider, sched *scheduler.Scheduler) Model {
 		planModel: pm,
 		nowModel:  nm,
 	}
+
+	// Run validation on initialization
+	m.updateValidationStatus()
+
+	return m
 }
 
 func (m Model) ShortHelp() []key.Binding {
@@ -112,4 +120,46 @@ func (m Model) FullHelp() [][]key.Binding {
 
 func (m Model) Init() tea.Cmd {
 	return m.nowModel.Init()
+}
+
+// updateValidationStatus runs validation and updates the warning message
+func (m *Model) updateValidationStatus() {
+	// Get all tasks
+	tasks, err := m.store.GetAllTasks()
+	if err != nil {
+		m.validationWarning = ""
+		return
+	}
+
+	// Get settings
+	settings, err := m.store.GetSettings()
+	if err != nil {
+		m.validationWarning = ""
+		return
+	}
+
+	// Get today's plan
+	today := time.Now().Format("2006-01-02")
+	plan, err := m.store.GetPlan(today)
+
+	validator := validation.New()
+
+	// Validate tasks first
+	taskResult := validator.ValidateTasks(tasks)
+
+	// Validate plan if it exists
+	var planResult validation.ValidationResult
+	if err == nil && len(plan.Slots) > 0 {
+		planResult = validator.ValidatePlan(plan, tasks, settings.DayStart, settings.DayEnd)
+	}
+
+	// Combine conflicts
+	allConflicts := append(taskResult.Conflicts, planResult.Conflicts...)
+
+	if len(allConflicts) > 0 {
+		// Show count of conflicts
+		m.validationWarning = fmt.Sprintf("⚠ %d validation warning(s)", len(allConflicts))
+	} else {
+		m.validationWarning = ""
+	}
 }
