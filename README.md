@@ -399,6 +399,15 @@ Applying 1 migration(s)...
 Applied 1 migration(s) in 2.14ms
 ```
 
+**Migration Path Configuration:**
+
+By default, migrations are loaded from the `migrations/` directory. You can override this using the `DAYLIT_MIGRATIONS_PATH` environment variable:
+
+```bash
+export DAYLIT_MIGRATIONS_PATH=/path/to/migrations
+daylit migrate
+```
+
 ## Configuration
 
 The default configuration file is located at `~/.config/daylit/daylit.db`.
