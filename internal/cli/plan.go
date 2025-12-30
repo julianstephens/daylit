@@ -33,6 +33,24 @@ func (c *PlanCmd) Run(ctx *Context) error {
 
 	dateStr := planDate.Format("2006-01-02")
 
+	// Check if a plan already exists for this date
+	existingPlan, err := ctx.Store.GetPlan(dateStr)
+	if err == nil && len(existingPlan.Slots) > 0 {
+		fmt.Printf("Warning: A plan already exists for %s. Generating a new plan will replace it.\n", dateStr)
+		fmt.Print("Continue? [y/N]: ")
+		reader := bufio.NewReader(os.Stdin)
+		response, err := reader.ReadString('\n')
+		if err != nil {
+			return err
+		}
+		response = strings.TrimSpace(response)
+		if strings.ToLower(response) != "y" && strings.ToLower(response) != "yes" {
+			fmt.Println("Plan generation cancelled.")
+			return nil
+		}
+		fmt.Println()
+	}
+
 	// Get settings
 	settings := ctx.Store.GetSettings()
 

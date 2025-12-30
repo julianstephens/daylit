@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/julianstephens/daylit/internal/models"
@@ -21,9 +22,72 @@ type TaskAddCmd struct {
 }
 
 func (c *TaskAddCmd) Validate() error {
+	// Validate priority
 	if c.Priority < 1 || c.Priority > 5 {
 		return fmt.Errorf("priority must be between 1 and 5")
 	}
+
+	// Validate duration is positive
+	if c.Duration <= 0 {
+		return fmt.Errorf("duration must be greater than zero")
+	}
+
+	// Validate interval for n_days recurrence
+	if c.Recurrence == "n_days" && c.Interval < 1 {
+		return fmt.Errorf("interval must be at least 1 for n_days recurrence")
+	}
+
+	// Validate weekly recurrence has weekdays
+	if c.Recurrence == "weekly" && c.Weekdays == "" {
+		return fmt.Errorf("weekdays must be specified for weekly recurrence")
+	}
+
+	// Validate time formats
+	if c.Earliest != "" {
+		if _, err := time.Parse("15:04", c.Earliest); err != nil {
+			return fmt.Errorf("invalid Earliest time format (expected HH:MM): %w", err)
+		}
+	}
+	if c.Latest != "" {
+		if _, err := time.Parse("15:04", c.Latest); err != nil {
+			return fmt.Errorf("invalid Latest time format (expected HH:MM): %w", err)
+		}
+	}
+	if c.FixedStart != "" {
+		if _, err := time.Parse("15:04", c.FixedStart); err != nil {
+			return fmt.Errorf("invalid FixedStart time format (expected HH:MM): %w", err)
+		}
+	}
+	if c.FixedEnd != "" {
+		if _, err := time.Parse("15:04", c.FixedEnd); err != nil {
+			return fmt.Errorf("invalid FixedEnd time format (expected HH:MM): %w", err)
+		}
+	}
+
+	// Validate FixedStart comes before FixedEnd
+	if c.FixedStart != "" && c.FixedEnd != "" {
+		start, _ := time.Parse("15:04", c.FixedStart)
+		end, _ := time.Parse("15:04", c.FixedEnd)
+		if !start.Before(end) {
+			return fmt.Errorf("FixedStart must be before FixedEnd")
+		}
+	}
+
+	// Validate Earliest comes before Latest
+	if c.Earliest != "" && c.Latest != "" {
+		earliest, _ := time.Parse("15:04", c.Earliest)
+		latest, _ := time.Parse("15:04", c.Latest)
+		if !earliest.Before(latest) {
+			return fmt.Errorf("Earliest must be before Latest")
+		}
+		
+		// Validate duration fits within time window
+		windowMinutes := int(latest.Sub(earliest).Minutes())
+		if c.Duration > windowMinutes {
+			return fmt.Errorf("duration (%d minutes) must fit within time window (%d minutes)", c.Duration, windowMinutes)
+		}
+	}
+
 	return nil
 }
 

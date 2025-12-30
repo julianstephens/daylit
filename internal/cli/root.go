@@ -93,6 +93,8 @@ func parseTimeToMinutes(timeStr string) (int, error) {
 	return hour*60 + minute, nil
 }
 
+// calculateSlotDuration returns the duration of a slot in minutes.
+// Returns 0 if the time format is invalid (which the caller should check).
 func calculateSlotDuration(slot models.Slot) int {
 	start, err := time.Parse("15:04", slot.Start)
 	if err != nil {

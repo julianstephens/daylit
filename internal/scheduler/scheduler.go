@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"time"
 
@@ -177,6 +178,13 @@ func parseTime(timeStr string) (int, error) {
 }
 
 func formatTime(minutes int) string {
+	// Ensure minutes value is within valid range (0-1439)
+	if minutes < 0 {
+		minutes = 0
+	}
+	if minutes >= 1440 {
+		minutes = 1439
+	}
 	hours := minutes / 60
 	mins := minutes % 60
 	return fmt.Sprintf("%02d:%02d", hours, mins)
@@ -204,8 +212,8 @@ func shouldScheduleTask(task models.Task, date time.Time) bool {
 		if err != nil {
 			return false
 		}
-		// Use date-based arithmetic to avoid DST issues
-		daysSince := int(date.Sub(lastDone).Hours()/24 + 0.5) // Round to nearest day
+		// Use date-based arithmetic to avoid DST issues with explicit rounding
+		daysSince := int(math.Round(date.Sub(lastDone).Hours() / 24))
 		return daysSince >= task.Recurrence.IntervalDays
 	case models.RecurrenceAdHoc:
 		return false // Only schedule if explicitly marked (not implemented in v0.1)
@@ -224,8 +232,8 @@ func calculateLateness(task models.Task, date time.Time) float64 {
 		return 0.0
 	}
 
-	// Use date-based arithmetic to avoid DST issues
-	daysSince := date.Sub(lastDone).Hours()/24 + 0.5 // Round to nearest day
+	// Use date-based arithmetic to avoid DST issues with explicit rounding
+	daysSince := math.Round(date.Sub(lastDone).Hours() / 24)
 
 	interval := float64(task.Recurrence.IntervalDays)
 	if interval == 0 {

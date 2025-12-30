@@ -19,6 +19,13 @@ const (
 	MinTaskDurationMin             = 10  // Minimum task duration in minutes
 )
 
+func init() {
+	// Runtime validation: ensure EMA weights sum to 1.0
+	if FeedbackExistingWeight+FeedbackNewWeight != 1.0 {
+		panic("FeedbackExistingWeight and FeedbackNewWeight must sum to 1.0")
+	}
+}
+
 type FeedbackCmd struct {
 	Rating string `help:"Rating (on_track|too_much|unnecessary)." required:""`
 	Note   string `help:"Optional note."`
@@ -89,7 +96,12 @@ func (c *FeedbackCmd) Run(ctx *Context) error {
 			// Keep duration as is, nudge slightly toward actual
 			slotDuration := calculateSlotDuration(plan.Slots[targetSlotIdx])
 			if slotDuration > 0 {
-				task.AvgActualDurationMin = task.AvgActualDurationMin*FeedbackExistingWeight + float64(slotDuration)*FeedbackNewWeight
+				if task.AvgActualDurationMin <= 0 {
+					// Initialize average if it was unset or invalid
+					task.AvgActualDurationMin = float64(slotDuration)
+				} else {
+					task.AvgActualDurationMin = task.AvgActualDurationMin*FeedbackExistingWeight + float64(slotDuration)*FeedbackNewWeight
+				}
 			}
 			task.LastDone = dateStr
 		case models.FeedbackTooMuch:
