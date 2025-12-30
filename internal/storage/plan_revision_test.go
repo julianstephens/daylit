@@ -308,7 +308,7 @@ func TestFeedbackAttachesToLatestRevision(t *testing.T) {
 	now := time.Now().UTC().Format(time.RFC3339)
 	plan1 := models.DayPlan{
 		Date:       "2024-03-05",
-		Revision:   1,
+		Revision:   0, // Use auto-assignment
 		AcceptedAt: &now,
 		Slots: []models.Slot{
 			{
@@ -326,7 +326,7 @@ func TestFeedbackAttachesToLatestRevision(t *testing.T) {
 	// Create revision 2
 	plan2 := models.DayPlan{
 		Date:       "2024-03-05",
-		Revision:   2,
+		Revision:   0, // Use auto-assignment to create new revision
 		AcceptedAt: &now,
 		Slots: []models.Slot{
 			{

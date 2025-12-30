@@ -19,7 +19,7 @@ INSERT INTO plans_new (date, revision, accepted_at, deleted_at)
 SELECT date, 1, NULL, deleted_at FROM plans;
 
 -- Update slots table to include revision
--- Create new slots table (without foreign key initially)
+-- Create new slots table with foreign keys
 CREATE TABLE slots_new (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     plan_date TEXT NOT NULL,
@@ -30,7 +30,9 @@ CREATE TABLE slots_new (
     status TEXT,
     feedback_rating TEXT,
     feedback_note TEXT,
-    deleted_at TEXT NULL
+    deleted_at TEXT NULL,
+    FOREIGN KEY(plan_date, plan_revision) REFERENCES plans_new(date, revision),
+    FOREIGN KEY(task_id) REFERENCES tasks(id)
 );
 
 -- Copy existing slots data, assigning revision 1

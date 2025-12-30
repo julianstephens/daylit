@@ -72,7 +72,10 @@ func (m *Model) SetSize(width, height int) {
 
 func (m *Model) SetPlan(plan models.DayPlan, tasks []models.Task) {
 	m.Plan = &plan
-	m.LatestRevision = plan.Revision // Assume this is the latest when set
+	// Initialize LatestRevision only if it hasn't been set yet.
+	if m.LatestRevision == 0 {
+		m.LatestRevision = plan.Revision
+	}
 	for _, t := range tasks {
 		m.Tasks[t.ID] = t
 	}
