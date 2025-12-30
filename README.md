@@ -281,6 +281,79 @@ daylit day today
 daylit day 2025-01-15
 ```
 
+### `daylit backup`
+
+Manage database backups. The application automatically creates backups on startup (TUI) and when generating plans.
+
+#### `daylit backup` or `daylit backup create`
+
+Create a manual backup of the database.
+
+```bash
+daylit backup
+# or explicitly
+daylit backup create
+```
+
+Backups are stored in `~/.config/daylit/backups/` with the format `daylit-YYYYMMDD-HHMM.db`.
+
+#### `daylit backup list`
+
+List all available backups.
+
+```bash
+daylit backup list
+```
+
+Shows:
+- Timestamp of each backup
+- Filename
+- File size
+- Total number of backups (retains 14 most recent)
+
+#### `daylit backup restore`
+
+Restore the database from a backup file.
+
+```bash
+daylit backup restore <backup-file>
+```
+
+**Arguments:**
+
+- `backup-file`: Path or filename of the backup to restore. Can be:
+  - Just the filename (e.g., `daylit-20250130-1230.db`) - will look in the backup directory
+  - Full path to a backup file
+
+**Safety:**
+- Prompts for confirmation before restoring
+- Automatically creates a backup of the current database before restoring
+- Verifies backup file integrity before restoring
+
+**Example:**
+
+```bash
+# List available backups
+daylit backup list
+
+# Restore from a specific backup
+daylit backup restore daylit-20250130-1230.db
+
+# Restore from a backup at a specific path
+daylit backup restore /path/to/backup/daylit-20250130-1230.db
+```
+
+**Automatic Backups:**
+
+The application automatically creates backups:
+- When launching the TUI (`daylit tui` or `daylit`)
+- When generating a plan (`daylit plan`)
+- Before restoring from a backup
+
+Backup retention:
+- Keeps the 14 most recent backups
+- Automatically deletes older backups
+
 ## Configuration
 
 The default configuration file is located at `~/.config/daylit/daylit.db`.
@@ -358,14 +431,22 @@ daylit/
 │   └── daylit/
 │       └── main.go           # CLI interface using kong
 ├── internal/
+│   ├── backup/
+│   │   ├── backup.go          # Backup management and operations
+│   │   ├── backup_test.go     # Unit tests for backup
+│   │   └── integration_test.go # Integration tests for backup
+│   ├── cli/
+│   │   ├── backup.go          # Backup CLI commands
+│   │   ├── plan.go            # Plan CLI commands
+│   │   └── ...                # Other CLI commands
 │   ├── models/
-│   │   ├── task.go           # Task data models
-│   │   └── plan.go           # Plan and slot models
+│   │   ├── task.go            # Task data models
+│   │   └── plan.go            # Plan and slot models
 │   ├── scheduler/
-│   │   └── scheduler.go      # Scheduling algorithm
+│   │   └── scheduler.go       # Scheduling algorithm
 │   └── storage/
-│       ├── interface.go      # Storage interface
-│       └── sqlite_store.go   # SQLite storage implementation
+│       ├── interface.go       # Storage interface
+│       └── sqlite_store.go    # SQLite storage implementation
 ├── go.mod
 └── go.sum
 ```
