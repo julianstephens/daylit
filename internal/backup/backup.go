@@ -3,6 +3,7 @@ package backup
 import (
 	"database/sql"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -122,6 +123,22 @@ func (m *Manager) backupDatabase(destPath string) error {
 	// For SQLite databases, the safest approach is to use a VACUUM INTO command
 	// or a simple file copy when the database is properly closed
 
+	// Validate destination path to prevent path traversal attacks
+	// The path should be within the backup directory
+	if !filepath.IsAbs(destPath) {
+		return fmt.Errorf("destination path must be absolute")
+	}
+
+	// Ensure the destination is within expected backup directory
+	backupDir, err := filepath.Abs(m.backupDir)
+	if err != nil {
+		return fmt.Errorf("failed to resolve backup directory: %w", err)
+	}
+	destDir := filepath.Dir(destPath)
+	if destDir != backupDir {
+		return fmt.Errorf("destination path must be in backup directory: %s", backupDir)
+	}
+
 	// Open source database in read-only mode
 	srcDB, err := sql.Open("sqlite", m.dbPath+"?mode=ro")
 	if err != nil {
@@ -138,13 +155,18 @@ func (m *Manager) backupDatabase(destPath string) error {
 	// Use VACUUM INTO to create a clean copy of the database
 	// This is the recommended way to backup SQLite databases
 	// Note: VACUUM INTO requires SQLite 3.27.0 or later
-	// We use a parameterized query to prevent path injection
+	// We use parameterized query, but if that doesn't work, we fall back to direct query with validation
 	_, err = srcDB.Exec("VACUUM INTO ?", destPath)
 	if err != nil {
-		// If VACUUM INTO fails (might not be supported in all SQLite versions),
-		// fall back to file copy
-		srcDB.Close()
-		return copyFile(m.dbPath, destPath)
+		// Parameters don't work with VACUUM INTO in some SQLite versions
+		// Use direct query with validated path (already checked above)
+		query := fmt.Sprintf("VACUUM INTO '%s'", strings.ReplaceAll(destPath, "'", "''"))
+		_, err = srcDB.Exec(query)
+		if err != nil {
+			// If VACUUM INTO fails, fall back to file copy
+			srcDB.Close()
+			return copyFile(m.dbPath, destPath)
+		}
 	}
 
 	return nil
@@ -313,7 +335,7 @@ func (m *Manager) verifyBackup(path string) error {
 	return nil
 }
 
-// copyFile copies a file from src to dst
+// copyFile copies a file from src to dst using buffered I/O
 func copyFile(src, dst string) error {
 	sourceFile, err := os.Open(src)
 	if err != nil {
@@ -327,7 +349,8 @@ func copyFile(src, dst string) error {
 	}
 	defer destFile.Close()
 
-	if _, err := destFile.ReadFrom(sourceFile); err != nil {
+	// Use io.Copy which handles buffering internally
+	if _, err := io.Copy(destFile, sourceFile); err != nil {
 		return err
 	}
 

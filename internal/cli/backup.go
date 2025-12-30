@@ -72,7 +72,7 @@ func (c *BackupRestoreCmd) Run(ctx *Context) error {
 
 	// Determine the full path to the backup file
 	backupPath := c.BackupFile
-	
+
 	// If it's an absolute path, use it directly
 	if filepath.IsAbs(backupPath) {
 		// Verify absolute path exists
@@ -82,8 +82,12 @@ func (c *BackupRestoreCmd) Run(ctx *Context) error {
 	} else {
 		// For relative paths, first check current directory
 		if _, err := os.Stat(backupPath); err == nil {
-			// File exists in current directory
-			backupPath, _ = filepath.Abs(backupPath)
+			// File exists in current directory - convert to absolute path
+			absPath, err := filepath.Abs(backupPath)
+			if err != nil {
+				return fmt.Errorf("failed to resolve backup path: %w", err)
+			}
+			backupPath = absPath
 		} else {
 			// Check backup directory
 			possiblePath := filepath.Join(mgr.GetBackupDir(), c.BackupFile)
