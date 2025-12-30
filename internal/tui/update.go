@@ -134,7 +134,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.editingTask.DurationMin = dur
 			}
 			m.editingTask.Recurrence.Type = m.taskForm.Recurrence
-			interval, err := strconv.Atoi(m.taskForm.Interval)
+			intervalStr := strings.TrimSpace(m.taskForm.Interval)
+			interval, err := strconv.Atoi(intervalStr)
 			if err == nil {
 				m.editingTask.Recurrence.IntervalDays = interval
 			}
@@ -146,17 +147,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			// Check if task exists to decide Add vs Update
 			_, err = m.store.GetTask(m.editingTask.ID)
+			var saveErr error
 			if err != nil {
 				// Task doesn't exist, add it
-				m.store.AddTask(*m.editingTask)
+				saveErr = m.store.AddTask(*m.editingTask)
 			} else {
 				// Task exists, update it
-				m.store.UpdateTask(*m.editingTask)
+				saveErr = m.store.UpdateTask(*m.editingTask)
 			}
 
-			tasks, err := m.store.GetAllTasks()
-			if err == nil {
-				m.taskList.SetTasks(tasks)
+			// Only update task list if save was successful
+			if saveErr == nil {
+				tasks, err := m.store.GetAllTasks()
+				if err == nil {
+					m.taskList.SetTasks(tasks)
+				}
 			}
 			m.state = StateTasks
 		case huh.StateAborted:
@@ -193,7 +198,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				slot.Status = models.SlotStatusDone
 
-				// Update task stats
+				// Save plan first to ensure feedback is persisted
+				if err := m.store.SavePlan(plan); err != nil {
+					// On error, revert to previous state
+					m.state = m.previousState
+					return m, nil
+				}
+
+				// Update task stats only after plan is saved
 				task, err := m.store.GetTask(slot.TaskID)
 				if err == nil {
 					switch rating {
@@ -218,16 +230,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 					task.LastDone = today
 					task.SuccessStreak++
-					if err := m.store.UpdateTask(task); err != nil {
-						// On error, revert to previous state
-						m.state = m.previousState
-						return m, nil
-					}
-				}
-				if err := m.store.SavePlan(plan); err != nil {
-					// On error, revert to previous state
-					m.state = m.previousState
-					return m, nil
+					// Ignore task update errors to avoid inconsistency if it fails after plan save
+					m.store.UpdateTask(task)
 				}
 
 				// Refresh views
@@ -256,15 +260,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if err := m.store.DeleteTask(m.taskToDeleteID); err != nil {
 					// On error, silently return to tasks view
 					m.state = StateTasks
+					m.taskToDeleteID = ""
 					return m, nil
 				}
+				// Deletion succeeded - always refresh and clear state
 				tasks, err := m.store.GetAllTasks()
-				if err != nil {
-					// On error, silently return to tasks view
-					m.state = StateTasks
-					return m, nil
+				if err == nil {
+					m.taskList.SetTasks(tasks)
 				}
-				m.taskList.SetTasks(tasks)
 				m.state = StateTasks
 				m.taskToDeleteID = ""
 			case "n", "N", "esc", "q":
