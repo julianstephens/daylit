@@ -16,7 +16,7 @@ daylit restore plan <date>
 ```
 
 ## Behavior
-- Deleted tasks don't appear in listings or the TUI
+- Deleted tasks are hidden from listings and the TUI (not shown, not visually indicated as deleted)
 - Deleted tasks won't be scheduled in daily plans
 - All data is preserved and can be restored
 - Foreign key relationships remain intact

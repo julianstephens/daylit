@@ -339,14 +339,40 @@ func (s *SQLiteStore) UpdateTask(task models.Task) error {
 
 func (s *SQLiteStore) DeleteTask(id string) error {
 	// Soft delete: set deleted_at timestamp instead of removing the record
+	var deletedAt sql.NullString
+	err := s.db.QueryRow("SELECT deleted_at FROM tasks WHERE id = ?", id).Scan(&deletedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("task with id %s not found", id)
+		}
+		return fmt.Errorf("failed to check task existence: %w", err)
+	}
+
+	if deletedAt.Valid {
+		return fmt.Errorf("task with id %s is already deleted", id)
+	}
+
 	now := time.Now().UTC().Format(time.RFC3339)
-	_, err := s.db.Exec("UPDATE tasks SET deleted_at = ? WHERE id = ?", now, id)
+	_, err = s.db.Exec("UPDATE tasks SET deleted_at = ? WHERE id = ?", now, id)
 	return err
 }
 
 func (s *SQLiteStore) RestoreTask(id string) error {
 	// Restore a soft-deleted task by clearing deleted_at
-	_, err := s.db.Exec("UPDATE tasks SET deleted_at = NULL WHERE id = ?", id)
+	var deletedAt sql.NullString
+	err := s.db.QueryRow("SELECT deleted_at FROM tasks WHERE id = ?", id).Scan(&deletedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("task with id %s not found", id)
+		}
+		return fmt.Errorf("failed to check task existence: %w", err)
+	}
+	
+	if !deletedAt.Valid {
+		return fmt.Errorf("cannot restore a task that is not deleted: %s", id)
+	}
+
+	_, err = s.db.Exec("UPDATE tasks SET deleted_at = NULL WHERE id = ?", id)
 	return err
 }
 
@@ -374,8 +400,8 @@ func (s *SQLiteStore) SavePlan(plan models.DayPlan) error {
 		return err
 	}
 
-	// Delete existing slots for this plan
-	_, err = tx.Exec("DELETE FROM slots WHERE plan_date = ?", plan.Date)
+	// Delete existing non-soft-deleted slots for this plan to preserve soft-deleted slots
+	_, err = tx.Exec("DELETE FROM slots WHERE plan_date = ? AND deleted_at IS NULL", plan.Date)
 	if err != nil {
 		return err
 	}
@@ -423,7 +449,7 @@ func (s *SQLiteStore) GetPlan(date string) (models.DayPlan, error) {
 	}
 
 	if deletedAt.Valid {
-		return models.DayPlan{}, fmt.Errorf("plan is deleted for date: %s", date)
+		return models.DayPlan{}, fmt.Errorf("plan for date %s has been deleted; use 'daylit restore plan %s' to restore it", date, date)
 	}
 
 	plan := models.DayPlan{
@@ -463,12 +489,28 @@ func (s *SQLiteStore) GetPlan(date string) (models.DayPlan, error) {
 
 func (s *SQLiteStore) DeletePlan(date string) error {
 	// Soft delete: set deleted_at timestamp for the plan and its slots
-	now := time.Now().UTC().Format(time.RFC3339)
-
 	tx, err := s.db.Begin()
 	if err != nil {
 		return err
 	}
+
+	// Check if plan exists and is not already deleted
+	var deletedAt sql.NullString
+	err = tx.QueryRow("SELECT deleted_at FROM plans WHERE date = ?", date).Scan(&deletedAt)
+	if err != nil {
+		tx.Rollback()
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("plan not found for date: %s", date)
+		}
+		return err
+	}
+
+	if deletedAt.Valid {
+		tx.Rollback()
+		return fmt.Errorf("plan for date %s is already deleted", date)
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
 
 	// Soft delete the plan
 	if _, err := tx.Exec("UPDATE plans SET deleted_at = ? WHERE date = ?", now, date); err != nil {
@@ -492,14 +534,34 @@ func (s *SQLiteStore) RestorePlan(date string) error {
 		return err
 	}
 
+	// Check if plan exists and get its deleted_at timestamp
+	var planDeletedAt sql.NullString
+	err = tx.QueryRow("SELECT deleted_at FROM plans WHERE date = ?", date).Scan(&planDeletedAt)
+	if err != nil {
+		tx.Rollback()
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("plan not found for date: %s", date)
+		}
+		return err
+	}
+
+	if !planDeletedAt.Valid {
+		tx.Rollback()
+		return fmt.Errorf("plan is not deleted for date: %s", date)
+	}
+
 	// Restore the plan
 	if _, err := tx.Exec("UPDATE plans SET deleted_at = NULL WHERE date = ?", date); err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	// Restore any soft-deleted slots associated with the plan
-	if _, err := tx.Exec("UPDATE slots SET deleted_at = NULL WHERE plan_date = ?", date); err != nil {
+	// Restore only slots that share the same deleted_at timestamp as the plan.
+	// This avoids resurrecting slots that were independently soft-deleted at a different time.
+	if _, err := tx.Exec(
+		"UPDATE slots SET deleted_at = NULL WHERE plan_date = ? AND deleted_at = ?",
+		date, planDeletedAt.String,
+	); err != nil {
 		tx.Rollback()
 		return err
 	}
