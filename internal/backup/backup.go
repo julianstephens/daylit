@@ -58,6 +58,12 @@ func (m *Manager) ensureBackupDir() error {
 
 // CreateBackup creates a new backup of the database
 func (m *Manager) CreateBackup() (string, error) {
+	return m.createBackup(false)
+}
+
+// createBackup creates a new backup of the database
+// skipRotation parameter is used to prevent recursive backup creation during restore
+func (m *Manager) createBackup(skipRotation bool) (string, error) {
 	// Ensure backup directory exists
 	if err := m.ensureBackupDir(); err != nil {
 		return "", fmt.Errorf("failed to create backup directory: %w", err)
@@ -100,10 +106,12 @@ func (m *Manager) CreateBackup() (string, error) {
 		return "", fmt.Errorf("failed to backup database: %w", err)
 	}
 
-	// Rotate old backups
-	if err := m.rotateBackups(); err != nil {
-		// Log error but don't fail the backup operation
-		fmt.Fprintf(os.Stderr, "Warning: failed to rotate old backups: %v\n", err)
+	// Rotate old backups (unless this is part of a restore operation)
+	if !skipRotation {
+		if err := m.rotateBackups(); err != nil {
+			// Log error but don't fail the backup operation
+			fmt.Fprintf(os.Stderr, "Warning: failed to rotate old backups: %v\n", err)
+		}
 	}
 
 	return backupPath, nil
@@ -129,8 +137,10 @@ func (m *Manager) backupDatabase(destPath string) error {
 
 	// Use VACUUM INTO to create a clean copy of the database
 	// This is the recommended way to backup SQLite databases
-	query := fmt.Sprintf("VACUUM INTO '%s'", destPath)
-	if _, err := srcDB.Exec(query); err != nil {
+	// Note: VACUUM INTO requires SQLite 3.27.0 or later
+	// We use a parameterized query to prevent path injection
+	_, err = srcDB.Exec("VACUUM INTO ?", destPath)
+	if err != nil {
 		// If VACUUM INTO fails (might not be supported in all SQLite versions),
 		// fall back to file copy
 		srcDB.Close()
@@ -257,7 +267,8 @@ func (m *Manager) RestoreBackup(backupPath string) error {
 	// Create a backup of the current database before restoring
 	if _, err := os.Stat(m.dbPath); err == nil {
 		// Current database exists, backup it first
-		currentBackup, err := m.CreateBackup()
+		// Use skipRotation=true to prevent infinite recursion
+		currentBackup, err := m.createBackup(true)
 		if err != nil {
 			return fmt.Errorf("failed to backup current database before restore: %w", err)
 		}
@@ -274,7 +285,10 @@ func (m *Manager) RestoreBackup(backupPath string) error {
 
 	// Rename temporary file to actual database (atomic operation)
 	if err := os.Rename(tempPath, m.dbPath); err != nil {
-		os.Remove(tempPath)
+		// Clean up temp file on error
+		if removeErr := os.Remove(tempPath); removeErr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to remove temporary file %s: %v\n", tempPath, removeErr)
+		}
 		return fmt.Errorf("failed to restore database: %w", err)
 	}
 

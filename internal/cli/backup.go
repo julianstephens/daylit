@@ -72,23 +72,33 @@ func (c *BackupRestoreCmd) Run(ctx *Context) error {
 
 	// Determine the full path to the backup file
 	backupPath := c.BackupFile
-	if !filepath.IsAbs(backupPath) {
-		// If it's not an absolute path, check if it exists relative to backup directory
-		possiblePath := filepath.Join(mgr.GetBackupDir(), c.BackupFile)
-		if _, err := os.Stat(possiblePath); err == nil {
-			backupPath = possiblePath
+	
+	// If it's an absolute path, use it directly
+	if filepath.IsAbs(backupPath) {
+		// Verify absolute path exists
+		if _, err := os.Stat(backupPath); os.IsNotExist(err) {
+			return fmt.Errorf("backup file not found: %s", backupPath)
 		}
-	}
-
-	// Verify backup file exists
-	if _, err := os.Stat(backupPath); os.IsNotExist(err) {
-		return fmt.Errorf("backup file not found: %s", backupPath)
+	} else {
+		// For relative paths, first check current directory
+		if _, err := os.Stat(backupPath); err == nil {
+			// File exists in current directory
+			backupPath, _ = filepath.Abs(backupPath)
+		} else {
+			// Check backup directory
+			possiblePath := filepath.Join(mgr.GetBackupDir(), c.BackupFile)
+			if _, err := os.Stat(possiblePath); err == nil {
+				backupPath = possiblePath
+			} else {
+				return fmt.Errorf("backup file not found: tried current directory and %s", mgr.GetBackupDir())
+			}
+		}
 	}
 
 	// Show warning and ask for confirmation
 	fmt.Println("⚠️  WARNING: This will replace your current database with the backup.")
 	fmt.Println("A backup of your current database will be created before restoring.")
-	fmt.Printf("\nRestore from: %s\n", filepath.Base(backupPath))
+	fmt.Printf("\nRestore from: %s\n", backupPath)
 	fmt.Print("Continue? [y/N]: ")
 
 	reader := bufio.NewReader(os.Stdin)
