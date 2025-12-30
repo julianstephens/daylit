@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	_ "modernc.org/sqlite"
@@ -337,5 +338,46 @@ func TestMigrationFilenameValidation(t *testing.T) {
 	_, err := runner.ReadMigrationFiles()
 	if err == nil {
 		t.Error("ReadMigrationFiles should have failed with invalid filename format")
+	}
+}
+
+func TestMigrationVersionValidation(t *testing.T) {
+	db, _, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	// Test zero version number
+	migrationsPath := setupTestMigrations(t, map[string]string{
+		"000_init.sql": `CREATE TABLE users (id INTEGER);`,
+	})
+
+	runner := NewRunner(db, migrationsPath)
+
+	_, err := runner.ReadMigrationFiles()
+	if err == nil {
+		t.Error("ReadMigrationFiles should have failed with version 0")
+	}
+	if err != nil && !strings.Contains(err.Error(), "version must be at least 1") {
+		t.Errorf("expected version validation error, got: %v", err)
+	}
+}
+
+func TestDuplicateVersionDetection(t *testing.T) {
+	db, _, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	// Two migrations with same version number
+	migrationsPath := setupTestMigrations(t, map[string]string{
+		"001_init.sql":  `CREATE TABLE users (id INTEGER);`,
+		"001_other.sql": `CREATE TABLE posts (id INTEGER);`,
+	})
+
+	runner := NewRunner(db, migrationsPath)
+
+	_, err := runner.ReadMigrationFiles()
+	if err == nil {
+		t.Error("ReadMigrationFiles should have failed with duplicate version")
+	}
+	if err != nil && !strings.Contains(err.Error(), "duplicate migration version") {
+		t.Errorf("expected duplicate version error, got: %v", err)
 	}
 }

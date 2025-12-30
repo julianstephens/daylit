@@ -107,6 +107,9 @@ func (r *Runner) ReadMigrationFiles() ([]Migration, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid version number in filename %s: %w", file.Name(), err)
 		}
+		if version < 1 {
+			return nil, fmt.Errorf("invalid version number in filename %s: version must be at least 1", file.Name())
+		}
 
 		// Read migration SQL
 		content, err := os.ReadFile(filepath.Join(r.migrationsPath, file.Name()))
@@ -125,6 +128,13 @@ func (r *Runner) ReadMigrationFiles() ([]Migration, error) {
 	sort.Slice(migrations, func(i, j int) bool {
 		return migrations[i].Version < migrations[j].Version
 	})
+
+	// Validate that there are no duplicate versions
+	for i := 1; i < len(migrations); i++ {
+		if migrations[i].Version == migrations[i-1].Version {
+			return nil, fmt.Errorf("duplicate migration version %d", migrations[i].Version)
+		}
+	}
 
 	return migrations, nil
 }
@@ -200,24 +210,28 @@ func (r *Runner) ApplyMigrations(logFn func(string)) (int, error) {
 		if err != nil {
 			return appliedCount, fmt.Errorf("failed to begin transaction for migration %d: %w", migration.Version, err)
 		}
-		defer tx.Rollback() // Safe to call after Commit()
 
 		// Execute the migration SQL
 		if _, err := tx.Exec(migration.SQL); err != nil {
+			_ = tx.Rollback()
 			return appliedCount, fmt.Errorf("failed to apply migration %d (%s): %w", migration.Version, migration.Name, err)
 		}
 
 		// Update the schema version within the same transaction
 		if _, err := tx.Exec("DELETE FROM schema_version"); err != nil {
+			_ = tx.Rollback()
 			return appliedCount, fmt.Errorf("failed to clear version in migration %d: %w", migration.Version, err)
 		}
 
 		if _, err := tx.Exec("INSERT INTO schema_version (version) VALUES (?)", migration.Version); err != nil {
+			_ = tx.Rollback()
 			return appliedCount, fmt.Errorf("failed to set version in migration %d: %w", migration.Version, err)
 		}
 
 		// Commit the transaction
 		if err := tx.Commit(); err != nil {
+			// Commit should normally finalize the transaction; rollback here is best-effort.
+			_ = tx.Rollback()
 			return appliedCount, fmt.Errorf("failed to commit migration %d: %w", migration.Version, err)
 		}
 
