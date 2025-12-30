@@ -305,11 +305,11 @@ func TestFeedbackAttachesToLatestRevision(t *testing.T) {
 	}
 
 	// Create revision 1
-	now := time.Now().UTC().Format(time.RFC3339)
+	now1 := time.Now().UTC().Format(time.RFC3339)
 	plan1 := models.DayPlan{
 		Date:       "2024-03-05",
 		Revision:   0, // Use auto-assignment
-		AcceptedAt: &now,
+		AcceptedAt: &now1,
 		Slots: []models.Slot{
 			{
 				Start:  "09:00",
@@ -323,11 +323,13 @@ func TestFeedbackAttachesToLatestRevision(t *testing.T) {
 		t.Fatalf("failed to save plan1: %v", err)
 	}
 
-	// Create revision 2
+	// Create revision 2 with a later timestamp to simulate real-world usage
+	time.Sleep(10 * time.Millisecond) // Ensure different timestamp
+	now2 := time.Now().UTC().Format(time.RFC3339)
 	plan2 := models.DayPlan{
 		Date:       "2024-03-05",
 		Revision:   0, // Use auto-assignment to create new revision
-		AcceptedAt: &now,
+		AcceptedAt: &now2,
 		Slots: []models.Slot{
 			{
 				Start:  "10:00",

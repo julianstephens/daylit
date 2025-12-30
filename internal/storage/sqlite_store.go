@@ -509,11 +509,11 @@ func (s *SQLiteStore) GetPlan(date string) (models.DayPlan, error) {
 func (s *SQLiteStore) GetLatestPlanRevision(date string) (models.DayPlan, error) {
 	// Get the latest non-deleted revision for this date
 	var revision int
-	var acceptedAt, deletedAt sql.NullString
+	var acceptedAt sql.NullString
 	err := s.db.QueryRow(
-		"SELECT revision, accepted_at, deleted_at FROM plans WHERE date = ? AND deleted_at IS NULL ORDER BY revision DESC LIMIT 1",
+		"SELECT revision, accepted_at FROM plans WHERE date = ? AND deleted_at IS NULL ORDER BY revision DESC LIMIT 1",
 		date,
-	).Scan(&revision, &acceptedAt, &deletedAt)
+	).Scan(&revision, &acceptedAt)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -522,7 +522,7 @@ func (s *SQLiteStore) GetLatestPlanRevision(date string) (models.DayPlan, error)
 		return models.DayPlan{}, err
 	}
 
-	return s.getPlanByRevision(date, revision, acceptedAt, deletedAt)
+	return s.getPlanByRevision(date, revision, acceptedAt, sql.NullString{})
 }
 
 func (s *SQLiteStore) GetPlanRevision(date string, revision int) (models.DayPlan, error) {
@@ -642,10 +642,6 @@ func (s *SQLiteStore) RestorePlan(date string) error {
 			return fmt.Errorf("no deleted plans found for date: %s", date)
 		}
 		return err
-	}
-
-	if !planDeletedAt.Valid {
-		return fmt.Errorf("no deleted plans found for date: %s", date)
 	}
 
 	// Restore all plan revisions that were deleted at the same time

@@ -32,8 +32,8 @@ type Slot struct {
 }
 
 type DayPlan struct {
-	Date       string  `json:"date"` // YYYY-MM-DD format
-	Revision   int     `json:"revision"`             // Plan revision: 0 = auto-assign latest, 1+ = specific saved revisions
+	Date       string  `json:"date"`                  // YYYY-MM-DD format
+	Revision   int     `json:"revision"`              // Plan revision: 0 = auto-assign latest, 1+ = specific saved revisions
 	AcceptedAt *string `json:"accepted_at,omitempty"` // RFC3339 timestamp when this revision was accepted; nil if never accepted
 	Slots      []Slot  `json:"slots"`
 	DeletedAt  *string `json:"deleted_at,omitempty"` // RFC3339 timestamp

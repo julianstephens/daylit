@@ -36,6 +36,7 @@ CREATE TABLE slots_new (
 );
 
 -- Copy existing slots data, assigning revision 1
+-- Note: SQLite's AUTOINCREMENT will track the highest id value and continue from max(id)+1
 INSERT INTO slots_new (id, plan_date, plan_revision, start_time, end_time, task_id, status, feedback_rating, feedback_note, deleted_at)
 SELECT id, plan_date, 1, start_time, end_time, task_id, status, feedback_rating, feedback_note, deleted_at FROM slots;
 

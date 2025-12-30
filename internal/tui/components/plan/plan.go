@@ -72,10 +72,9 @@ func (m *Model) SetSize(width, height int) {
 
 func (m *Model) SetPlan(plan models.DayPlan, tasks []models.Task) {
 	m.Plan = &plan
-	// Initialize LatestRevision only if it hasn't been set yet.
-	if m.LatestRevision == 0 {
-		m.LatestRevision = plan.Revision
-	}
+	// By default, assume the current plan's revision is the latest known for this view.
+	// Callers can override this via SetLatestRevision when they know of a newer revision.
+	m.LatestRevision = plan.Revision
 	for _, t := range tasks {
 		m.Tasks[t.ID] = t
 	}

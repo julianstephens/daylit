@@ -267,7 +267,9 @@ func (s *JSONStore) SavePlan(plan models.DayPlan) error {
 		}
 	}
 
-	// Filter out soft-deleted slots to keep behavior consistent with SQLite
+	// Filter out soft-deleted slots so that SavePlan only persists non-deleted slots,
+	// matching the SQLite store's behavior where existing non-soft-deleted slots are
+	// hard-deleted before new ones are inserted during the save operation.
 	if len(plan.Slots) > 0 {
 		filteredSlots := make([]models.Slot, 0, len(plan.Slots))
 		for _, slot := range plan.Slots {
