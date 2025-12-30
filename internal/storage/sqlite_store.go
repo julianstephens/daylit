@@ -390,12 +390,14 @@ func (s *SQLiteStore) SavePlan(plan models.DayPlan) error {
 		return fmt.Errorf("cannot save slots to a deleted plan: %s", plan.Date)
 	}
 
-	// Insert or update plan with deleted_at
-	var planDeletedAt sql.NullString
+	// Prevent bypassing the delete/restore workflow by ensuring plans cannot be saved
+	// with DeletedAt manually set. Use DeletePlan/RestorePlan for managing deletion state.
 	if plan.DeletedAt != nil {
-		planDeletedAt = sql.NullString{String: *plan.DeletedAt, Valid: true}
+		return fmt.Errorf("cannot save a plan with deleted_at set; use DeletePlan to soft-delete or RestorePlan to restore")
 	}
-	_, err = tx.Exec("INSERT OR REPLACE INTO plans (date, deleted_at) VALUES (?, ?)", plan.Date, planDeletedAt)
+
+	// Insert or update plan (deleted_at will always be NULL for SavePlan)
+	_, err = tx.Exec("INSERT OR REPLACE INTO plans (date, deleted_at) VALUES (?, NULL)", plan.Date)
 	if err != nil {
 		return err
 	}

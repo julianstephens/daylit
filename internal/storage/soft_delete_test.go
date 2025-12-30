@@ -441,6 +441,249 @@ func TestSoftDeletePreservesData(t *testing.T) {
 	}
 }
 
+// Edge case tests
+
+func TestDeleteAlreadyDeletedTask(t *testing.T) {
+	store, cleanup := setupTestSQLiteStore(t)
+	defer cleanup()
+
+	// Create and add a test task
+	task := models.Task{
+		ID:          "task-double-delete",
+		Name:        "Double Delete Task",
+		Kind:        models.TaskKindFlexible,
+		DurationMin: 30,
+		Recurrence: models.Recurrence{
+			Type: models.RecurrenceDaily,
+		},
+		Priority: 1,
+		Active:   true,
+	}
+
+	if err := store.AddTask(task); err != nil {
+		t.Fatalf("failed to add task: %v", err)
+	}
+
+	// Delete the task once
+	if err := store.DeleteTask(task.ID); err != nil {
+		t.Fatalf("failed to delete task: %v", err)
+	}
+
+	// Try to delete again - should return error
+	err := store.DeleteTask(task.ID)
+	if err == nil {
+		t.Error("expected error when deleting already deleted task, got nil")
+	}
+}
+
+func TestRestoreNonDeletedTask(t *testing.T) {
+	store, cleanup := setupTestSQLiteStore(t)
+	defer cleanup()
+
+	// Create and add a test task (not deleted)
+	task := models.Task{
+		ID:          "task-restore-active",
+		Name:        "Restore Active Task",
+		Kind:        models.TaskKindFlexible,
+		DurationMin: 30,
+		Recurrence: models.Recurrence{
+			Type: models.RecurrenceDaily,
+		},
+		Priority: 1,
+		Active:   true,
+	}
+
+	if err := store.AddTask(task); err != nil {
+		t.Fatalf("failed to add task: %v", err)
+	}
+
+	// Try to restore a non-deleted task - should return error
+	err := store.RestoreTask(task.ID)
+	if err == nil {
+		t.Error("expected error when restoring non-deleted task, got nil")
+	}
+}
+
+func TestDeleteAlreadyDeletedPlan(t *testing.T) {
+	store, cleanup := setupTestSQLiteStore(t)
+	defer cleanup()
+
+	// Create a task
+	task := models.Task{
+		ID:          "task-plan-double-delete",
+		Name:        "Plan Double Delete Task",
+		Kind:        models.TaskKindFlexible,
+		DurationMin: 30,
+		Recurrence: models.Recurrence{
+			Type: models.RecurrenceDaily,
+		},
+		Priority: 1,
+		Active:   true,
+	}
+	if err := store.AddTask(task); err != nil {
+		t.Fatalf("failed to add task: %v", err)
+	}
+
+	// Create and save a plan
+	plan := models.DayPlan{
+		Date: "2024-02-01",
+		Slots: []models.Slot{
+			{
+				Start:  "09:00",
+				End:    "09:30",
+				TaskID: task.ID,
+				Status: models.SlotStatusPlanned,
+			},
+		},
+	}
+
+	if err := store.SavePlan(plan); err != nil {
+		t.Fatalf("failed to save plan: %v", err)
+	}
+
+	// Delete the plan once
+	if err := store.DeletePlan(plan.Date); err != nil {
+		t.Fatalf("failed to delete plan: %v", err)
+	}
+
+	// Try to delete again - should return error
+	err := store.DeletePlan(plan.Date)
+	if err == nil {
+		t.Error("expected error when deleting already deleted plan, got nil")
+	}
+}
+
+func TestRestoreNonDeletedPlan(t *testing.T) {
+	store, cleanup := setupTestSQLiteStore(t)
+	defer cleanup()
+
+	// Create a task
+	task := models.Task{
+		ID:          "task-restore-active-plan",
+		Name:        "Restore Active Plan Task",
+		Kind:        models.TaskKindFlexible,
+		DurationMin: 30,
+		Recurrence: models.Recurrence{
+			Type: models.RecurrenceDaily,
+		},
+		Priority: 1,
+		Active:   true,
+	}
+	if err := store.AddTask(task); err != nil {
+		t.Fatalf("failed to add task: %v", err)
+	}
+
+	// Create and save a plan (not deleted)
+	plan := models.DayPlan{
+		Date: "2024-02-02",
+		Slots: []models.Slot{
+			{
+				Start:  "10:00",
+				End:    "10:30",
+				TaskID: task.ID,
+				Status: models.SlotStatusPlanned,
+			},
+		},
+	}
+
+	if err := store.SavePlan(plan); err != nil {
+		t.Fatalf("failed to save plan: %v", err)
+	}
+
+	// Try to restore a non-deleted plan - should return error
+	err := store.RestorePlan(plan.Date)
+	if err == nil {
+		t.Error("expected error when restoring non-deleted plan, got nil")
+	}
+}
+
+func TestRestorePlanTimestampMatching(t *testing.T) {
+	store, cleanup := setupTestSQLiteStore(t)
+	defer cleanup()
+
+	// Create a task
+	task := models.Task{
+		ID:          "task-timestamp-match",
+		Name:        "Timestamp Match Task",
+		Kind:        models.TaskKindFlexible,
+		DurationMin: 30,
+		Recurrence: models.Recurrence{
+			Type: models.RecurrenceDaily,
+		},
+		Priority: 1,
+		Active:   true,
+	}
+	if err := store.AddTask(task); err != nil {
+		t.Fatalf("failed to add task: %v", err)
+	}
+
+	// Create a plan with two slots
+	plan := models.DayPlan{
+		Date: "2024-02-03",
+		Slots: []models.Slot{
+			{
+				Start:  "09:00",
+				End:    "09:30",
+				TaskID: task.ID,
+				Status: models.SlotStatusPlanned,
+			},
+			{
+				Start:  "10:00",
+				End:    "10:30",
+				TaskID: task.ID,
+				Status: models.SlotStatusPlanned,
+			},
+		},
+	}
+
+	if err := store.SavePlan(plan); err != nil {
+		t.Fatalf("failed to save plan: %v", err)
+	}
+
+	// Manually soft-delete one slot individually (simulating a slot being deleted before the plan)
+	// This requires direct database access since there's no API for individual slot deletion yet
+	db, err := store.GetDB()
+	if err != nil {
+		t.Fatalf("failed to get database: %v", err)
+	}
+
+	earlyDeleteTime := "2024-02-03T08:00:00Z"
+	_, err = db.Exec("UPDATE slots SET deleted_at = ? WHERE plan_date = ? AND start_time = ?", 
+		earlyDeleteTime, plan.Date, "09:00")
+	if err != nil {
+		t.Fatalf("failed to manually delete slot: %v", err)
+	}
+
+	// Now delete the entire plan (this should soft-delete the remaining slot with a different timestamp)
+	if err := store.DeletePlan(plan.Date); err != nil {
+		t.Fatalf("failed to delete plan: %v", err)
+	}
+
+	// Restore the plan
+	if err := store.RestorePlan(plan.Date); err != nil {
+		t.Fatalf("failed to restore plan: %v", err)
+	}
+
+	// Verify the plan is restored
+	restoredPlan, err := store.GetPlan(plan.Date)
+	if err != nil {
+		t.Fatalf("failed to get restored plan: %v", err)
+	}
+
+	// The restored plan should only have 1 slot (the one that was deleted with the plan)
+	// The slot that was individually deleted earlier should NOT be restored
+	if len(restoredPlan.Slots) != 1 {
+		t.Errorf("expected 1 slot after restore (only plan-level deletion), got %d", len(restoredPlan.Slots))
+	}
+
+	// Verify the restored slot is the correct one (10:00-10:30)
+	if len(restoredPlan.Slots) == 1 {
+		if restoredPlan.Slots[0].Start != "10:00" {
+			t.Errorf("expected restored slot to start at 10:00, got %s", restoredPlan.Slots[0].Start)
+		}
+	}
+}
+
 // JSONStore Tests
 
 func setupTestJSONStore(t *testing.T) (*JSONStore, func()) {

@@ -210,6 +210,12 @@ func (s *JSONStore) SavePlan(plan models.DayPlan) error {
 		return fmt.Errorf("cannot save slots to a deleted plan: %s", plan.Date)
 	}
 
+	// Prevent bypassing the delete/restore workflow by ensuring plans cannot be saved
+	// with DeletedAt manually set. Use DeletePlan/RestorePlan for managing deletion state.
+	if plan.DeletedAt != nil {
+		return fmt.Errorf("cannot save a plan with deleted_at set; use DeletePlan to soft-delete or RestorePlan to restore")
+	}
+
 	// Filter out soft-deleted slots to keep behavior consistent with SQLite
 	// which hard-deletes existing slots before inserting
 	if len(plan.Slots) > 0 {
@@ -232,8 +238,11 @@ func (s *JSONStore) GetPlan(date string) (models.DayPlan, error) {
 	}
 
 	plan, ok := s.store.Plans[date]
-	if !ok || plan.DeletedAt != nil {
+	if !ok {
 		return models.DayPlan{}, fmt.Errorf("no plan found for date: %s", date)
+	}
+	if plan.DeletedAt != nil {
+		return models.DayPlan{}, fmt.Errorf("plan for date %s has been deleted; use 'daylit restore plan %s' to restore it", date, date)
 	}
 
 	// Filter out soft-deleted slots before returning the plan
@@ -258,6 +267,12 @@ func (s *JSONStore) DeletePlan(date string) error {
 	plan, ok := s.store.Plans[date]
 	if !ok {
 		return fmt.Errorf("plan not found for date: %s", date)
+	}
+
+	// Do not allow deleting an already soft-deleted plan, for consistency
+	// with other storage backends (e.g. SQLiteStore).
+	if plan.DeletedAt != nil {
+		return fmt.Errorf("plan for date %s is already deleted", date)
 	}
 
 	// Soft delete: set deleted_at timestamp for plan and all its slots
