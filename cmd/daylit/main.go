@@ -29,6 +29,13 @@ const (
 	minTaskDurationMin             = 10   // Minimum task duration in minutes
 )
 
+func init() {
+	// Compile-time assertion: ensure EMA weights sum to 1.0
+	if feedbackExistingWeight+feedbackNewWeight != 1.0 {
+		panic("feedbackExistingWeight and feedbackNewWeight must sum to 1.0")
+	}
+}
+
 var CLI struct {
 	Version kong.VersionFlag
 	Config  string `help:"Config file path." type:"path" default:"~/.config/daylit/state.json"`
