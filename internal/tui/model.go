@@ -59,15 +59,15 @@ type Model struct {
 
 func NewModel(store storage.Provider, sched *scheduler.Scheduler) Model {
 	today := time.Now().Format("2006-01-02")
-	planData, err := store.GetPlan(today)
+	planData, planErr := store.GetPlan(today)
 	pm := plan.New(0, 0)
 	nm := now.New()
-	tasks, err := store.GetAllTasks()
-	if err != nil {
-		fmt.Printf("warning: failed to load tasks during initialization: %v\n", err)
+	tasks, taskErr := store.GetAllTasks()
+	if taskErr != nil {
+		fmt.Printf("warning: failed to load tasks during initialization: %v\n", taskErr)
 		tasks = []models.Task{} // Initialize with empty task list on error
 	}
-	if err == nil {
+	if planErr == nil {
 		pm.SetPlan(planData, tasks)
 		nm.SetPlan(planData, tasks)
 	}
