@@ -68,6 +68,9 @@ func (c *TaskEditCmd) Run(ctx *Context) error {
 	}
 
 	if c.Interval != nil {
+		if *c.Interval <= 0 {
+			return fmt.Errorf("interval must be positive")
+		}
 		task.Recurrence.IntervalDays = *c.Interval
 	}
 
