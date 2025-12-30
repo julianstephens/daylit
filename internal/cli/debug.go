@@ -1,11 +1,11 @@
 package cli
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
-
-	"github.com/julianstephens/daylit/internal/storage"
 )
 
 type DebugCmd struct {
@@ -58,7 +58,7 @@ func (cmd *DebugDumpPlanCmd) Run(ctx *Context) error {
 	plan, err := ctx.Store.GetPlan(date)
 	if err != nil {
 		// Try to provide a helpful error message
-		if err.Error() == "sql: no rows in result set" || err.Error() == "plan not found" {
+		if errors.Is(err, sql.ErrNoRows) || err.Error() == "plan not found" {
 			return fmt.Errorf("no plan found for date: %s", date)
 		}
 		return fmt.Errorf("failed to get plan: %w", err)
@@ -88,11 +88,8 @@ func (cmd *DebugDumpTaskCmd) Run(ctx *Context) error {
 	task, err := ctx.Store.GetTask(cmd.ID)
 	if err != nil {
 		// Check if it's a not found error
-		if _, ok := ctx.Store.(*storage.SQLiteStore); ok {
-			// For SQLite, sql.ErrNoRows means not found
-			if err.Error() == "sql: no rows in result set" {
-				return fmt.Errorf("task not found: %s", cmd.ID)
-			}
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("task not found: %s", cmd.ID)
 		}
 		return fmt.Errorf("failed to get task: %w", err)
 	}

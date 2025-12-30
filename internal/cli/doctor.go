@@ -28,22 +28,30 @@ func (cmd *DoctorCmd) Run(ctx *Context) error {
 		dbReachable = true
 	}
 
-	// Check 2: Schema version valid
-	if err := checkSchemaVersion(ctx); err != nil {
-		fmt.Printf("❌ Schema version: FAIL\n")
-		fmt.Printf("   Error: %v\n", err)
-		hasError = true
+	// Check 2: Schema version valid (only if DB is reachable)
+	if dbReachable {
+		if err := checkSchemaVersion(ctx); err != nil {
+			fmt.Printf("❌ Schema version: FAIL\n")
+			fmt.Printf("   Error: %v\n", err)
+			hasError = true
+		} else {
+			fmt.Printf("✓ Schema version: OK\n")
+		}
 	} else {
-		fmt.Printf("✓ Schema version: OK\n")
+		fmt.Printf("⊘ Schema version: SKIPPED (database not reachable)\n")
 	}
 
-	// Check 3: Migrations complete
-	if err := checkMigrationsComplete(ctx); err != nil {
-		fmt.Printf("❌ Migrations complete: FAIL\n")
-		fmt.Printf("   Error: %v\n", err)
-		hasError = true
+	// Check 3: Migrations complete (only if DB is reachable)
+	if dbReachable {
+		if err := checkMigrationsComplete(ctx); err != nil {
+			fmt.Printf("❌ Migrations complete: FAIL\n")
+			fmt.Printf("   Error: %v\n", err)
+			hasError = true
+		} else {
+			fmt.Printf("✓ Migrations complete: OK\n")
+		}
 	} else {
-		fmt.Printf("✓ Migrations complete: OK\n")
+		fmt.Printf("⊘ Migrations complete: SKIPPED (database not reachable)\n")
 	}
 
 	// Check 4: Backups present (warning only)
