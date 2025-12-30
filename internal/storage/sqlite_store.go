@@ -664,6 +664,9 @@ func (s *SQLiteStore) GetConfigPath() string {
 	return s.path
 }
 
+// GetDB returns the underlying database connection.
+// Returns nil if the database has not been initialized or loaded.
+// Callers should use Load() before calling this method.
 func (s *SQLiteStore) GetDB() *sql.DB {
 	return s.db
 }

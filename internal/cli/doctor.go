@@ -218,12 +218,5 @@ func checkClockTimezone() error {
 		return fmt.Errorf("system time appears incorrect: %s", now.Format(time.RFC3339))
 	}
 
-	// Check if timezone is set
-	_, offset := now.Zone()
-	if offset == 0 && now.Location() == time.UTC {
-		// This might be intentional, so just note it
-		fmt.Printf("   Note: timezone is UTC\n")
-	}
-
 	return nil
 }

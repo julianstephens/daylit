@@ -88,8 +88,7 @@ func (cmd *DebugDumpTaskCmd) Run(ctx *Context) error {
 	task, err := ctx.Store.GetTask(cmd.ID)
 	if err != nil {
 		// Check if it's a not found error
-		sqliteStore, ok := ctx.Store.(*storage.SQLiteStore)
-		if ok && sqliteStore != nil {
+		if _, ok := ctx.Store.(*storage.SQLiteStore); ok {
 			// For SQLite, sql.ErrNoRows means not found
 			if err.Error() == "sql: no rows in result set" {
 				return fmt.Errorf("task not found: %s", cmd.ID)
