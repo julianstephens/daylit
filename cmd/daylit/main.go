@@ -7,14 +7,15 @@ import (
 	"github.com/alecthomas/kong"
 
 	"github.com/julianstephens/daylit/internal/cli"
+	"github.com/julianstephens/daylit/internal/constants"
 	"github.com/julianstephens/daylit/internal/scheduler"
 	"github.com/julianstephens/daylit/internal/storage"
 )
 
 func init() {
 	// Compile-time assertion: ensure EMA weights sum to 1.0
-	if cli.FeedbackExistingWeight+cli.FeedbackNewWeight != 1.0 {
-		panic("cli.FeedbackExistingWeight and cli.FeedbackNewWeight must sum to 1.0")
+	if constants.FeedbackExistingWeight+constants.FeedbackNewWeight != 1.0 {
+		panic("constants.FeedbackExistingWeight and constants.FeedbackNewWeight must sum to 1.0")
 	}
 }
 

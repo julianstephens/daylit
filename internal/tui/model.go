@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/charmbracelet/bubbles/help"
@@ -61,7 +62,11 @@ func NewModel(store storage.Provider, sched *scheduler.Scheduler) Model {
 	planData, err := store.GetPlan(today)
 	pm := plan.New(0, 0)
 	nm := now.New()
-	tasks, _ := store.GetAllTasks()
+	tasks, err := store.GetAllTasks()
+	if err != nil {
+		fmt.Printf("warning: failed to load tasks during initialization: %v\n", err)
+		tasks = []models.Task{} // Initialize with empty task list on error
+	}
 	if err == nil {
 		pm.SetPlan(planData, tasks)
 		nm.SetPlan(planData, tasks)
