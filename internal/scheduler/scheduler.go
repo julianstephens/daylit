@@ -97,6 +97,7 @@ func (s *Scheduler) GeneratePlan(date string, tasks []models.Task, dayStart, day
 
 	scheduledSlots := make([]models.Slot, 0)
 	usedTasks := make(map[string]bool)
+	unscheduledTasks := make([]models.Task, 0)
 
 	// Try to place each task in any available block
 	for _, task := range candidateTasks {
@@ -142,9 +143,15 @@ func (s *Scheduler) GeneratePlan(date string, tasks []models.Task, dayStart, day
 		}
 
 		if !placed {
-			// Task couldn't be scheduled
-			continue
+			// Track tasks that couldn't be scheduled
+			unscheduledTasks = append(unscheduledTasks, task)
 		}
+	}
+
+	// Log unscheduled tasks for debugging
+	if len(unscheduledTasks) > 0 {
+		// Note: In v0.2, consider returning unscheduled tasks to show to user
+		_ = unscheduledTasks
 	}
 
 	// Combine fixed and flexible slots, then sort
@@ -197,7 +204,8 @@ func shouldScheduleTask(task models.Task, date time.Time) bool {
 		if err != nil {
 			return false
 		}
-		daysSince := int(date.Sub(lastDone).Hours() / 24)
+		// Use date-based arithmetic to avoid DST issues
+		daysSince := int(date.Sub(lastDone).Hours()/24 + 0.5) // Round to nearest day
 		return daysSince >= task.Recurrence.IntervalDays
 	case models.RecurrenceAdHoc:
 		return false // Only schedule if explicitly marked (not implemented in v0.1)
@@ -216,7 +224,8 @@ func calculateLateness(task models.Task, date time.Time) float64 {
 		return 0.0
 	}
 
-	daysSince := date.Sub(lastDone).Hours() / 24
+	// Use date-based arithmetic to avoid DST issues
+	daysSince := date.Sub(lastDone).Hours()/24 + 0.5 // Round to nearest day
 
 	interval := float64(task.Recurrence.IntervalDays)
 	if interval == 0 {

@@ -36,7 +36,7 @@ func New(configPath string) (*Storage, error) {
 func (s *Storage) Init() error {
 	// Create config directory if it doesn't exist
 	dir := filepath.Dir(s.path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0700); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
@@ -91,7 +91,7 @@ func (s *Storage) save() error {
 		return fmt.Errorf("failed to serialize storage: %w", err)
 	}
 
-	if err := os.WriteFile(s.path, data, 0644); err != nil {
+	if err := os.WriteFile(s.path, data, 0600); err != nil {
 		return fmt.Errorf("failed to write storage: %w", err)
 	}
 
@@ -175,6 +175,13 @@ func (s *Storage) GetPlan(date string) (models.DayPlan, error) {
 	return plan, nil
 }
 
+// GetConfigPath returns the path to the underlying configuration/storage file.
+//
+// Concurrency note:
+//   - Storage is not safe for concurrent use by multiple goroutines without external
+//     synchronization.
+//   - Running multiple daylit processes that share the same storage/config path at the
+//     same time is not supported and may lead to data loss or corruption.
 func (s *Storage) GetConfigPath() string {
 	return s.path
 }

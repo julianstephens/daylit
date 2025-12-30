@@ -18,10 +18,15 @@ import (
 )
 
 const (
-	// Feedback adjustment constants
-	durationSmoothingOld = 0.8 // Weight for existing average
-	durationSmoothingNew = 0.2 // Weight for new actual duration
-	durationReduction    = 0.9 // Factor to reduce duration when task is too much
+	// Feedback adjustment constants:
+	// - feedbackExistingWeight and feedbackNewWeight are exponential moving average (EMA)
+	//   weights for the existing average and the new actual duration. They must sum to 1.0.
+	// - feedbackTooMuchReductionFactor is an independent multiplicative scaling factor
+	//   applied to reduce a task's duration when feedback indicates it is too much.
+	feedbackExistingWeight         = 0.8  // EMA weight for existing average duration
+	feedbackNewWeight              = 0.2  // EMA weight for new actual duration
+	feedbackTooMuchReductionFactor = 0.9  // Scaling factor applied when reducing task duration
+	minTaskDurationMin             = 10   // Minimum task duration in minutes
 )
 
 var CLI struct {
@@ -257,7 +262,7 @@ func (c *NowCmd) Run(ctx *Context) error {
 
 	now := time.Now()
 	dateStr := now.Format("2006-01-02")
-	currentTime := fmt.Sprintf("%02d:%02d", now.Hour(), now.Minute())
+	currentMinutes := now.Hour()*60 + now.Minute()
 
 	plan, err := ctx.Store.GetPlan(dateStr)
 	if err != nil {
@@ -269,7 +274,15 @@ func (c *NowCmd) Run(ctx *Context) error {
 	var currentSlot *models.Slot
 	for i := range plan.Slots {
 		if plan.Slots[i].Status == models.SlotStatusAccepted || plan.Slots[i].Status == models.SlotStatusDone {
-			if plan.Slots[i].Start <= currentTime && currentTime < plan.Slots[i].End {
+			startMinutes, err := parseTimeToMinutes(plan.Slots[i].Start)
+			if err != nil {
+				continue
+			}
+			endMinutes, err := parseTimeToMinutes(plan.Slots[i].End)
+			if err != nil {
+				continue
+			}
+			if startMinutes <= currentMinutes && currentMinutes < endMinutes {
 				currentSlot = &plan.Slots[i]
 				break
 			}
@@ -277,7 +290,7 @@ func (c *NowCmd) Run(ctx *Context) error {
 	}
 
 	if currentSlot == nil {
-		fmt.Printf("Now (%s): Free time\n", currentTime)
+		fmt.Printf("Now (%02d:%02d): Free time\n", now.Hour(), now.Minute())
 		return nil
 	}
 
@@ -286,7 +299,7 @@ func (c *NowCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	fmt.Printf("Now (%s): You planned to be doing:\n\n", currentTime)
+	fmt.Printf("Now (%02d:%02d): You planned to be doing:\n\n", now.Hour(), now.Minute())
 	fmt.Printf("%s–%s  %s\n", currentSlot.Start, currentSlot.End, task.Name)
 
 	return nil
@@ -317,6 +330,7 @@ func (c *FeedbackCmd) Run(ctx *Context) error {
 
 	now := time.Now()
 	dateStr := now.Format("2006-01-02")
+	currentMinutes := now.Hour()*60 + now.Minute()
 
 	plan, err := ctx.Store.GetPlan(dateStr)
 	if err != nil {
@@ -325,14 +339,20 @@ func (c *FeedbackCmd) Run(ctx *Context) error {
 
 	// Find the most recent past slot without feedback
 	var targetSlotIdx = -1
-	currentTime := fmt.Sprintf("%02d:%02d", now.Hour(), now.Minute())
 
 	for i := len(plan.Slots) - 1; i >= 0; i-- {
 		slot := &plan.Slots[i]
 		if (slot.Status == models.SlotStatusAccepted || slot.Status == models.SlotStatusDone) &&
-			slot.End <= currentTime && slot.Feedback == nil {
-			targetSlotIdx = i
-			break
+			slot.Feedback == nil {
+			endMinutes, err := parseTimeToMinutes(slot.End)
+			if err != nil {
+				// Skip slots with invalid end time format
+				continue
+			}
+			if endMinutes <= currentMinutes {
+				targetSlotIdx = i
+				break
+			}
 		}
 	}
 
@@ -354,13 +374,15 @@ func (c *FeedbackCmd) Run(ctx *Context) error {
 		case models.FeedbackOnTrack:
 			// Keep duration as is, nudge slightly toward actual
 			slotDuration := calculateSlotDuration(plan.Slots[targetSlotIdx])
-			task.AvgActualDurationMin = task.AvgActualDurationMin*durationSmoothingOld + float64(slotDuration)*durationSmoothingNew
+			if slotDuration > 0 {
+				task.AvgActualDurationMin = task.AvgActualDurationMin*feedbackExistingWeight + float64(slotDuration)*feedbackNewWeight
+			}
 			task.LastDone = dateStr
 		case models.FeedbackTooMuch:
 			// Reduce duration slightly
-			task.DurationMin = int(float64(task.DurationMin) * durationReduction)
-			if task.DurationMin < 10 {
-				task.DurationMin = 10
+			task.DurationMin = int(float64(task.DurationMin) * feedbackTooMuchReductionFactor)
+			if task.DurationMin < minTaskDurationMin {
+				task.DurationMin = minTaskDurationMin
 			}
 			task.LastDone = dateStr
 		case models.FeedbackUnnecessary:
@@ -369,7 +391,9 @@ func (c *FeedbackCmd) Run(ctx *Context) error {
 				task.Recurrence.IntervalDays++
 			}
 		}
-		ctx.Store.UpdateTask(task)
+		if err := ctx.Store.UpdateTask(task); err != nil {
+			return fmt.Errorf("update task with feedback: %w", err)
+		}
 	}
 
 	if err := ctx.Store.SavePlan(plan); err != nil {
@@ -558,8 +582,30 @@ func formatRecurrence(rec models.Recurrence) string {
 	}
 }
 
+func parseTimeToMinutes(timeStr string) (int, error) {
+	parts := strings.Split(timeStr, ":")
+	if len(parts) != 2 {
+		return 0, fmt.Errorf("invalid time format: %q", timeStr)
+	}
+	hour, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return 0, fmt.Errorf("invalid hour in %q: %w", timeStr, err)
+	}
+	minute, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return 0, fmt.Errorf("invalid minute in %q: %w", timeStr, err)
+	}
+	return hour*60 + minute, nil
+}
+
 func calculateSlotDuration(slot models.Slot) int {
-	start, _ := time.Parse("15:04", slot.Start)
-	end, _ := time.Parse("15:04", slot.End)
+	start, err := time.Parse("15:04", slot.Start)
+	if err != nil {
+		return 0
+	}
+	end, err := time.Parse("15:04", slot.End)
+	if err != nil {
+		return 0
+	}
 	return int(end.Sub(start).Minutes())
 }
