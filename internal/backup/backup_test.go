@@ -309,7 +309,7 @@ func TestUniqueBackupFilenames(t *testing.T) {
 		if err != nil {
 			t.Fatalf("CreateBackup #%d failed: %v", i, err)
 		}
-		
+
 		filename := filepath.Base(backupPath)
 		if paths[filename] {
 			t.Errorf("duplicate backup filename: %s", filename)

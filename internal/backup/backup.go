@@ -79,7 +79,7 @@ func (m *Manager) CreateBackup() (string, error) {
 		timestamp = time.Now().Format("20060102-150405")
 		backupName = fmt.Sprintf("%s%s%s", BackupFilePrefix, timestamp, BackupFileSuffix)
 		backupPath = filepath.Join(m.backupDir, backupName)
-		
+
 		// If still exists, add a counter
 		counter := 1
 		for {
@@ -113,7 +113,7 @@ func (m *Manager) CreateBackup() (string, error) {
 func (m *Manager) backupDatabase(destPath string) error {
 	// For SQLite databases, the safest approach is to use a VACUUM INTO command
 	// or a simple file copy when the database is properly closed
-	
+
 	// Open source database in read-only mode
 	srcDB, err := sql.Open("sqlite", m.dbPath+"?mode=ro")
 	if err != nil {
@@ -166,7 +166,7 @@ func (m *Manager) ListBackups() ([]BackupInfo, error) {
 		// Parse timestamp from filename
 		timestampStr := strings.TrimPrefix(name, BackupFilePrefix)
 		timestampStr = strings.TrimSuffix(timestampStr, BackupFileSuffix)
-		
+
 		// Remove counter suffix if present (format: YYYYMMDD-HHMM-N or YYYYMMDD-HHMMSS-N)
 		// Counter is always after the last hyphen and is all digits
 		parts := strings.Split(timestampStr, "-")
@@ -188,7 +188,7 @@ func (m *Manager) ListBackups() ([]BackupInfo, error) {
 				}
 			}
 		}
-		
+
 		var timestamp time.Time
 		// Try different timestamp formats
 		timestamp, err := time.Parse("20060102-1504", timestampStr)
@@ -267,7 +267,7 @@ func (m *Manager) RestoreBackup(backupPath string) error {
 	// Copy backup file to database location
 	// We use a temporary file and atomic rename to ensure safety
 	tempPath := m.dbPath + ".restore.tmp"
-	
+
 	if err := copyFile(backupPath, tempPath); err != nil {
 		return fmt.Errorf("failed to copy backup file: %w", err)
 	}
