@@ -66,8 +66,8 @@ func (c *TaskAddCmd) Validate() error {
 
 	// Validate FixedStart comes before FixedEnd
 	if c.FixedStart != "" && c.FixedEnd != "" {
-		start, _ := time.Parse("15:04", c.FixedStart)
-		end, _ := time.Parse("15:04", c.FixedEnd)
+		start, _ := time.Parse("15:04", c.FixedStart) // Already validated above, won't fail
+		end, _ := time.Parse("15:04", c.FixedEnd)     // Already validated above, won't fail
 		if !start.Before(end) {
 			return fmt.Errorf("FixedStart must be before FixedEnd")
 		}
@@ -75,8 +75,8 @@ func (c *TaskAddCmd) Validate() error {
 
 	// Validate Earliest comes before Latest
 	if c.Earliest != "" && c.Latest != "" {
-		earliest, _ := time.Parse("15:04", c.Earliest)
-		latest, _ := time.Parse("15:04", c.Latest)
+		earliest, _ := time.Parse("15:04", c.Earliest) // Already validated above, won't fail
+		latest, _ := time.Parse("15:04", c.Latest)     // Already validated above, won't fail
 		if !earliest.Before(latest) {
 			return fmt.Errorf("Earliest must be before Latest")
 		}
