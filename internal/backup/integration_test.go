@@ -82,7 +82,7 @@ func TestIntegrationBackupRestoreWorkflow(t *testing.T) {
 		t.Errorf("expected 2 tasks after modification, got %d", count)
 	}
 	db.Close()
-	
+
 	// Wait for the database connection to fully close
 	time.Sleep(100 * time.Millisecond)
 

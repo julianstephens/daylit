@@ -183,7 +183,7 @@ func (m *Manager) backupDatabase(destPath string) error {
 			// main database file. This makes a plain file copy safe
 			// even when the database is in WAL mode.
 			srcDB.Close()
-			
+
 			// Open a writable connection for the checkpoint
 			checkpointDB, chkErr := sql.Open("sqlite", m.dbPath)
 			if chkErr == nil {
@@ -194,7 +194,7 @@ func (m *Manager) backupDatabase(destPath string) error {
 				}
 				checkpointDB.Close()
 			}
-			
+
 			return copyFile(m.dbPath, destPath)
 		}
 	}
@@ -354,14 +354,14 @@ func (m *Manager) RestoreBackup(backupPath string) error {
 	// Clean up any WAL/SHM files from the old database to prevent corruption
 	walPath := m.dbPath + "-wal"
 	shmPath := m.dbPath + "-shm"
-	
+
 	// Remove WAL file if it exists
 	if _, err := os.Stat(walPath); err == nil {
 		if err := os.Remove(walPath); err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: failed to remove WAL file %s: %v\n", walPath, err)
 		}
 	}
-	
+
 	// Remove SHM file if it exists
 	if _, err := os.Stat(shmPath); err == nil {
 		if err := os.Remove(shmPath); err != nil {
