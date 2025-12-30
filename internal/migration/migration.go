@@ -230,8 +230,6 @@ func (r *Runner) ApplyMigrations(logFn func(string)) (int, error) {
 
 		// Commit the transaction
 		if err := tx.Commit(); err != nil {
-			// Commit should normally finalize the transaction; rollback here is best-effort.
-			_ = tx.Rollback()
 			return appliedCount, fmt.Errorf("failed to commit migration %d: %w", migration.Version, err)
 		}
 
