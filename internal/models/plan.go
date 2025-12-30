@@ -32,7 +32,9 @@ type Slot struct {
 }
 
 type DayPlan struct {
-	Date      string  `json:"date"` // YYYY-MM-DD format
-	Slots     []Slot  `json:"slots"`
-	DeletedAt *string `json:"deleted_at,omitempty"` // RFC3339 timestamp
+	Date       string  `json:"date"` // YYYY-MM-DD format
+	Revision   int     `json:"revision"`
+	AcceptedAt *string `json:"accepted_at,omitempty"` // RFC3339 timestamp
+	Slots      []Slot  `json:"slots"`
+	DeletedAt  *string `json:"deleted_at,omitempty"` // RFC3339 timestamp
 }

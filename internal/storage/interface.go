@@ -23,6 +23,8 @@ type Provider interface {
 	// Plans
 	SavePlan(models.DayPlan) error
 	GetPlan(date string) (models.DayPlan, error)
+	GetPlanRevision(date string, revision int) (models.DayPlan, error)
+	GetLatestPlanRevision(date string) (models.DayPlan, error)
 	DeletePlan(date string) error
 	RestorePlan(date string) error
 

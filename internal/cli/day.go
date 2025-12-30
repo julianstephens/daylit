@@ -35,7 +35,7 @@ func (c *DayCmd) Run(ctx *Context) error {
 		return fmt.Errorf("no plan found for %s", dateStr)
 	}
 
-	fmt.Printf("Plan for %s:\n\n", dateStr)
+	fmt.Printf("Plan for %s (Rev %d):\n\n", dateStr, plan.Revision)
 
 	if len(plan.Slots) == 0 {
 		fmt.Println("  No slots scheduled")
