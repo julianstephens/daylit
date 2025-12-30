@@ -13,6 +13,10 @@ type KeyMap struct {
 	Enter    key.Binding
 	Help     key.Binding
 	Generate key.Binding
+	Feedback key.Binding
+	Add      key.Binding
+	Edit     key.Binding
+	Delete   key.Binding
 }
 
 func (k KeyMap) ShortHelp() []key.Binding {
@@ -22,7 +26,7 @@ func (k KeyMap) ShortHelp() []key.Binding {
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Tab, k.ShiftTab, k.Quit},
-		{k.Up, k.Down, k.Left, k.Right, k.Enter, k.Help, k.Generate},
+		{k.Up, k.Down, k.Left, k.Right, k.Enter, k.Help, k.Generate, k.Feedback, k.Add, k.Edit, k.Delete},
 	}
 }
 
@@ -67,6 +71,22 @@ func DefaultKeyMap() KeyMap {
 		Generate: key.NewBinding(
 			key.WithKeys("g"),
 			key.WithHelp("g", "generate plan"),
+		),
+		Feedback: key.NewBinding(
+			key.WithKeys("f"),
+			key.WithHelp("f", "feedback"),
+		),
+		Add: key.NewBinding(
+			key.WithKeys("a"),
+			key.WithHelp("a", "add task"),
+		),
+		Edit: key.NewBinding(
+			key.WithKeys("e"),
+			key.WithHelp("e", "edit task"),
+		),
+		Delete: key.NewBinding(
+			key.WithKeys("d"),
+			key.WithHelp("d", "delete task"),
 		),
 	}
 }

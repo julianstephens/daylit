@@ -10,7 +10,6 @@ A daily structure scheduler and time-blocking companion CLI tool.
 - Tracking what you should be doing now
 - Collecting feedback to improve future plans
 
-The emphasis is on **gentle structure**, not maximizing throughput.
 
 ## Installation
 
@@ -71,7 +70,7 @@ Initialize the configuration and storage files.
 daylit init
 ```
 
-By default, stores data in `~/.config/daylit/state.json`. Use `--config` to specify a different location.
+By default, stores data in `~/.config/daylit/daylit.db`. Use `--config` to specify a different location.
 
 ### `daylit tui`
 
@@ -95,6 +94,10 @@ The TUI provides a dashboard with three main views:
 -   `h` / `l`: Switch between tabs (Vim style).
 -   `j` / `k`: Navigate up/down in lists.
 -   `g`: Generate plan (in Plan tab).
+-   `a`: Add task (in Tasks tab).
+-   `e`: Edit task (in Tasks tab).
+-   `d`: Delete task (in Tasks tab).
+-   `f`: Give feedback on last task.
 -   `?`: Toggle help.
 -   `q` / `Ctrl+C`: Quit.
 
@@ -134,6 +137,54 @@ daylit task add "Gym" --duration 60 --recurrence weekly --weekdays mon,wed,fri -
 daylit task add "Doctor appointment" --duration 60 --fixed-start 14:00 --fixed-end 15:00
 ```
 
+### `daylit task edit`
+
+Edit an existing task template.
+
+```bash
+daylit task edit <TASK_ID> [flags]
+```
+
+To find the Task ID, use `daylit task list --show-ids`.
+
+**Flags:**
+
+- `--name STRING`: New task name
+- `--duration INT`: New duration in minutes
+- `--recurrence STRING`: New recurrence type (`daily`, `weekly`, `n_days`, `ad_hoc`)
+- `--interval INT`: New interval for `n_days` recurrence
+- `--weekdays STRING`: New comma-separated weekdays for `weekly` recurrence
+- `--earliest TIME`: New earliest start time (HH:MM)
+- `--latest TIME`: New latest end time (HH:MM)
+- `--fixed-start TIME`: New fixed start time (HH:MM)
+- `--fixed-end TIME`: New fixed end time (HH:MM)
+- `--priority INT`: New priority (1-5)
+- `--active BOOL`: Set active status (true/false)
+
+**Example:**
+
+```bash
+# Find the task ID
+daylit task list --show-ids
+
+# Edit the task
+daylit task edit 81462541-e5ef-400b-9a8e-de96de1a9574 --name "Updated Task" --duration 45
+```
+
+### `daylit task delete`
+
+Delete a task template.
+
+```bash
+daylit task delete <TASK_ID>
+```
+
+**Example:**
+
+```bash
+daylit task delete 81462541-e5ef-400b-9a8e-de96de1a9574
+```
+
 ### `daylit task list`
 
 List all task templates.
@@ -145,6 +196,7 @@ daylit task list [flags]
 **Flags:**
 
 - `--active-only`: Show only active tasks
+- `--show-ids`: Show task IDs (useful for editing)
 
 ### `daylit plan`
 
@@ -231,29 +283,31 @@ daylit day 2025-01-15
 
 ## Configuration
 
-The default configuration file is located at `~/.config/daylit/state.json`.
+The default configuration file is located at `~/.config/daylit/daylit.db`.
 
 You can specify a different location using the `--config` flag:
 
 ```bash
-daylit --config /path/to/config.json init
+daylit --config /path/to/config.db init
 ```
 
-### Configuration File Format
+### Database Schema
 
-The configuration file is a JSON file with the following structure:
+The application uses SQLite for storage. The database contains tables for:
 
-```json
-{
-  "version": 1,
-  "settings": {
-    "day_start": "07:00",
-    "day_end": "22:00",
-    "default_block_min": 30
-  },
-  "tasks": {},
-  "plans": {}
-}
+- `tasks`: Task templates
+- `plans`: Daily plans
+- `slots`: Time slots within plans
+- `settings`: Application settings
+
+```sql
+CREATE TABLE tasks (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    duration_min INTEGER NOT NULL,
+    -- ... other fields
+);
 ```
 
 ## Scheduling Algorithm
@@ -310,7 +364,8 @@ daylit/
 │   ├── scheduler/
 │   │   └── scheduler.go      # Scheduling algorithm
 │   └── storage/
-│       └── storage.go        # JSON storage layer
+│       ├── interface.go      # Storage interface
+│       └── sqlite_store.go   # SQLite storage implementation
 ├── go.mod
 └── go.sum
 ```
@@ -339,7 +394,6 @@ go test ./...
 
 Future enhancements (v0.2+):
 
-- [ ] SQLite storage for better querying
 - [ ] Natural language parsing for task creation
 - [ ] Notification daemon
 - [ ] Energy level tracking

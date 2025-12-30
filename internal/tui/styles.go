@@ -12,4 +12,10 @@ var (
 	inactiveTabStyle = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("240")).
 				Padding(0, 1)
+
+	dangerStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("196")).
+			Bold(true)
+
+	docStyle = lipgloss.NewStyle().Padding(1, 2)
 )

@@ -9,12 +9,6 @@ import (
 	"github.com/julianstephens/daylit/internal/models"
 )
 
-type Settings struct {
-	DayStart        string `json:"day_start"`
-	DayEnd          string `json:"day_end"`
-	DefaultBlockMin int    `json:"default_block_min"`
-}
-
 type Store struct {
 	Version  int                       `json:"version"`
 	Settings Settings                  `json:"settings"`
@@ -22,18 +16,18 @@ type Store struct {
 	Plans    map[string]models.DayPlan `json:"plans"`
 }
 
-type Storage struct {
+type JSONStore struct {
 	path  string
 	store *Store
 }
 
-func New(configPath string) (*Storage, error) {
-	return &Storage{
+func NewJSONStore(configPath string) *JSONStore {
+	return &JSONStore{
 		path: configPath,
-	}, nil
+	}
 }
 
-func (s *Storage) Init() error {
+func (s *JSONStore) Init() error {
 	// Create config directory if it doesn't exist
 	dir := filepath.Dir(s.path)
 	if err := os.MkdirAll(dir, 0700); err != nil {
@@ -60,7 +54,7 @@ func (s *Storage) Init() error {
 	return s.save()
 }
 
-func (s *Storage) Load() error {
+func (s *JSONStore) Load() error {
 	data, err := os.ReadFile(s.path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -85,7 +79,11 @@ func (s *Storage) Load() error {
 	return nil
 }
 
-func (s *Storage) save() error {
+func (s *JSONStore) Close() error {
+	return nil
+}
+
+func (s *JSONStore) save() error {
 	data, err := json.MarshalIndent(s.store, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to serialize storage: %w", err)
@@ -98,14 +96,22 @@ func (s *Storage) save() error {
 	return nil
 }
 
-func (s *Storage) GetSettings() Settings {
+func (s *JSONStore) GetSettings() (Settings, error) {
 	if s.store == nil {
-		return Settings{}
+		return Settings{}, fmt.Errorf("storage not loaded")
 	}
-	return s.store.Settings
+	return s.store.Settings, nil
 }
 
-func (s *Storage) AddTask(task models.Task) error {
+func (s *JSONStore) SaveSettings(settings Settings) error {
+	if s.store == nil {
+		return fmt.Errorf("storage not loaded")
+	}
+	s.store.Settings = settings
+	return s.save()
+}
+
+func (s *JSONStore) AddTask(task models.Task) error {
 	if s.store == nil {
 		return fmt.Errorf("storage not loaded")
 	}
@@ -114,7 +120,7 @@ func (s *Storage) AddTask(task models.Task) error {
 	return s.save()
 }
 
-func (s *Storage) GetTask(id string) (models.Task, error) {
+func (s *JSONStore) GetTask(id string) (models.Task, error) {
 	if s.store == nil {
 		return models.Task{}, fmt.Errorf("storage not loaded")
 	}
@@ -127,9 +133,9 @@ func (s *Storage) GetTask(id string) (models.Task, error) {
 	return task, nil
 }
 
-func (s *Storage) GetAllTasks() []models.Task {
+func (s *JSONStore) GetAllTasks() ([]models.Task, error) {
 	if s.store == nil {
-		return nil
+		return nil, fmt.Errorf("storage not loaded")
 	}
 
 	tasks := make([]models.Task, 0, len(s.store.Tasks))
@@ -137,10 +143,10 @@ func (s *Storage) GetAllTasks() []models.Task {
 		tasks = append(tasks, task)
 	}
 
-	return tasks
+	return tasks, nil
 }
 
-func (s *Storage) UpdateTask(task models.Task) error {
+func (s *JSONStore) UpdateTask(task models.Task) error {
 	if s.store == nil {
 		return fmt.Errorf("storage not loaded")
 	}
@@ -153,7 +159,20 @@ func (s *Storage) UpdateTask(task models.Task) error {
 	return s.save()
 }
 
-func (s *Storage) SavePlan(plan models.DayPlan) error {
+func (s *JSONStore) DeleteTask(id string) error {
+	if s.store == nil {
+		return fmt.Errorf("storage not loaded")
+	}
+
+	if _, ok := s.store.Tasks[id]; !ok {
+		return fmt.Errorf("task not found: %s", id)
+	}
+
+	delete(s.store.Tasks, id)
+	return s.save()
+}
+
+func (s *JSONStore) SavePlan(plan models.DayPlan) error {
 	if s.store == nil {
 		return fmt.Errorf("storage not loaded")
 	}
@@ -162,7 +181,7 @@ func (s *Storage) SavePlan(plan models.DayPlan) error {
 	return s.save()
 }
 
-func (s *Storage) GetPlan(date string) (models.DayPlan, error) {
+func (s *JSONStore) GetPlan(date string) (models.DayPlan, error) {
 	if s.store == nil {
 		return models.DayPlan{}, fmt.Errorf("storage not loaded")
 	}
@@ -175,13 +194,6 @@ func (s *Storage) GetPlan(date string) (models.DayPlan, error) {
 	return plan, nil
 }
 
-// GetConfigPath returns the path to the underlying configuration/storage file.
-//
-// Concurrency note:
-//   - Storage is not safe for concurrent use by multiple goroutines without external
-//     synchronization.
-//   - Running multiple daylit processes that share the same storage/config path at the
-//     same time is not supported and may lead to data loss or corruption.
-func (s *Storage) GetConfigPath() string {
+func (s *JSONStore) GetConfigPath() string {
 	return s.path
 }

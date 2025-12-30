@@ -12,7 +12,7 @@ import (
 )
 
 type Context struct {
-	Store     *storage.Storage
+	Store     storage.Provider
 	Scheduler *scheduler.Scheduler
 }
 
