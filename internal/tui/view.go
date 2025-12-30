@@ -20,12 +20,18 @@ func (m Model) View() string {
 		content = m.viewTasks()
 	}
 
-	return lipgloss.JoinVertical(
+	ui := lipgloss.JoinVertical(
 		lipgloss.Left,
 		m.viewTabs(),
 		content,
 		m.help.View(m.keys),
 	)
+
+	// If we are already filling the screen (which we are, because components are sized to full width/height),
+	// lipgloss.Place won't do much if we pass full width/height.
+	// However, if we want to ensure centering if the terminal is huge, we might want to constrain the max width.
+	// For now, let's just return ui as components are handling their own sizing/centering if needed.
+	return ui
 }
 
 func (m Model) viewTabs() string {
@@ -41,13 +47,13 @@ func (m Model) viewTabs() string {
 }
 
 func (m Model) viewNow() string {
-	return "Now View (Placeholder)"
+	return m.nowModel.View()
 }
 
 func (m Model) viewPlan() string {
-	return "Plan View (Placeholder)"
+	return m.planModel.View()
 }
 
 func (m Model) viewTasks() string {
-	return "Tasks View (Placeholder)"
+	return m.taskList.View()
 }

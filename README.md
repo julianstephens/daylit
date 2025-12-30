@@ -315,7 +315,6 @@ go test ./...
 Future enhancements (v0.2+):
 
 - [ ] SQLite storage for better querying
-- [ ] TUI (Terminal UI) interface
 - [ ] Natural language parsing for task creation
 - [ ] Notification daemon
 - [ ] Energy level tracking
