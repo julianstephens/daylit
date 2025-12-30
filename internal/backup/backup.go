@@ -63,8 +63,8 @@ func (m *Manager) CreateBackup() (string, error) {
 }
 
 // createBackup creates a new backup of the database
-// skipRotation parameter is used to prevent recursive backup creation during restore
-func (m *Manager) createBackup(skipRotation bool) (string, error) {
+// isPreRestoreBackup parameter prevents rotation to avoid infinite recursion during restore
+func (m *Manager) createBackup(isPreRestoreBackup bool) (string, error) {
 	// Ensure backup directory exists
 	if err := m.ensureBackupDir(); err != nil {
 		return "", fmt.Errorf("failed to create backup directory: %w", err)
@@ -97,7 +97,15 @@ func (m *Manager) createBackup(skipRotation bool) (string, error) {
 			backupPath = filepath.Join(m.backupDir, backupName)
 			counter++
 			if counter > 100 {
-				return "", fmt.Errorf("failed to generate unique backup filename")
+				// Fallback: use a high-entropy suffix to avoid unexpected failures
+				fallbackSuffix := time.Now().UnixNano()
+				backupName = fmt.Sprintf("%s%s-%d%s", BackupFilePrefix, timestamp, fallbackSuffix, BackupFileSuffix)
+				backupPath = filepath.Join(m.backupDir, backupName)
+				// Final check - if this still fails, give up with informative error
+				if _, err := os.Stat(backupPath); err == nil {
+					return "", fmt.Errorf("failed to generate unique backup filename after %d attempts; please check the backup directory for conflicting files", counter)
+				}
+				break
 			}
 		}
 	}
@@ -108,7 +116,7 @@ func (m *Manager) createBackup(skipRotation bool) (string, error) {
 	}
 
 	// Rotate old backups (unless this is part of a restore operation)
-	if !skipRotation {
+	if !isPreRestoreBackup {
 		if err := m.rotateBackups(); err != nil {
 			// Log error but don't fail the backup operation
 			fmt.Fprintf(os.Stderr, "Warning: failed to rotate old backups: %v\n", err)
@@ -140,7 +148,13 @@ func (m *Manager) backupDatabase(destPath string) error {
 	}
 
 	// Open source database in read-only mode
-	srcDB, err := sql.Open("sqlite", m.dbPath+"?mode=ro")
+	dsn := m.dbPath
+	if strings.Contains(dsn, "?") {
+		dsn += "&mode=ro"
+	} else {
+		dsn += "?mode=ro"
+	}
+	srcDB, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return fmt.Errorf("failed to open source database: %w", err)
 	}
@@ -163,7 +177,17 @@ func (m *Manager) backupDatabase(destPath string) error {
 		query := fmt.Sprintf("VACUUM INTO '%s'", strings.ReplaceAll(destPath, "'", "''"))
 		_, err = srcDB.Exec(query)
 		if err != nil {
-			// If VACUUM INTO fails, fall back to file copy
+			// If VACUUM INTO fails, fall back to file copy.
+			// Before copying, force a WAL checkpoint so that any
+			// outstanding changes in the WAL are flushed into the
+			// main database file. This makes a plain file copy safe
+			// even when the database is in WAL mode.
+			if _, chkErr := srcDB.Exec("PRAGMA wal_checkpoint(FULL)"); chkErr != nil {
+				// Preserve previous behavior even if the checkpoint
+				// fails, but emit a warning so that operators are
+				// aware the backup may be missing recent changes.
+				fmt.Fprintf(os.Stderr, "warning: wal_checkpoint(FULL) failed during backup: %v\n", chkErr)
+			}
 			srcDB.Close()
 			return copyFile(m.dbPath, destPath)
 		}
@@ -205,8 +229,22 @@ func (m *Manager) ListBackups() ([]BackupInfo, error) {
 		if len(parts) > 2 {
 			// Check if last part is a counter (all digits, not 4 or 6 chars which would be time)
 			lastPart := parts[len(parts)-1]
-			if len(lastPart) != 4 && len(lastPart) != 6 {
-				// Could be a counter, check if all digits
+			// Explicitly handle counters (1-3 digit numbers) vs time components (4 or 6 digits)
+			if len(lastPart) >= 1 && len(lastPart) <= 3 {
+				// Could be a counter (1-3 digits), check if all digits
+				isCounter := true
+				for _, c := range lastPart {
+					if c < '0' || c > '9' {
+						isCounter = false
+						break
+					}
+				}
+				if isCounter {
+					// Remove the counter part
+					timestampStr = strings.Join(parts[:len(parts)-1], "-")
+				}
+			} else if len(lastPart) != 4 && len(lastPart) != 6 {
+				// Not a standard time component, check if it's a numeric counter
 				isCounter := true
 				for _, c := range lastPart {
 					if c < '0' || c > '9' {
@@ -221,7 +259,6 @@ func (m *Manager) ListBackups() ([]BackupInfo, error) {
 			}
 		}
 
-		var timestamp time.Time
 		// Try different timestamp formats
 		timestamp, err := time.Parse("20060102-1504", timestampStr)
 		if err != nil {
@@ -275,6 +312,10 @@ func (m *Manager) rotateBackups() error {
 }
 
 // RestoreBackup restores the database from a backup file
+// WARNING: This operation should only be performed when no other processes
+// are accessing the database. Concurrent access during restore can lead to
+// corruption or data loss. Ensure all daylit processes are stopped before
+// calling this function.
 func (m *Manager) RestoreBackup(backupPath string) error {
 	// Check if backup file exists
 	if _, err := os.Stat(backupPath); os.IsNotExist(err) {
@@ -289,7 +330,7 @@ func (m *Manager) RestoreBackup(backupPath string) error {
 	// Create a backup of the current database before restoring
 	if _, err := os.Stat(m.dbPath); err == nil {
 		// Current database exists, backup it first
-		// Use skipRotation=true to prevent infinite recursion
+		// Use isPreRestoreBackup=true to prevent infinite recursion
 		currentBackup, err := m.createBackup(true)
 		if err != nil {
 			return fmt.Errorf("failed to backup current database before restore: %w", err)
@@ -303,6 +344,24 @@ func (m *Manager) RestoreBackup(backupPath string) error {
 
 	if err := copyFile(backupPath, tempPath); err != nil {
 		return fmt.Errorf("failed to copy backup file: %w", err)
+	}
+
+	// Clean up any WAL/SHM files from the old database to prevent corruption
+	walPath := m.dbPath + "-wal"
+	shmPath := m.dbPath + "-shm"
+	
+	// Remove WAL file if it exists
+	if _, err := os.Stat(walPath); err == nil {
+		if err := os.Remove(walPath); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to remove WAL file %s: %v\n", walPath, err)
+		}
+	}
+	
+	// Remove SHM file if it exists
+	if _, err := os.Stat(shmPath); err == nil {
+		if err := os.Remove(shmPath); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to remove SHM file %s: %v\n", shmPath, err)
+		}
 	}
 
 	// Rename temporary file to actual database (atomic operation)
@@ -343,6 +402,12 @@ func copyFile(src, dst string) error {
 	}
 	defer sourceFile.Close()
 
+	// Get source file info to preserve permissions
+	srcInfo, err := sourceFile.Stat()
+	if err != nil {
+		return err
+	}
+
 	destFile, err := os.Create(dst)
 	if err != nil {
 		return err
@@ -355,5 +420,14 @@ func copyFile(src, dst string) error {
 	}
 
 	// Sync to ensure data is written to disk
-	return destFile.Sync()
+	if err := destFile.Sync(); err != nil {
+		return err
+	}
+
+	// Preserve source file permissions on destination
+	if err := os.Chmod(dst, srcInfo.Mode()); err != nil {
+		return err
+	}
+
+	return nil
 }

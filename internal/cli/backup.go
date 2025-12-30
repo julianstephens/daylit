@@ -101,6 +101,8 @@ func (c *BackupRestoreCmd) Run(ctx *Context) error {
 
 	// Show warning and ask for confirmation
 	fmt.Println("⚠️  WARNING: This will replace your current database with the backup.")
+	fmt.Println("⚠️  IMPORTANT: All daylit processes (including TUI) must be stopped before restore.")
+	fmt.Println("             Concurrent access during restore can cause data corruption.")
 	fmt.Println("A backup of your current database will be created before restoring.")
 	fmt.Printf("\nRestore from: %s\n", backupPath)
 	fmt.Print("Continue? [y/N]: ")
@@ -128,7 +130,8 @@ func (c *BackupRestoreCmd) Run(ctx *Context) error {
 	}
 
 	fmt.Println("✓ Database restored successfully!")
-	fmt.Println("Restart any running daylit processes to use the restored database.")
+	fmt.Println("⚠️  Remember to restart any daylit processes that were stopped for the restore.")
+	fmt.Println("    The restored database is now active.")
 
 	return nil
 }
