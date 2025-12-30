@@ -429,13 +429,10 @@ func (s *SQLiteStore) GetPlan(date string) (models.DayPlan, error) {
 	plan := models.DayPlan{
 		Date: date,
 	}
-	if deletedAt.Valid {
-		plan.DeletedAt = &deletedAt.String
-	}
 
 	// Get slots (exclude soft-deleted slots)
 	rows, err := s.db.Query(`
-		SELECT start_time, end_time, task_id, status, feedback_rating, feedback_note, deleted_at
+		SELECT start_time, end_time, task_id, status, feedback_rating, feedback_note
 		FROM slots WHERE plan_date = ? AND deleted_at IS NULL ORDER BY start_time`, date)
 	if err != nil {
 		return models.DayPlan{}, err
@@ -445,9 +442,8 @@ func (s *SQLiteStore) GetPlan(date string) (models.DayPlan, error) {
 	for rows.Next() {
 		var slot models.Slot
 		var rating, note string
-		var slotDeletedAt sql.NullString
 		err := rows.Scan(
-			&slot.Start, &slot.End, &slot.TaskID, &slot.Status, &rating, &note, &slotDeletedAt,
+			&slot.Start, &slot.End, &slot.TaskID, &slot.Status, &rating, &note,
 		)
 		if err != nil {
 			return models.DayPlan{}, err
@@ -458,9 +454,6 @@ func (s *SQLiteStore) GetPlan(date string) (models.DayPlan, error) {
 				Rating: models.FeedbackRating(rating),
 				Note:   note,
 			}
-		}
-		if slotDeletedAt.Valid {
-			slot.DeletedAt = &slotDeletedAt.String
 		}
 		plan.Slots = append(plan.Slots, slot)
 	}
