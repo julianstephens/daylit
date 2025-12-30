@@ -71,6 +71,10 @@ func (v *Validator) ValidateTasks(tasks []models.Task) ValidationResult {
 		if task.DeletedAt != nil {
 			continue // Skip deleted tasks
 		}
+		// Skip empty names to avoid false positives
+		if task.Name == "" {
+			continue
+		}
 		nameCount[task.Name] = append(nameCount[task.Name], task.ID)
 	}
 
@@ -129,12 +133,30 @@ func (v *Validator) ValidateTasks(tasks []models.Task) ValidationResult {
 				})
 			}
 		}
+
+		// Check for negative duration in fixed appointments
+		if task.FixedStart != "" && task.FixedEnd != "" {
+			startMin, err1 := parseTimeToMinutes(task.FixedStart)
+			endMin, err2 := parseTimeToMinutes(task.FixedEnd)
+			if err1 == nil && err2 == nil && endMin < startMin {
+				result.Conflicts = append(result.Conflicts, Conflict{
+					Type:        ConflictInvalidDateTime,
+					Description: fmt.Sprintf("Task \"%s\" has end time (%s) before start time (%s)", task.Name, task.FixedEnd, task.FixedStart),
+					Items:       []string{task.Name},
+				})
+			}
+		}
 	}
 
 	// Check for overlapping fixed appointments (across all tasks)
+	// Note: Only active appointments are checked
 	var fixedTasks []models.Task
 	for _, task := range tasks {
 		if task.DeletedAt != nil {
+			continue
+		}
+		// Skip inactive tasks as they won't be scheduled
+		if !task.Active {
 			continue
 		}
 		if task.Kind == models.TaskKindAppointment && task.FixedStart != "" && task.FixedEnd != "" {
@@ -147,7 +169,10 @@ func (v *Validator) ValidateTasks(tasks []models.Task) ValidationResult {
 		return fixedTasks[i].FixedStart < fixedTasks[j].FixedStart
 	})
 
-	// Check for overlaps in fixed appointments (they could be on different days due to recurrence)
+	// Check for overlaps in fixed appointments
+	// Note: This checks time-of-day overlap only. Tasks with different recurrence patterns
+	// (e.g., Monday-only vs Tuesday-only) may be flagged even though they never occur on the same day.
+	// O(n²) complexity - acceptable for typical use cases with few appointments.
 	for i := 0; i < len(fixedTasks); i++ {
 		for j := i + 1; j < len(fixedTasks); j++ {
 			t1 := fixedTasks[i]
@@ -160,7 +185,7 @@ func (v *Validator) ValidateTasks(tasks []models.Task) ValidationResult {
 					Description: fmt.Sprintf("Fixed appointments overlap: \"%s\" (%s-%s) and \"%s\" (%s-%s)",
 						t1.Name, t1.FixedStart, t1.FixedEnd, t2.Name, t2.FixedStart, t2.FixedEnd),
 					Items:     []string{t1.Name, t2.Name},
-					TimeRange: fmt.Sprintf("%s-%s", t1.FixedStart, t2.FixedEnd),
+					TimeRange: fmt.Sprintf("%s-%s", t1.FixedStart, t1.FixedEnd),
 				})
 			}
 		}
@@ -260,11 +285,23 @@ func (v *Validator) ValidatePlan(plan models.DayPlan, tasks []models.Task, daySt
 		if err != nil {
 			continue // Already reported as invalid time
 		}
+
+		// Validate that the slot end time is not before the start time
+		if slotEnd < slotStart {
+			result.Conflicts = append(result.Conflicts, Conflict{
+				Type:        ConflictInvalidDateTime,
+				Description: fmt.Sprintf("%s: Slot end time '%s' is before start time '%s'", formatDate(planDate), slot.End, slot.Start),
+				Date:        plan.Date,
+			})
+			continue
+		}
+
 		slotDuration := slotEnd - slotStart
 		totalPlannedMinutes += slotDuration
 	}
 
 	// Check for overlapping slots
+	// O(n²) complexity - acceptable for typical daily plans with moderate number of slots
 	nonDeletedSlots := make([]models.Slot, 0)
 	for _, slot := range plan.Slots {
 		if slot.DeletedAt == nil {
@@ -297,7 +334,7 @@ func (v *Validator) ValidatePlan(plan models.DayPlan, tasks []models.Task, daySt
 						formatDate(planDate), slot1.Start, slot1.End, task1Name, task2Name),
 					Date:      plan.Date,
 					Items:     []string{task1Name, task2Name},
-					TimeRange: fmt.Sprintf("%s-%s", slot1.Start, slot2.End),
+					TimeRange: fmt.Sprintf("%s-%s", slot1.Start, slot1.End),
 				})
 			}
 		}

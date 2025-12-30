@@ -127,14 +127,16 @@ func (m *Model) updateValidationStatus() {
 	// Get all tasks
 	tasks, err := m.store.GetAllTasks()
 	if err != nil {
-		m.validationWarning = ""
+		// Store errors prevent validation - show generic message
+		m.validationWarning = "⚠ Validation unavailable"
 		return
 	}
 
 	// Get settings
 	settings, err := m.store.GetSettings()
 	if err != nil {
-		m.validationWarning = ""
+		// Store errors prevent validation - show generic message
+		m.validationWarning = "⚠ Validation unavailable"
 		return
 	}
 

@@ -89,9 +89,14 @@ func (c *PlanCmd) Run(ctx *Context) error {
 	// Set revision to 0 so SavePlan will auto-assign it and perform immutability checks
 	plan.Revision = 0
 
-	// Validate the generated plan
+	// Validate both tasks and the generated plan
 	validator := validation.New()
-	validationResult := validator.ValidatePlan(plan, tasks, settings.DayStart, settings.DayEnd)
+	taskValidationResult := validator.ValidateTasks(tasks)
+	planValidationResult := validator.ValidatePlan(plan, tasks, settings.DayStart, settings.DayEnd)
+
+	// Combine validation results
+	allConflicts := append(taskValidationResult.Conflicts, planValidationResult.Conflicts...)
+	validationResult := validation.ValidationResult{Conflicts: allConflicts}
 
 	// Display plan
 	fmt.Printf("Proposed plan for %s:\n\n", dateStr)

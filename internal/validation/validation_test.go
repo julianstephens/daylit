@@ -446,3 +446,116 @@ func TestValidatePlan_SkipsDeletedSlots(t *testing.T) {
 		t.Errorf("Expected no conflicts (deleted slots should be skipped), got: %s", result.FormatReport())
 	}
 }
+
+func TestValidateTasks_EmptyNames(t *testing.T) {
+	validator := New()
+
+	tasks := []models.Task{
+		{ID: "1", Name: "", Active: true, Kind: models.TaskKindFlexible},
+		{ID: "2", Name: "", Active: true, Kind: models.TaskKindFlexible},
+		{ID: "3", Name: "Valid Task", Active: true, Kind: models.TaskKindFlexible},
+	}
+
+	result := validator.ValidateTasks(tasks)
+
+	// Should not report duplicates for empty names
+	for _, conflict := range result.Conflicts {
+		if conflict.Type == ConflictDuplicateTaskName {
+			t.Error("Should not flag empty task names as duplicates")
+		}
+	}
+}
+
+func TestValidateTasks_InactiveTasks(t *testing.T) {
+	validator := New()
+
+	tasks := []models.Task{
+		{
+			ID:         "1",
+			Name:       "Active Meeting",
+			Active:     true,
+			Kind:       models.TaskKindAppointment,
+			FixedStart: "09:00",
+			FixedEnd:   "10:00",
+		},
+		{
+			ID:         "2",
+			Name:       "Inactive Meeting",
+			Active:     false, // Inactive
+			Kind:       models.TaskKindAppointment,
+			FixedStart: "09:30",
+			FixedEnd:   "10:30",
+		},
+	}
+
+	result := validator.ValidateTasks(tasks)
+
+	// Should not report overlap since one task is inactive
+	if result.HasConflicts() {
+		t.Errorf("Expected no conflicts (inactive tasks should be skipped), got: %s", result.FormatReport())
+	}
+}
+
+func TestValidateTasks_NegativeDuration(t *testing.T) {
+	validator := New()
+
+	tasks := []models.Task{
+		{
+			ID:         "1",
+			Name:       "Bad Appointment",
+			Active:     true,
+			Kind:       models.TaskKindAppointment,
+			FixedStart: "10:00",
+			FixedEnd:   "09:00", // End before start
+		},
+	}
+
+	result := validator.ValidateTasks(tasks)
+
+	if !result.HasConflicts() {
+		t.Error("Expected to detect negative duration")
+	}
+
+	found := false
+	for _, conflict := range result.Conflicts {
+		if conflict.Type == ConflictInvalidDateTime {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("Expected ConflictInvalidDateTime conflict type for negative duration")
+	}
+}
+
+func TestValidatePlan_NegativeSlotDuration(t *testing.T) {
+	validator := New()
+
+	tasks := []models.Task{
+		{ID: "task1", Name: "Task 1", Active: true},
+	}
+
+	plan := models.DayPlan{
+		Date: "2025-01-15",
+		Slots: []models.Slot{
+			{Start: "10:00", End: "09:00", TaskID: "task1", Status: models.SlotStatusPlanned}, // End before start
+		},
+	}
+
+	result := validator.ValidatePlan(plan, tasks, "08:00", "18:00")
+
+	if !result.HasConflicts() {
+		t.Error("Expected to detect negative slot duration")
+	}
+
+	found := false
+	for _, conflict := range result.Conflicts {
+		if conflict.Type == ConflictInvalidDateTime {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("Expected ConflictInvalidDateTime conflict type for negative slot duration")
+	}
+}
