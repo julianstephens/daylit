@@ -21,7 +21,7 @@ clean: ## Remove built binary
 	rm -f $(BUILD_DIR)/$(BINARY_NAME)
 
 lint: ## Run golangci-lint
-	golangci-lint run ./... --fix	
+	golangci-lint run ./... --fix
 
 test: ## Run tests
 	go test -v ./...
