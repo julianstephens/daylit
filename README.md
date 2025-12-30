@@ -73,6 +73,31 @@ daylit init
 
 By default, stores data in `~/.config/daylit/state.json`. Use `--config` to specify a different location.
 
+### `daylit tui`
+
+Launch the interactive Text User Interface (TUI).
+
+```bash
+daylit tui
+# or simply
+daylit
+```
+
+The TUI provides a dashboard with three main views:
+
+1.  **Now**: Shows the current task and time.
+2.  **Plan**: Displays today's schedule. Press `g` to generate a plan if one doesn't exist.
+3.  **Tasks**: Lists all your tasks.
+
+**Key Bindings:**
+
+-   `Tab` / `Shift+Tab`: Switch between tabs.
+-   `h` / `l`: Switch between tabs (Vim style).
+-   `j` / `k`: Navigate up/down in lists.
+-   `g`: Generate plan (in Plan tab).
+-   `?`: Toggle help.
+-   `q` / `Ctrl+C`: Quit.
+
 ### `daylit task add`
 
 Add a new task template.
