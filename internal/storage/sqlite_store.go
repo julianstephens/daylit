@@ -664,15 +664,10 @@ func (s *SQLiteStore) GetConfigPath() string {
 	return s.path
 }
 
-// GetDB returns the underlying database connection
-func (s *SQLiteStore) GetDB() (*sql.DB, error) {
-	if s.db == nil {
-		return nil, fmt.Errorf("database not initialized")
-	}
-	return s.db, nil
+func (s *SQLiteStore) GetDB() *sql.DB {
+	return s.db
 }
 
-// GetMigrationsPath returns the path to the migrations directory
 func (s *SQLiteStore) GetMigrationsPath() string {
 	return s.getMigrationsPath()
 }

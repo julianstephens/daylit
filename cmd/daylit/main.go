@@ -19,11 +19,13 @@ var CLI struct {
 
 	Init     cli.InitCmd     `cmd:"" help:"Initialize daylit storage."`
 	Migrate  cli.MigrateCmd  `cmd:"" help:"Run database migrations."`
+	Doctor   cli.DoctorCmd   `cmd:"" help:"Run health checks and diagnostics."`
 	Tui      cli.TuiCmd      `cmd:"" help:"Launch the interactive TUI." default:"1"`
 	Plan     cli.PlanCmd     `cmd:"" help:"Generate day plans."`
 	Now      cli.NowCmd      `cmd:"" help:"Show current task."`
 	Feedback cli.FeedbackCmd `cmd:"" help:"Provide feedback on a slot."`
 	Day      cli.DayCmd      `cmd:"" help:"Show plan for a day."`
+	Debug    cli.DebugCmd    `cmd:"" help:"Debug commands for troubleshooting."`
 	Backup   struct {
 		Create  cli.BackupCreateCmd  `cmd:"" help:"Create a manual backup." default:"1"`
 		List    cli.BackupListCmd    `cmd:"" help:"List available backups."`
