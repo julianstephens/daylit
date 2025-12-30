@@ -24,6 +24,7 @@ var CLI struct {
 	Now      cli.NowCmd      `cmd:"" help:"Show current task."`
 	Feedback cli.FeedbackCmd `cmd:"" help:"Provide feedback on a slot."`
 	Day      cli.DayCmd      `cmd:"" help:"Show plan for a day."`
+	Validate cli.ValidateCmd `cmd:"" help:"Validate tasks and plans for conflicts."`
 	Backup   struct {
 		Create  cli.BackupCreateCmd  `cmd:"" help:"Create a manual backup." default:"1"`
 		List    cli.BackupListCmd    `cmd:"" help:"List available backups."`
