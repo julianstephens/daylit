@@ -383,27 +383,89 @@ func (s *SQLiteStore) SavePlan(plan models.DayPlan) error {
 	}
 	defer tx.Rollback()
 
-	// Check if plan is deleted - forbid adding slots to deleted plans
-	var deletedAt sql.NullString
-	err = tx.QueryRow("SELECT deleted_at FROM plans WHERE date = ?", plan.Date).Scan(&deletedAt)
-	if err == nil && deletedAt.Valid {
-		return fmt.Errorf("cannot save slots to a deleted plan: %s", plan.Date)
-	}
-
 	// Prevent bypassing the delete/restore workflow by ensuring plans cannot be saved
 	// with DeletedAt manually set. Use DeletePlan/RestorePlan for managing deletion state.
 	if plan.DeletedAt != nil {
 		return fmt.Errorf("cannot save a plan with deleted_at set; use DeletePlan to soft-delete or RestorePlan to restore")
 	}
 
-	// Insert or update plan (deleted_at will always be NULL for SavePlan)
-	_, err = tx.Exec("INSERT OR REPLACE INTO plans (date, deleted_at) VALUES (?, NULL)", plan.Date)
+	// Determine the revision number
+	// If plan.Revision is 0, auto-assign it
+	if plan.Revision == 0 {
+		// Check if there's an existing accepted plan for this date
+		var existingRevision int
+		var acceptedAt sql.NullString
+		err = tx.QueryRow(
+			"SELECT revision, accepted_at FROM plans WHERE date = ? AND deleted_at IS NULL ORDER BY revision DESC LIMIT 1",
+			plan.Date,
+		).Scan(&existingRevision, &acceptedAt)
+
+		if err == sql.ErrNoRows {
+			// No existing plan, start with revision 1
+			plan.Revision = 1
+		} else if err != nil {
+			return fmt.Errorf("failed to check existing plan: %w", err)
+		} else {
+			// Existing plan found
+			if acceptedAt.Valid {
+				// Plan is accepted - must create a new revision
+				plan.Revision = existingRevision + 1
+			} else {
+				// Plan exists but not accepted - can overwrite
+				plan.Revision = existingRevision
+				// Delete the old plan and its slots first
+				_, err = tx.Exec("DELETE FROM slots WHERE plan_date = ? AND plan_revision = ? AND deleted_at IS NULL", plan.Date, plan.Revision)
+				if err != nil {
+					return err
+				}
+				_, err = tx.Exec("DELETE FROM plans WHERE date = ? AND revision = ?", plan.Date, plan.Revision)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	} else {
+		// If revision is manually set, validate that it doesn't overwrite an accepted plan
+		// unless it's the same plan being updated (same accepted_at timestamp)
+		var existingAcceptedAt sql.NullString
+		err = tx.QueryRow("SELECT accepted_at FROM plans WHERE date = ? AND revision = ? AND deleted_at IS NULL", plan.Date, plan.Revision).Scan(&existingAcceptedAt)
+		if err == nil && existingAcceptedAt.Valid {
+			// Check if we're updating the same plan (same accepted_at timestamp)
+			planAcceptedAtStr := ""
+			if plan.AcceptedAt != nil {
+				planAcceptedAtStr = *plan.AcceptedAt
+			}
+			if planAcceptedAtStr != existingAcceptedAt.String {
+				return fmt.Errorf("cannot overwrite accepted plan: %s revision %d", plan.Date, plan.Revision)
+			}
+		}
+		// If the query returns no rows or accepted_at is NULL, it's safe to proceed
+	}
+
+	// Check if plan is deleted - forbid adding slots to deleted plans
+	var deletedAt sql.NullString
+	err = tx.QueryRow("SELECT deleted_at FROM plans WHERE date = ? AND revision = ?", plan.Date, plan.Revision).Scan(&deletedAt)
+	if err == nil && deletedAt.Valid {
+		return fmt.Errorf("cannot save slots to a deleted plan: %s revision %d", plan.Date, plan.Revision)
+	}
+
+	// Prepare accepted_at value
+	var acceptedAtVal sql.NullString
+	if plan.AcceptedAt != nil {
+		acceptedAtVal = sql.NullString{String: *plan.AcceptedAt, Valid: true}
+	}
+
+	// Insert or replace plan
+	_, err = tx.Exec(
+		"INSERT OR REPLACE INTO plans (date, revision, accepted_at, deleted_at) VALUES (?, ?, ?, NULL)",
+		plan.Date, plan.Revision, acceptedAtVal,
+	)
 	if err != nil {
 		return err
 	}
 
-	// Delete existing non-soft-deleted slots for this plan to preserve soft-deleted slots
-	_, err = tx.Exec("DELETE FROM slots WHERE plan_date = ? AND deleted_at IS NULL", plan.Date)
+	// Delete existing non-soft-deleted slots for this plan revision
+	_, err = tx.Exec("DELETE FROM slots WHERE plan_date = ? AND plan_revision = ? AND deleted_at IS NULL", plan.Date, plan.Revision)
 	if err != nil {
 		return err
 	}
@@ -411,8 +473,8 @@ func (s *SQLiteStore) SavePlan(plan models.DayPlan) error {
 	// Insert slots
 	stmt, err := tx.Prepare(`
 		INSERT INTO slots (
-			plan_date, start_time, end_time, task_id, status, feedback_rating, feedback_note, deleted_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+			plan_date, plan_revision, start_time, end_time, task_id, status, feedback_rating, feedback_note, deleted_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
@@ -429,7 +491,7 @@ func (s *SQLiteStore) SavePlan(plan models.DayPlan) error {
 			slotDeletedAt = sql.NullString{String: *slot.DeletedAt, Valid: true}
 		}
 		_, err = stmt.Exec(
-			plan.Date, slot.Start, slot.End, slot.TaskID, slot.Status, rating, note, slotDeletedAt,
+			plan.Date, plan.Revision, slot.Start, slot.End, slot.TaskID, slot.Status, rating, note, slotDeletedAt,
 		)
 		if err != nil {
 			return err
@@ -440,9 +502,19 @@ func (s *SQLiteStore) SavePlan(plan models.DayPlan) error {
 }
 
 func (s *SQLiteStore) GetPlan(date string) (models.DayPlan, error) {
-	// Check if plan exists and is not deleted
-	var deletedAt sql.NullString
-	err := s.db.QueryRow("SELECT deleted_at FROM plans WHERE date = ?", date).Scan(&deletedAt)
+	// Get latest revision by default
+	return s.GetLatestPlanRevision(date)
+}
+
+func (s *SQLiteStore) GetLatestPlanRevision(date string) (models.DayPlan, error) {
+	// Get the latest non-deleted revision for this date
+	var revision int
+	var acceptedAt sql.NullString
+	err := s.db.QueryRow(
+		"SELECT revision, accepted_at FROM plans WHERE date = ? AND deleted_at IS NULL ORDER BY revision DESC LIMIT 1",
+		date,
+	).Scan(&revision, &acceptedAt)
+
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return models.DayPlan{}, fmt.Errorf("no plan found for date: %s", date)
@@ -450,18 +522,46 @@ func (s *SQLiteStore) GetPlan(date string) (models.DayPlan, error) {
 		return models.DayPlan{}, err
 	}
 
-	if deletedAt.Valid {
-		return models.DayPlan{}, fmt.Errorf("plan for date %s has been deleted; use 'daylit restore plan %s' to restore it", date, date)
+	return s.getPlanByRevision(date, revision, acceptedAt, sql.NullString{})
+}
+
+func (s *SQLiteStore) GetPlanRevision(date string, revision int) (models.DayPlan, error) {
+	// Get a specific revision
+	var acceptedAt, deletedAt sql.NullString
+	err := s.db.QueryRow(
+		"SELECT accepted_at, deleted_at FROM plans WHERE date = ? AND revision = ?",
+		date, revision,
+	).Scan(&acceptedAt, &deletedAt)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return models.DayPlan{}, fmt.Errorf("no plan found for date: %s revision: %d", date, revision)
+		}
+		return models.DayPlan{}, err
 	}
 
+	if deletedAt.Valid {
+		return models.DayPlan{}, fmt.Errorf("plan for date %s revision %d has been deleted; use 'daylit restore plan %s' to restore it", date, revision, date)
+	}
+
+	return s.getPlanByRevision(date, revision, acceptedAt, deletedAt)
+}
+
+func (s *SQLiteStore) getPlanByRevision(date string, revision int, acceptedAt, deletedAt sql.NullString) (models.DayPlan, error) {
 	plan := models.DayPlan{
-		Date: date,
+		Date:     date,
+		Revision: revision,
+	}
+
+	if acceptedAt.Valid {
+		plan.AcceptedAt = &acceptedAt.String
 	}
 
 	// Get slots (exclude soft-deleted slots)
 	rows, err := s.db.Query(`
 		SELECT start_time, end_time, task_id, status, feedback_rating, feedback_note
-		FROM slots WHERE plan_date = ? AND deleted_at IS NULL ORDER BY start_time`, date)
+		FROM slots WHERE plan_date = ? AND plan_revision = ? AND deleted_at IS NULL ORDER BY start_time`,
+		date, revision)
 	if err != nil {
 		return models.DayPlan{}, err
 	}
@@ -490,39 +590,33 @@ func (s *SQLiteStore) GetPlan(date string) (models.DayPlan, error) {
 }
 
 func (s *SQLiteStore) DeletePlan(date string) error {
-	// Soft delete: set deleted_at timestamp for the plan and its slots
+	// Soft delete: set deleted_at timestamp for all revisions of the plan and their slots
 	tx, err := s.db.Begin()
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
 
-	// Check if plan exists and is not already deleted
-	var deletedAt sql.NullString
-	err = tx.QueryRow("SELECT deleted_at FROM plans WHERE date = ?", date).Scan(&deletedAt)
+	// Check if any non-deleted plans exist for this date
+	var count int
+	err = tx.QueryRow("SELECT COUNT(*) FROM plans WHERE date = ? AND deleted_at IS NULL", date).Scan(&count)
 	if err != nil {
-		tx.Rollback()
-		if err == sql.ErrNoRows {
-			return fmt.Errorf("plan not found for date: %s", date)
-		}
 		return err
 	}
 
-	if deletedAt.Valid {
-		tx.Rollback()
-		return fmt.Errorf("plan for date %s is already deleted", date)
+	if count == 0 {
+		return fmt.Errorf("no active plans found for date: %s", date)
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
 
-	// Soft delete the plan
-	if _, err := tx.Exec("UPDATE plans SET deleted_at = ? WHERE date = ?", now, date); err != nil {
-		tx.Rollback()
+	// Soft delete all revisions of the plan
+	if _, err := tx.Exec("UPDATE plans SET deleted_at = ? WHERE date = ? AND deleted_at IS NULL", now, date); err != nil {
 		return err
 	}
 
 	// Soft delete associated slots that are not already soft-deleted
 	if _, err := tx.Exec("UPDATE slots SET deleted_at = ? WHERE plan_date = ? AND deleted_at IS NULL", now, date); err != nil {
-		tx.Rollback()
 		return err
 	}
 
@@ -530,41 +624,36 @@ func (s *SQLiteStore) DeletePlan(date string) error {
 }
 
 func (s *SQLiteStore) RestorePlan(date string) error {
-	// Restore a soft-deleted plan (and its slots) by clearing deleted_at
+	// Restore soft-deleted plans (all revisions and their slots) by clearing deleted_at
 	tx, err := s.db.Begin()
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
 
-	// Check if plan exists and get its deleted_at timestamp
+	// Get the most recent deleted_at timestamp for plans on this date
 	var planDeletedAt sql.NullString
-	err = tx.QueryRow("SELECT deleted_at FROM plans WHERE date = ?", date).Scan(&planDeletedAt)
+	err = tx.QueryRow(
+		"SELECT deleted_at FROM plans WHERE date = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC LIMIT 1",
+		date,
+	).Scan(&planDeletedAt)
 	if err != nil {
-		tx.Rollback()
 		if err == sql.ErrNoRows {
-			return fmt.Errorf("plan not found for date: %s", date)
+			return fmt.Errorf("no deleted plans found for date: %s", date)
 		}
 		return err
 	}
 
-	if !planDeletedAt.Valid {
-		tx.Rollback()
-		return fmt.Errorf("plan is not deleted for date: %s", date)
-	}
-
-	// Restore the plan
-	if _, err := tx.Exec("UPDATE plans SET deleted_at = NULL WHERE date = ?", date); err != nil {
-		tx.Rollback()
+	// Restore all plan revisions that were deleted at the same time
+	if _, err := tx.Exec("UPDATE plans SET deleted_at = NULL WHERE date = ? AND deleted_at = ?", date, planDeletedAt.String); err != nil {
 		return err
 	}
 
-	// Restore only slots that share the same deleted_at timestamp as the plan.
-	// This avoids resurrecting slots that were independently soft-deleted at a different time.
+	// Restore only slots that share the same deleted_at timestamp as the plans
 	if _, err := tx.Exec(
 		"UPDATE slots SET deleted_at = NULL WHERE plan_date = ? AND deleted_at = ?",
 		date, planDeletedAt.String,
 	); err != nil {
-		tx.Rollback()
 		return err
 	}
 
