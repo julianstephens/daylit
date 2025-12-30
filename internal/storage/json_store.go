@@ -11,10 +11,10 @@ import (
 )
 
 type Store struct {
-	Version  int                                `json:"version"`
-	Settings Settings                           `json:"settings"`
-	Tasks    map[string]models.Task             `json:"tasks"`
-	Plans    map[string]map[int]models.DayPlan  `json:"plans"` // date -> revision -> plan
+	Version  int                               `json:"version"`
+	Settings Settings                          `json:"settings"`
+	Tasks    map[string]models.Task            `json:"tasks"`
+	Plans    map[string]map[int]models.DayPlan `json:"plans"` // date -> revision -> plan
 }
 
 type JSONStore struct {
@@ -227,7 +227,7 @@ func (s *JSONStore) SavePlan(plan models.DayPlan) error {
 					latestPlan = p
 				}
 			}
-			
+
 			if latestRev == 0 {
 				// All plans are deleted, create new revision 1
 				plan.Revision = 1

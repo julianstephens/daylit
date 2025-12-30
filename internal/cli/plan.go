@@ -40,7 +40,7 @@ func (c *PlanCmd) Run(ctx *Context) error {
 	// Check if a plan already exists for this date
 	existingPlan, err := ctx.Store.GetPlan(dateStr)
 	var shouldCreateNewRevision bool
-	
+
 	if err == nil && len(existingPlan.Slots) > 0 {
 		if existingPlan.AcceptedAt != nil {
 			// Plan is accepted - must create new revision
@@ -89,7 +89,7 @@ func (c *PlanCmd) Run(ctx *Context) error {
 
 	// Set revision to 0 so SavePlan will auto-assign it
 	plan.Revision = 0
-	
+
 	// If user explicitly requested new revision, force it
 	if shouldCreateNewRevision {
 		plan.Revision = existingPlan.Revision + 1

@@ -80,6 +80,10 @@ func (m *Model) Render() {
 	}
 
 	var b strings.Builder
+
+	// Add revision badge at the top
+	b.WriteString(fmt.Sprintf("Revision %d\n\n", m.Plan.Revision))
+
 	for _, slot := range m.Plan.Slots {
 		taskName := "Unknown Task"
 		if t, ok := m.Tasks[slot.TaskID]; ok {
