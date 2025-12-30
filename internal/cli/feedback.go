@@ -4,27 +4,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/julianstephens/daylit/internal/constants"
 	"github.com/julianstephens/daylit/internal/models"
 )
-
-const (
-	// Feedback adjustment constants:
-	// - FeedbackExistingWeight and feedbackNewWeight are exponential moving average (EMA)
-	//   weights for the existing average and the new actual duration. They must sum to 1.0.
-	// - feedbackTooMuchReductionFactor is an independent multiplicative scaling factor
-	//   applied to reduce a task's duration when feedback indicates it is too much.
-	FeedbackExistingWeight         = 0.8 // EMA weight for existing average duration
-	FeedbackNewWeight              = 0.2 // EMA weight for new actual duration
-	FeedbackTooMuchReductionFactor = 0.9 // Scaling factor applied when reducing task duration
-	MinTaskDurationMin             = 10  // Minimum task duration in minutes
-)
-
-func init() {
-	// Runtime validation: ensure EMA weights sum to 1.0
-	if FeedbackExistingWeight+FeedbackNewWeight != 1.0 {
-		panic("FeedbackExistingWeight and FeedbackNewWeight must sum to 1.0")
-	}
-}
 
 type FeedbackCmd struct {
 	Rating string `help:"Rating (on_track|too_much|unnecessary)." required:""`
@@ -100,15 +82,15 @@ func (c *FeedbackCmd) Run(ctx *Context) error {
 					// Initialize average if it was unset or invalid
 					task.AvgActualDurationMin = float64(slotDuration)
 				} else {
-					task.AvgActualDurationMin = task.AvgActualDurationMin*FeedbackExistingWeight + float64(slotDuration)*FeedbackNewWeight
+					task.AvgActualDurationMin = task.AvgActualDurationMin*constants.FeedbackExistingWeight + float64(slotDuration)*constants.FeedbackNewWeight
 				}
 			}
 			task.LastDone = dateStr
 		case models.FeedbackTooMuch:
 			// Reduce duration slightly
-			task.DurationMin = int(float64(task.DurationMin) * FeedbackTooMuchReductionFactor)
-			if task.DurationMin < MinTaskDurationMin {
-				task.DurationMin = MinTaskDurationMin
+			task.DurationMin = int(float64(task.DurationMin) * constants.FeedbackTooMuchReductionFactor)
+			if task.DurationMin < constants.MinTaskDurationMin {
+				task.DurationMin = constants.MinTaskDurationMin
 			}
 			task.LastDone = dateStr
 		case models.FeedbackUnnecessary:

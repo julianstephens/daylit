@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/google/uuid"
 
+	"github.com/julianstephens/daylit/internal/constants"
 	"github.com/julianstephens/daylit/internal/models"
 	"github.com/julianstephens/daylit/internal/tui/components/tasklist"
 )
@@ -96,13 +97,6 @@ func calculateSlotDuration(slot models.Slot) int {
 	return int(end.Sub(start).Minutes())
 }
 
-const (
-	FeedbackExistingWeight         = 0.8
-	FeedbackNewWeight              = 0.2
-	FeedbackTooMuchReductionFactor = 0.9
-	MinTaskDurationMin             = 10
-)
-
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
@@ -123,25 +117,45 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case huh.StateCompleted:
 			// Apply changes
 			m.editingTask.Name = m.taskForm.Name
-			dur, _ := strconv.Atoi(m.taskForm.Duration)
-			m.editingTask.DurationMin = dur
+			dur, err := strconv.Atoi(m.taskForm.Duration)
+			if err != nil {
+				fmt.Printf("failed to parse duration %q: %v\n", m.taskForm.Duration, err)
+			} else {
+				m.editingTask.DurationMin = dur
+			}
 			m.editingTask.Recurrence.Type = m.taskForm.Recurrence
-			interval, _ := strconv.Atoi(m.taskForm.Interval)
-			m.editingTask.Recurrence.IntervalDays = interval
-			prio, _ := strconv.Atoi(m.taskForm.Priority)
-			m.editingTask.Priority = prio
+			interval, err := strconv.Atoi(m.taskForm.Interval)
+			if err != nil {
+				fmt.Printf("failed to parse interval %q: %v\n", m.taskForm.Interval, err)
+			} else {
+				m.editingTask.Recurrence.IntervalDays = interval
+			}
+			prio, err := strconv.Atoi(m.taskForm.Priority)
+			if err != nil {
+				fmt.Printf("failed to parse priority %q: %v\n", m.taskForm.Priority, err)
+			} else {
+				m.editingTask.Priority = prio
+			}
 			m.editingTask.Active = m.taskForm.Active
 
 			// Check if task exists to decide Add vs Update
-			_, err := m.store.GetTask(m.editingTask.ID)
+			_, err = m.store.GetTask(m.editingTask.ID)
 			if err != nil {
-				m.store.AddTask(*m.editingTask)
+				if err := m.store.AddTask(*m.editingTask); err != nil {
+					fmt.Printf("failed to add task %q: %v\n", m.editingTask.ID, err)
+				}
 			} else {
-				m.store.UpdateTask(*m.editingTask)
+				if err := m.store.UpdateTask(*m.editingTask); err != nil {
+					fmt.Printf("failed to update task %q: %v\n", m.editingTask.ID, err)
+				}
 			}
 
-			tasks, _ := m.store.GetAllTasks()
-			m.taskList.SetTasks(tasks)
+			tasks, err := m.store.GetAllTasks()
+			if err != nil {
+				fmt.Printf("failed to load tasks: %v\n", err)
+			} else {
+				m.taskList.SetTasks(tasks)
+			}
 			m.state = StateTasks
 		case huh.StateAborted:
 			m.state = StateTasks
@@ -187,13 +201,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 							if task.AvgActualDurationMin <= 0 {
 								task.AvgActualDurationMin = float64(slotDuration)
 							} else {
-								task.AvgActualDurationMin = (task.AvgActualDurationMin * FeedbackExistingWeight) + (float64(slotDuration) * FeedbackNewWeight)
+								task.AvgActualDurationMin = (task.AvgActualDurationMin * constants.FeedbackExistingWeight) + (float64(slotDuration) * constants.FeedbackNewWeight)
 							}
 						}
 					case models.FeedbackTooMuch:
-						task.DurationMin = int(float64(task.DurationMin) * FeedbackTooMuchReductionFactor)
-						if task.DurationMin < MinTaskDurationMin {
-							task.DurationMin = MinTaskDurationMin
+						task.DurationMin = int(float64(task.DurationMin) * constants.FeedbackTooMuchReductionFactor)
+						if task.DurationMin < constants.MinTaskDurationMin {
+							task.DurationMin = constants.MinTaskDurationMin
 						}
 					case models.FeedbackUnnecessary:
 						if task.Recurrence.Type == models.RecurrenceNDays {
@@ -202,12 +216,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 					task.LastDone = today
 					task.SuccessStreak++
-					m.store.UpdateTask(task)
+					if err := m.store.UpdateTask(task); err != nil {
+						fmt.Printf("error updating task with feedback: %v\n", err)
+						m.state = m.previousState
+						return m, nil
+					}
 				}
-				m.store.SavePlan(plan)
+				if err := m.store.SavePlan(plan); err != nil {
+					fmt.Printf("error saving plan with feedback: %v\n", err)
+					m.state = m.previousState
+					return m, nil
+				}
 
 				// Refresh views
-				tasks, _ := m.store.GetAllTasks()
+				tasks, err := m.store.GetAllTasks()
+				if err != nil {
+					fmt.Printf("error refreshing tasks after feedback: %v\n", err)
+					m.state = m.previousState
+					return m, nil
+				}
 				m.planModel.SetPlan(plan, tasks)
 				m.nowModel.SetPlan(plan, tasks)
 				m.taskList.SetTasks(tasks)
@@ -224,9 +251,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg, ok := msg.(tea.KeyMsg); ok {
 			switch msg.String() {
 			case "y", "Y":
-				m.store.DeleteTask(m.taskToDeleteID)
-				tasks, _ := m.store.GetAllTasks()
-				m.taskList.SetTasks(tasks)
+				if err := m.store.DeleteTask(m.taskToDeleteID); err != nil {
+					fmt.Printf("error deleting task %s: %v\n", m.taskToDeleteID, err)
+				}
+				tasks, err := m.store.GetAllTasks()
+				if err != nil {
+					fmt.Printf("error loading tasks after deletion: %v\n", err)
+				} else {
+					m.taskList.SetTasks(tasks)
+				}
 				m.state = StateTasks
 				m.taskToDeleteID = ""
 			case "n", "N", "esc", "q":

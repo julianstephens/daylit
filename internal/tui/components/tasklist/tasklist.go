@@ -106,7 +106,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			return m, func() tea.Msg { return AddTaskMsg{} }
 		case key.Matches(msg, m.keys.Edit):
 			if i, ok := m.list.SelectedItem().(Item); ok {
-				return m, func() tea.Msg { return EditTaskMsg(i) }
+				return m, func() tea.Msg { return EditTaskMsg{Task: i.Task} }
 			}
 		case key.Matches(msg, m.keys.Delete):
 			if i, ok := m.list.SelectedItem().(Item); ok {

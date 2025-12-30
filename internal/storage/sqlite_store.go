@@ -276,9 +276,12 @@ func (s *SQLiteStore) GetAllTasks() ([]models.Task, error) {
 }
 
 func (s *SQLiteStore) UpdateTask(task models.Task) error {
-	weekdaysJSON, _ := json.Marshal(task.Recurrence.WeekdayMask)
+	weekdaysJSON, err := json.Marshal(task.Recurrence.WeekdayMask)
+	if err != nil {
+		return fmt.Errorf("failed to marshal recurrence weekday mask: %w", err)
+	}
 
-	_, err := s.db.Exec(`
+	_, err = s.db.Exec(`
 		INSERT OR REPLACE INTO tasks (
 			id, name, kind, duration_min, earliest_start, latest_end, fixed_start, fixed_end,
 			recurrence_type, recurrence_interval, recurrence_weekdays, priority, energy_band,

@@ -7,16 +7,10 @@ import (
 	"github.com/alecthomas/kong"
 
 	"github.com/julianstephens/daylit/internal/cli"
+	_ "github.com/julianstephens/daylit/internal/constants" // import for init validation
 	"github.com/julianstephens/daylit/internal/scheduler"
 	"github.com/julianstephens/daylit/internal/storage"
 )
-
-func init() {
-	// Compile-time assertion: ensure EMA weights sum to 1.0
-	if cli.FeedbackExistingWeight+cli.FeedbackNewWeight != 1.0 {
-		panic("cli.FeedbackExistingWeight and cli.FeedbackNewWeight must sum to 1.0")
-	}
-}
 
 var CLI struct {
 	Version kong.VersionFlag
