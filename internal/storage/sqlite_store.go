@@ -153,7 +153,9 @@ func (s *SQLiteStore) GetSettings() (Settings, error) {
 		case "day_end":
 			settings.DayEnd = value
 		case "default_block_min":
-			fmt.Sscanf(value, "%d", &settings.DefaultBlockMin)
+			if _, err := fmt.Sscanf(value, "%d", &settings.DefaultBlockMin); err != nil {
+				return Settings{}, fmt.Errorf("parsing default_block_min: %w", err)
+			}
 		}
 		count++
 	}
@@ -295,8 +297,24 @@ func (s *SQLiteStore) UpdateTask(task models.Task) error {
 }
 
 func (s *SQLiteStore) DeleteTask(id string) error {
-	_, err := s.db.Exec("DELETE FROM tasks WHERE id = ?", id)
-	return err
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	// Delete any slots that reference this task to maintain referential integrity.
+	if _, err := tx.Exec("DELETE FROM slots WHERE task_id = ?", id); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Now delete the task itself.
+	if _, err := tx.Exec("DELETE FROM tasks WHERE id = ?", id); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (s *SQLiteStore) SavePlan(plan models.DayPlan) error {

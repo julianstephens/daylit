@@ -26,8 +26,14 @@ func newEditForm(fm *TaskFormModel) *huh.Form {
 				Title("Duration (min)").
 				Value(&fm.Duration).
 				Validate(func(s string) error {
-					_, err := strconv.Atoi(s)
-					return err
+					i, err := strconv.Atoi(s)
+					if err != nil {
+						return err
+					}
+					if i <= 0 {
+						return fmt.Errorf("duration must be a positive number of minutes")
+					}
+					return nil
 				}),
 			huh.NewSelect[models.RecurrenceType]().
 				Title("Recurrence").
@@ -43,11 +49,17 @@ func newEditForm(fm *TaskFormModel) *huh.Form {
 				Description("For 'Every N Days' recurrence").
 				Value(&fm.Interval).
 				Validate(func(s string) error {
-					if s == "" {
+					if strings.TrimSpace(s) == "" {
 						return nil
 					}
-					_, err := strconv.Atoi(s)
-					return err
+					i, err := strconv.Atoi(s)
+					if err != nil {
+						return err
+					}
+					if i <= 0 {
+						return fmt.Errorf("interval must be a positive number of days")
+					}
+					return nil
 				}),
 			huh.NewInput().
 				Title("Priority (1-5)").
@@ -118,43 +130,38 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Apply changes
 			m.editingTask.Name = m.taskForm.Name
 			dur, err := strconv.Atoi(m.taskForm.Duration)
-			if err != nil {
-				fmt.Printf("failed to parse duration %q: %v\n", m.taskForm.Duration, err)
-			} else {
+			if err == nil {
 				m.editingTask.DurationMin = dur
 			}
 			m.editingTask.Recurrence.Type = m.taskForm.Recurrence
-			interval, err := strconv.Atoi(m.taskForm.Interval)
-			if err != nil {
-				fmt.Printf("failed to parse interval %q: %v\n", m.taskForm.Interval, err)
-			} else {
+			intervalStr := strings.TrimSpace(m.taskForm.Interval)
+			interval, err := strconv.Atoi(intervalStr)
+			if err == nil {
 				m.editingTask.Recurrence.IntervalDays = interval
 			}
 			prio, err := strconv.Atoi(m.taskForm.Priority)
-			if err != nil {
-				fmt.Printf("failed to parse priority %q: %v\n", m.taskForm.Priority, err)
-			} else {
+			if err == nil {
 				m.editingTask.Priority = prio
 			}
 			m.editingTask.Active = m.taskForm.Active
 
 			// Check if task exists to decide Add vs Update
 			_, err = m.store.GetTask(m.editingTask.ID)
+			var saveErr error
 			if err != nil {
-				if err := m.store.AddTask(*m.editingTask); err != nil {
-					fmt.Printf("failed to add task %q: %v\n", m.editingTask.ID, err)
-				}
+				// Task doesn't exist, add it
+				saveErr = m.store.AddTask(*m.editingTask)
 			} else {
-				if err := m.store.UpdateTask(*m.editingTask); err != nil {
-					fmt.Printf("failed to update task %q: %v\n", m.editingTask.ID, err)
-				}
+				// Task exists, update it
+				saveErr = m.store.UpdateTask(*m.editingTask)
 			}
 
-			tasks, err := m.store.GetAllTasks()
-			if err != nil {
-				fmt.Printf("failed to load tasks: %v\n", err)
-			} else {
-				m.taskList.SetTasks(tasks)
+			// Only update task list if save was successful
+			if saveErr == nil {
+				tasks, err := m.store.GetAllTasks()
+				if err == nil {
+					m.taskList.SetTasks(tasks)
+				}
 			}
 			m.state = StateTasks
 		case huh.StateAborted:
@@ -191,7 +198,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				slot.Status = models.SlotStatusDone
 
-				// Update task stats
+				// Save plan first to ensure feedback is persisted
+				if err := m.store.SavePlan(plan); err != nil {
+					// On error, revert to previous state
+					m.state = m.previousState
+					return m, nil
+				}
+
+				// Update task stats only after plan is saved
 				task, err := m.store.GetTask(slot.TaskID)
 				if err == nil {
 					switch rating {
@@ -216,22 +230,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 					task.LastDone = today
 					task.SuccessStreak++
-					if err := m.store.UpdateTask(task); err != nil {
-						fmt.Printf("error updating task with feedback: %v\n", err)
-						m.state = m.previousState
-						return m, nil
-					}
-				}
-				if err := m.store.SavePlan(plan); err != nil {
-					fmt.Printf("error saving plan with feedback: %v\n", err)
-					m.state = m.previousState
-					return m, nil
+					// Ignore task update errors to avoid inconsistency if it fails after plan save
+					m.store.UpdateTask(task)
 				}
 
 				// Refresh views
 				tasks, err := m.store.GetAllTasks()
 				if err != nil {
-					fmt.Printf("error refreshing tasks after feedback: %v\n", err)
+					// On error, revert to previous state
 					m.state = m.previousState
 					return m, nil
 				}
@@ -252,12 +258,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "y", "Y":
 				if err := m.store.DeleteTask(m.taskToDeleteID); err != nil {
-					fmt.Printf("error deleting task %s: %v\n", m.taskToDeleteID, err)
+					// On error, silently return to tasks view
+					m.state = StateTasks
+					m.taskToDeleteID = ""
+					return m, nil
 				}
+				// Deletion succeeded - always refresh and clear state
 				tasks, err := m.store.GetAllTasks()
-				if err != nil {
-					fmt.Printf("error loading tasks after deletion: %v\n", err)
-				} else {
+				if err == nil {
 					m.taskList.SetTasks(tasks)
 				}
 				m.state = StateTasks

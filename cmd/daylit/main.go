@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/alecthomas/kong"
 
@@ -40,7 +41,7 @@ func main() {
 
 	// Determine storage type based on extension
 	var store storage.Provider
-	if len(CLI.Config) > 5 && CLI.Config[len(CLI.Config)-5:] == ".json" {
+	if filepath.Ext(CLI.Config) == ".json" {
 		store = storage.NewJSONStore(CLI.Config)
 	} else {
 		store = storage.NewSQLiteStore(CLI.Config)

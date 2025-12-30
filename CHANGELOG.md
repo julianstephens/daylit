@@ -1,6 +1,6 @@
 ## v0.2.0
 
-- Moves to sqlite for storage
+- Adds SQLite storage option (JSON storage still supported)
 - Adds `daylit task edit`
 - Adds `daylit task delete`
 - Adds all CLI commands to TUI
