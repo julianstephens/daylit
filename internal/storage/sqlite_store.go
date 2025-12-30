@@ -227,17 +227,18 @@ func (s *SQLiteStore) GetTask(id string) (models.Task, error) {
 	row := s.db.QueryRow(`
 		SELECT id, name, kind, duration_min, earliest_start, latest_end, fixed_start, fixed_end,
 		       recurrence_type, recurrence_interval, recurrence_weekdays, priority, energy_band,
-		       active, last_done, success_streak, avg_actual_duration
-		FROM tasks WHERE id = ?`, id)
+		       active, last_done, success_streak, avg_actual_duration, deleted_at
+		FROM tasks WHERE id = ? AND deleted_at IS NULL`, id)
 
 	var t models.Task
 	var recType, recWeekdays, energyBand string
 	var active bool
+	var deletedAt sql.NullString
 
 	err := row.Scan(
 		&t.ID, &t.Name, &t.Kind, &t.DurationMin, &t.EarliestStart, &t.LatestEnd, &t.FixedStart, &t.FixedEnd,
 		&recType, &t.Recurrence.IntervalDays, &recWeekdays, &t.Priority, &energyBand,
-		&active, &t.LastDone, &t.SuccessStreak, &t.AvgActualDurationMin,
+		&active, &t.LastDone, &t.SuccessStreak, &t.AvgActualDurationMin, &deletedAt,
 	)
 	if err != nil {
 		return models.Task{}, err
@@ -246,6 +247,10 @@ func (s *SQLiteStore) GetTask(id string) (models.Task, error) {
 	t.Recurrence.Type = models.RecurrenceType(recType)
 	t.EnergyBand = models.EnergyBand(energyBand)
 	t.Active = active
+
+	if deletedAt.Valid {
+		t.DeletedAt = &deletedAt.String
+	}
 
 	if recWeekdays != "" {
 		var weekdays []int
@@ -263,8 +268,8 @@ func (s *SQLiteStore) GetAllTasks() ([]models.Task, error) {
 	rows, err := s.db.Query(`
 		SELECT id, name, kind, duration_min, earliest_start, latest_end, fixed_start, fixed_end,
 		       recurrence_type, recurrence_interval, recurrence_weekdays, priority, energy_band,
-		       active, last_done, success_streak, avg_actual_duration
-		FROM tasks`)
+		       active, last_done, success_streak, avg_actual_duration, deleted_at
+		FROM tasks WHERE deleted_at IS NULL`)
 	if err != nil {
 		return nil, err
 	}
@@ -275,11 +280,12 @@ func (s *SQLiteStore) GetAllTasks() ([]models.Task, error) {
 		var t models.Task
 		var recType, recWeekdays, energyBand string
 		var active bool
+		var deletedAt sql.NullString
 
 		err := rows.Scan(
 			&t.ID, &t.Name, &t.Kind, &t.DurationMin, &t.EarliestStart, &t.LatestEnd, &t.FixedStart, &t.FixedEnd,
 			&recType, &t.Recurrence.IntervalDays, &recWeekdays, &t.Priority, &energyBand,
-			&active, &t.LastDone, &t.SuccessStreak, &t.AvgActualDurationMin,
+			&active, &t.LastDone, &t.SuccessStreak, &t.AvgActualDurationMin, &deletedAt,
 		)
 		if err != nil {
 			return nil, err
@@ -288,6 +294,10 @@ func (s *SQLiteStore) GetAllTasks() ([]models.Task, error) {
 		t.Recurrence.Type = models.RecurrenceType(recType)
 		t.EnergyBand = models.EnergyBand(energyBand)
 		t.Active = active
+
+		if deletedAt.Valid {
+			t.DeletedAt = &deletedAt.String
+		}
 
 		if recWeekdays != "" {
 			var weekdays []int
@@ -309,38 +319,61 @@ func (s *SQLiteStore) UpdateTask(task models.Task) error {
 		return fmt.Errorf("failed to marshal recurrence weekday mask: %w", err)
 	}
 
+	var deletedAt sql.NullString
+	if task.DeletedAt != nil {
+		deletedAt = sql.NullString{String: *task.DeletedAt, Valid: true}
+	}
+
 	_, err = s.db.Exec(`
 		INSERT OR REPLACE INTO tasks (
 			id, name, kind, duration_min, earliest_start, latest_end, fixed_start, fixed_end,
 			recurrence_type, recurrence_interval, recurrence_weekdays, priority, energy_band,
-			active, last_done, success_streak, avg_actual_duration
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			active, last_done, success_streak, avg_actual_duration, deleted_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		task.ID, task.Name, task.Kind, task.DurationMin, task.EarliestStart, task.LatestEnd, task.FixedStart, task.FixedEnd,
 		task.Recurrence.Type, task.Recurrence.IntervalDays, string(weekdaysJSON), task.Priority, task.EnergyBand,
-		task.Active, task.LastDone, task.SuccessStreak, task.AvgActualDurationMin,
+		task.Active, task.LastDone, task.SuccessStreak, task.AvgActualDurationMin, deletedAt,
 	)
 	return err
 }
 
 func (s *SQLiteStore) DeleteTask(id string) error {
-	tx, err := s.db.Begin()
+	// Soft delete: set deleted_at timestamp instead of removing the record
+	var deletedAt sql.NullString
+	err := s.db.QueryRow("SELECT deleted_at FROM tasks WHERE id = ?", id).Scan(&deletedAt)
 	if err != nil {
-		return err
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("task with id %s not found", id)
+		}
+		return fmt.Errorf("failed to check task existence: %w", err)
 	}
 
-	// Delete any slots that reference this task to maintain referential integrity.
-	if _, err := tx.Exec("DELETE FROM slots WHERE task_id = ?", id); err != nil {
-		tx.Rollback()
-		return err
+	if deletedAt.Valid {
+		return fmt.Errorf("task with id %s is already deleted", id)
 	}
 
-	// Now delete the task itself.
-	if _, err := tx.Exec("DELETE FROM tasks WHERE id = ?", id); err != nil {
-		tx.Rollback()
-		return err
+	now := time.Now().UTC().Format(time.RFC3339)
+	_, err = s.db.Exec("UPDATE tasks SET deleted_at = ? WHERE id = ?", now, id)
+	return err
+}
+
+func (s *SQLiteStore) RestoreTask(id string) error {
+	// Restore a soft-deleted task by clearing deleted_at
+	var deletedAt sql.NullString
+	err := s.db.QueryRow("SELECT deleted_at FROM tasks WHERE id = ?", id).Scan(&deletedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("task with id %s not found", id)
+		}
+		return fmt.Errorf("failed to check task existence: %w", err)
 	}
 
-	return tx.Commit()
+	if !deletedAt.Valid {
+		return fmt.Errorf("cannot restore a task that is not deleted: %s", id)
+	}
+
+	_, err = s.db.Exec("UPDATE tasks SET deleted_at = NULL WHERE id = ?", id)
+	return err
 }
 
 func (s *SQLiteStore) SavePlan(plan models.DayPlan) error {
@@ -350,14 +383,27 @@ func (s *SQLiteStore) SavePlan(plan models.DayPlan) error {
 	}
 	defer tx.Rollback()
 
-	// Insert plan
-	_, err = tx.Exec("INSERT OR IGNORE INTO plans (date) VALUES (?)", plan.Date)
+	// Check if plan is deleted - forbid adding slots to deleted plans
+	var deletedAt sql.NullString
+	err = tx.QueryRow("SELECT deleted_at FROM plans WHERE date = ?", plan.Date).Scan(&deletedAt)
+	if err == nil && deletedAt.Valid {
+		return fmt.Errorf("cannot save slots to a deleted plan: %s", plan.Date)
+	}
+
+	// Prevent bypassing the delete/restore workflow by ensuring plans cannot be saved
+	// with DeletedAt manually set. Use DeletePlan/RestorePlan for managing deletion state.
+	if plan.DeletedAt != nil {
+		return fmt.Errorf("cannot save a plan with deleted_at set; use DeletePlan to soft-delete or RestorePlan to restore")
+	}
+
+	// Insert or update plan (deleted_at will always be NULL for SavePlan)
+	_, err = tx.Exec("INSERT OR REPLACE INTO plans (date, deleted_at) VALUES (?, NULL)", plan.Date)
 	if err != nil {
 		return err
 	}
 
-	// Delete existing slots for this plan
-	_, err = tx.Exec("DELETE FROM slots WHERE plan_date = ?", plan.Date)
+	// Delete existing non-soft-deleted slots for this plan to preserve soft-deleted slots
+	_, err = tx.Exec("DELETE FROM slots WHERE plan_date = ? AND deleted_at IS NULL", plan.Date)
 	if err != nil {
 		return err
 	}
@@ -365,8 +411,8 @@ func (s *SQLiteStore) SavePlan(plan models.DayPlan) error {
 	// Insert slots
 	stmt, err := tx.Prepare(`
 		INSERT INTO slots (
-			plan_date, start_time, end_time, task_id, status, feedback_rating, feedback_note
-		) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+			plan_date, start_time, end_time, task_id, status, feedback_rating, feedback_note, deleted_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
@@ -378,8 +424,12 @@ func (s *SQLiteStore) SavePlan(plan models.DayPlan) error {
 			rating = string(slot.Feedback.Rating)
 			note = slot.Feedback.Note
 		}
+		var slotDeletedAt sql.NullString
+		if slot.DeletedAt != nil {
+			slotDeletedAt = sql.NullString{String: *slot.DeletedAt, Valid: true}
+		}
 		_, err = stmt.Exec(
-			plan.Date, slot.Start, slot.End, slot.TaskID, slot.Status, rating, note,
+			plan.Date, slot.Start, slot.End, slot.TaskID, slot.Status, rating, note, slotDeletedAt,
 		)
 		if err != nil {
 			return err
@@ -390,9 +440,9 @@ func (s *SQLiteStore) SavePlan(plan models.DayPlan) error {
 }
 
 func (s *SQLiteStore) GetPlan(date string) (models.DayPlan, error) {
-	// Check if plan exists
-	var exists int
-	err := s.db.QueryRow("SELECT 1 FROM plans WHERE date = ?", date).Scan(&exists)
+	// Check if plan exists and is not deleted
+	var deletedAt sql.NullString
+	err := s.db.QueryRow("SELECT deleted_at FROM plans WHERE date = ?", date).Scan(&deletedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return models.DayPlan{}, fmt.Errorf("no plan found for date: %s", date)
@@ -400,14 +450,18 @@ func (s *SQLiteStore) GetPlan(date string) (models.DayPlan, error) {
 		return models.DayPlan{}, err
 	}
 
+	if deletedAt.Valid {
+		return models.DayPlan{}, fmt.Errorf("plan for date %s has been deleted; use 'daylit restore plan %s' to restore it", date, date)
+	}
+
 	plan := models.DayPlan{
 		Date: date,
 	}
 
-	// Get slots
+	// Get slots (exclude soft-deleted slots)
 	rows, err := s.db.Query(`
 		SELECT start_time, end_time, task_id, status, feedback_rating, feedback_note
-		FROM slots WHERE plan_date = ? ORDER BY start_time`, date)
+		FROM slots WHERE plan_date = ? AND deleted_at IS NULL ORDER BY start_time`, date)
 	if err != nil {
 		return models.DayPlan{}, err
 	}
@@ -433,6 +487,88 @@ func (s *SQLiteStore) GetPlan(date string) (models.DayPlan, error) {
 	}
 
 	return plan, nil
+}
+
+func (s *SQLiteStore) DeletePlan(date string) error {
+	// Soft delete: set deleted_at timestamp for the plan and its slots
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	// Check if plan exists and is not already deleted
+	var deletedAt sql.NullString
+	err = tx.QueryRow("SELECT deleted_at FROM plans WHERE date = ?", date).Scan(&deletedAt)
+	if err != nil {
+		tx.Rollback()
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("plan not found for date: %s", date)
+		}
+		return err
+	}
+
+	if deletedAt.Valid {
+		tx.Rollback()
+		return fmt.Errorf("plan for date %s is already deleted", date)
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+
+	// Soft delete the plan
+	if _, err := tx.Exec("UPDATE plans SET deleted_at = ? WHERE date = ?", now, date); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Soft delete associated slots that are not already soft-deleted
+	if _, err := tx.Exec("UPDATE slots SET deleted_at = ? WHERE plan_date = ? AND deleted_at IS NULL", now, date); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (s *SQLiteStore) RestorePlan(date string) error {
+	// Restore a soft-deleted plan (and its slots) by clearing deleted_at
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	// Check if plan exists and get its deleted_at timestamp
+	var planDeletedAt sql.NullString
+	err = tx.QueryRow("SELECT deleted_at FROM plans WHERE date = ?", date).Scan(&planDeletedAt)
+	if err != nil {
+		tx.Rollback()
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("plan not found for date: %s", date)
+		}
+		return err
+	}
+
+	if !planDeletedAt.Valid {
+		tx.Rollback()
+		return fmt.Errorf("plan is not deleted for date: %s", date)
+	}
+
+	// Restore the plan
+	if _, err := tx.Exec("UPDATE plans SET deleted_at = NULL WHERE date = ?", date); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Restore only slots that share the same deleted_at timestamp as the plan.
+	// This avoids resurrecting slots that were independently soft-deleted at a different time.
+	if _, err := tx.Exec(
+		"UPDATE slots SET deleted_at = NULL WHERE plan_date = ? AND deleted_at = ?",
+		date, planDeletedAt.String,
+	); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (s *SQLiteStore) GetConfigPath() string {

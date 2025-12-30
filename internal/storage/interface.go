@@ -18,10 +18,13 @@ type Provider interface {
 	GetAllTasks() ([]models.Task, error)
 	UpdateTask(models.Task) error
 	DeleteTask(id string) error
+	RestoreTask(id string) error
 
 	// Plans
 	SavePlan(models.DayPlan) error
 	GetPlan(date string) (models.DayPlan, error)
+	DeletePlan(date string) error
+	RestorePlan(date string) error
 
 	// Utils
 	GetConfigPath() string
