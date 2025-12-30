@@ -15,7 +15,7 @@ func (c *TuiCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	// Perform automatic backup on TUI startup
+	// Perform automatic backup on TUI startup (after successful load)
 	ctx.PerformAutomaticBackup()
 
 	p := tea.NewProgram(tui.NewModel(ctx.Store, ctx.Scheduler), tea.WithAltScreen())

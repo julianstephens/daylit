@@ -201,6 +201,10 @@ func TestRestoreBackup(t *testing.T) {
 		t.Fatalf("failed to query database: %v", err)
 	}
 	db.Close()
+	
+	// Wait for the database connection to fully close
+	time.Sleep(100 * time.Millisecond)
+	
 	if count != 3 {
 		t.Errorf("expected 3 rows before restore, got %d", count)
 	}

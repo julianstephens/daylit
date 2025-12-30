@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	_ "modernc.org/sqlite"
 )
@@ -81,6 +82,9 @@ func TestIntegrationBackupRestoreWorkflow(t *testing.T) {
 		t.Errorf("expected 2 tasks after modification, got %d", count)
 	}
 	db.Close()
+	
+	// Wait for the database connection to fully close
+	time.Sleep(100 * time.Millisecond)
 
 	// Step 4: Restore from backup
 	err = mgr.RestoreBackup(backup1Path)

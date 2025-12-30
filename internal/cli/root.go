@@ -21,14 +21,11 @@ type Context struct {
 // PerformAutomaticBackup creates an automatic backup and silently handles errors
 func (c *Context) PerformAutomaticBackup() {
 	mgr := backup.NewManager(c.Store.GetConfigPath())
-	backupPath, err := mgr.CreateBackup()
+	_, err := mgr.CreateBackup()
 	if err != nil {
 		// Silently fail - don't interrupt user workflow
 		fmt.Fprintf(os.Stderr, "Warning: automatic backup failed: %v\n", err)
-		return
 	}
-	// Optionally log success (but keep it quiet)
-	_ = backupPath
 }
 
 func parseWeekdays(s string) ([]time.Weekday, error) {

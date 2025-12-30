@@ -19,7 +19,7 @@ func (c *PlanCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	// Perform automatic backup on plan invocation
+	// Perform automatic backup on plan invocation (after successful load)
 	ctx.PerformAutomaticBackup()
 
 	// Parse date

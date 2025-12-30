@@ -182,13 +182,19 @@ func (m *Manager) backupDatabase(destPath string) error {
 			// outstanding changes in the WAL are flushed into the
 			// main database file. This makes a plain file copy safe
 			// even when the database is in WAL mode.
-			if _, chkErr := srcDB.Exec("PRAGMA wal_checkpoint(FULL)"); chkErr != nil {
-				// Preserve previous behavior even if the checkpoint
-				// fails, but emit a warning so that operators are
-				// aware the backup may be missing recent changes.
-				fmt.Fprintf(os.Stderr, "warning: wal_checkpoint(FULL) failed during backup: %v\n", chkErr)
-			}
 			srcDB.Close()
+			
+			// Open a writable connection for the checkpoint
+			checkpointDB, chkErr := sql.Open("sqlite", m.dbPath)
+			if chkErr == nil {
+				if _, chkErr := checkpointDB.Exec("PRAGMA wal_checkpoint(FULL)"); chkErr != nil {
+					// Emit a warning if the checkpoint fails, as the backup
+					// may be missing recent changes.
+					fmt.Fprintf(os.Stderr, "warning: wal_checkpoint(FULL) failed during backup: %v\n", chkErr)
+				}
+				checkpointDB.Close()
+			}
+			
 			return copyFile(m.dbPath, destPath)
 		}
 	}
@@ -232,27 +238,13 @@ func (m *Manager) ListBackups() ([]BackupInfo, error) {
 			// Explicitly handle counters (1-3 digit numbers) vs time components (4 or 6 digits)
 			if len(lastPart) >= 1 && len(lastPart) <= 3 {
 				// Could be a counter (1-3 digits), check if all digits
-				isCounter := true
-				for _, c := range lastPart {
-					if c < '0' || c > '9' {
-						isCounter = false
-						break
-					}
-				}
-				if isCounter {
+				if isNumericCounter(lastPart) {
 					// Remove the counter part
 					timestampStr = strings.Join(parts[:len(parts)-1], "-")
 				}
 			} else if len(lastPart) != 4 && len(lastPart) != 6 {
 				// Not a standard time component, check if it's a numeric counter
-				isCounter := true
-				for _, c := range lastPart {
-					if c < '0' || c > '9' {
-						isCounter = false
-						break
-					}
-				}
-				if isCounter {
+				if isNumericCounter(lastPart) {
 					// Remove the counter part
 					timestampStr = strings.Join(parts[:len(parts)-1], "-")
 				}
@@ -288,6 +280,19 @@ func (m *Manager) ListBackups() ([]BackupInfo, error) {
 	})
 
 	return backups, nil
+}
+
+// isNumericCounter checks if a string is a numeric counter (all digits)
+func isNumericCounter(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 // rotateBackups removes old backups beyond the retention limit
