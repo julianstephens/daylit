@@ -19,6 +19,9 @@ func (c *PlanCmd) Run(ctx *Context) error {
 		return err
 	}
 
+	// Perform automatic backup on plan invocation (after successful load)
+	ctx.PerformAutomaticBackup()
+
 	// Parse date
 	var planDate time.Time
 	if c.Date == "today" {

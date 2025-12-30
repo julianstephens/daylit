@@ -23,7 +23,12 @@ var CLI struct {
 	Now      cli.NowCmd      `cmd:"" help:"Show current task."`
 	Feedback cli.FeedbackCmd `cmd:"" help:"Provide feedback on a slot."`
 	Day      cli.DayCmd      `cmd:"" help:"Show plan for a day."`
-	Task     struct {
+	Backup   struct {
+		Create  cli.BackupCreateCmd  `cmd:"" help:"Create a manual backup." default:"1"`
+		List    cli.BackupListCmd    `cmd:"" help:"List available backups."`
+		Restore cli.BackupRestoreCmd `cmd:"" help:"Restore from a backup."`
+	} `cmd:"" help:"Manage database backups."`
+	Task struct {
 		Add    cli.TaskAddCmd    `cmd:"" help:"Add a new task."`
 		Edit   cli.TaskEditCmd   `cmd:"" help:"Edit an existing task."`
 		Delete cli.TaskDeleteCmd `cmd:"" help:"Delete a task."`

@@ -2,10 +2,12 @@ package cli
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/julianstephens/daylit/internal/backup"
 	"github.com/julianstephens/daylit/internal/models"
 	"github.com/julianstephens/daylit/internal/scheduler"
 	"github.com/julianstephens/daylit/internal/storage"
@@ -14,6 +16,16 @@ import (
 type Context struct {
 	Store     storage.Provider
 	Scheduler *scheduler.Scheduler
+}
+
+// PerformAutomaticBackup creates an automatic backup and silently handles errors
+func (c *Context) PerformAutomaticBackup() {
+	mgr := backup.NewManager(c.Store.GetConfigPath())
+	_, err := mgr.CreateBackup()
+	if err != nil {
+		// Silently fail - don't interrupt user workflow
+		fmt.Fprintf(os.Stderr, "Warning: automatic backup failed: %v\n", err)
+	}
 }
 
 func parseWeekdays(s string) ([]time.Weekday, error) {
