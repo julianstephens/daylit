@@ -41,4 +41,3 @@ DROP TABLE slots;
 DROP TABLE plans;
 ALTER TABLE plans_new RENAME TO plans;
 ALTER TABLE slots_new RENAME TO slots;
-
