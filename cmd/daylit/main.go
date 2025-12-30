@@ -23,10 +23,10 @@ const (
 	//   weights for the existing average and the new actual duration. They must sum to 1.0.
 	// - feedbackTooMuchReductionFactor is an independent multiplicative scaling factor
 	//   applied to reduce a task's duration when feedback indicates it is too much.
-	feedbackExistingWeight         = 0.8  // EMA weight for existing average duration
-	feedbackNewWeight              = 0.2  // EMA weight for new actual duration
-	feedbackTooMuchReductionFactor = 0.9  // Scaling factor applied when reducing task duration
-	minTaskDurationMin             = 10   // Minimum task duration in minutes
+	feedbackExistingWeight         = 0.8 // EMA weight for existing average duration
+	feedbackNewWeight              = 0.2 // EMA weight for new actual duration
+	feedbackTooMuchReductionFactor = 0.9 // Scaling factor applied when reducing task duration
+	minTaskDurationMin             = 10  // Minimum task duration in minutes
 )
 
 func init() {
