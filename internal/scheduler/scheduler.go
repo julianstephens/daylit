@@ -50,13 +50,19 @@ func (s *Scheduler) GeneratePlan(date string, tasks []models.Task, dayStart, day
 	var flexibleTasks []models.Task
 
 	for _, task := range activeTasks {
-		if task.Kind == models.TaskKindAppointment && task.FixedStart != "" && task.FixedEnd != "" {
-			fixedSlots = append(fixedSlots, models.Slot{
-				Start:  task.FixedStart,
-				End:    task.FixedEnd,
-				TaskID: task.ID,
-				Status: models.SlotStatusPlanned,
-			})
+		if task.Kind == models.TaskKindAppointment {
+			// Appointments must have both fixed start and end times
+			if task.FixedStart != "" && task.FixedEnd != "" {
+				fixedSlots = append(fixedSlots, models.Slot{
+					Start:  task.FixedStart,
+					End:    task.FixedEnd,
+					TaskID: task.ID,
+					Status: models.SlotStatusPlanned,
+				})
+			} else {
+				// Treat incomplete appointments as flexible tasks
+				flexibleTasks = append(flexibleTasks, task)
+			}
 		} else if task.Kind == models.TaskKindFlexible {
 			flexibleTasks = append(flexibleTasks, task)
 		}

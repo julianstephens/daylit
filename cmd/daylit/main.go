@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,6 +14,13 @@ import (
 	"github.com/julianstephens/daylit/internal/models"
 	"github.com/julianstephens/daylit/internal/scheduler"
 	"github.com/julianstephens/daylit/internal/storage"
+)
+
+const (
+	// Feedback adjustment constants
+	durationSmoothingOld = 0.8 // Weight for existing average
+	durationSmoothingNew = 0.2 // Weight for new actual duration
+	durationReduction    = 0.9 // Factor to reduce duration when task is too much
 )
 
 var CLI struct {
@@ -213,8 +221,12 @@ func (c *PlanCmd) Run(ctx *Context) error {
 	}
 
 	// Read user input
-	var response string
-	fmt.Scanln(&response)
+	reader := bufio.NewReader(os.Stdin)
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		return err
+	}
+	response = strings.TrimSpace(response)
 
 	if strings.ToLower(response) == "y" || strings.ToLower(response) == "yes" {
 		// Update all slots to accepted
@@ -340,11 +352,11 @@ func (c *FeedbackCmd) Run(ctx *Context) error {
 		case models.FeedbackOnTrack:
 			// Keep duration as is, nudge slightly toward actual
 			slotDuration := calculateSlotDuration(plan.Slots[targetSlotIdx])
-			task.AvgActualDurationMin = task.AvgActualDurationMin*0.8 + float64(slotDuration)*0.2
+			task.AvgActualDurationMin = task.AvgActualDurationMin*durationSmoothingOld + float64(slotDuration)*durationSmoothingNew
 			task.LastDone = dateStr
 		case models.FeedbackTooMuch:
 			// Reduce duration slightly
-			task.DurationMin = int(float64(task.DurationMin) * 0.9)
+			task.DurationMin = int(float64(task.DurationMin) * durationReduction)
 			if task.DurationMin < 10 {
 				task.DurationMin = 10
 			}
