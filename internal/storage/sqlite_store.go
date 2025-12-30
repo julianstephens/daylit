@@ -301,15 +301,16 @@ func (s *SQLiteStore) DeleteTask(id string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
 
 	// Delete any slots that reference this task to maintain referential integrity.
 	if _, err := tx.Exec("DELETE FROM slots WHERE task_id = ?", id); err != nil {
+		tx.Rollback()
 		return err
 	}
 
 	// Now delete the task itself.
 	if _, err := tx.Exec("DELETE FROM tasks WHERE id = ?", id); err != nil {
+		tx.Rollback()
 		return err
 	}
 
