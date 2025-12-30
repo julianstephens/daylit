@@ -18,13 +18,19 @@ func (m Model) View() string {
 		content = m.viewPlan()
 	case StateTasks:
 		content = m.viewTasks()
+	case StateFeedback:
+		content = m.viewFeedback()
+	case StateEditing:
+		content = m.form.View()
+	case StateConfirmDelete:
+		content = m.viewConfirmDelete()
 	}
 
 	ui := lipgloss.JoinVertical(
 		lipgloss.Left,
 		m.viewTabs(),
 		content,
-		m.help.View(m.keys),
+		m.help.View(m),
 	)
 
 	// If we are already filling the screen (which we are, because components are sized to full width/height),
@@ -51,9 +57,36 @@ func (m Model) viewNow() string {
 }
 
 func (m Model) viewPlan() string {
-	return m.planModel.View()
+	return docStyle.Render(m.planModel.View())
 }
 
 func (m Model) viewTasks() string {
-	return m.taskList.View()
+	return docStyle.Render(m.taskList.View())
+}
+
+func (m Model) viewFeedback() string {
+	return lipgloss.Place(m.width, m.height-4,
+		lipgloss.Center, lipgloss.Center,
+		lipgloss.JoinVertical(lipgloss.Center,
+			"Rate the last completed task:",
+			"",
+			"[1] On Track",
+			"[2] Too Much",
+			"[3] Unnecessary",
+			"",
+			"[q] Cancel",
+		),
+	)
+}
+
+func (m Model) viewConfirmDelete() string {
+	return lipgloss.Place(m.width, m.height-4,
+		lipgloss.Center, lipgloss.Center,
+		lipgloss.JoinVertical(lipgloss.Center,
+			dangerStyle.Render("Are you sure you want to delete this task?"),
+			"",
+			"[y] Yes",
+			"[n] No",
+		),
+	)
 }

@@ -52,10 +52,16 @@ func (c *PlanCmd) Run(ctx *Context) error {
 	}
 
 	// Get settings
-	settings := ctx.Store.GetSettings()
+	settings, err := ctx.Store.GetSettings()
+	if err != nil {
+		return fmt.Errorf("failed to get settings: %w", err)
+	}
 
 	// Get all tasks
-	tasks := ctx.Store.GetAllTasks()
+	tasks, err := ctx.Store.GetAllTasks()
+	if err != nil {
+		return fmt.Errorf("failed to get tasks: %w", err)
+	}
 
 	// Generate plan
 	plan, err := ctx.Scheduler.GeneratePlan(dateStr, tasks, settings.DayStart, settings.DayEnd)

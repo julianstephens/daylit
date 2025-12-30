@@ -20,7 +20,7 @@ func init() {
 
 var CLI struct {
 	Version kong.VersionFlag
-	Config  string `help:"Config file path." type:"path" default:"~/.config/daylit/state.json"`
+	Config  string `help:"Config file path." type:"path" default:"~/.config/daylit/daylit.db"`
 
 	Init     cli.InitCmd     `cmd:"" help:"Initialize daylit storage."`
 	Tui      cli.TuiCmd      `cmd:"" help:"Launch the interactive TUI." default:"1"`
@@ -29,8 +29,10 @@ var CLI struct {
 	Feedback cli.FeedbackCmd `cmd:"" help:"Provide feedback on a slot."`
 	Day      cli.DayCmd      `cmd:"" help:"Show plan for a day."`
 	Task     struct {
-		Add  cli.TaskAddCmd  `cmd:"" help:"Add a new task."`
-		List cli.TaskListCmd `cmd:"" help:"List all tasks."`
+		Add    cli.TaskAddCmd    `cmd:"" help:"Add a new task."`
+		Edit   cli.TaskEditCmd   `cmd:"" help:"Edit an existing task."`
+		Delete cli.TaskDeleteCmd `cmd:"" help:"Delete a task."`
+		List   cli.TaskListCmd   `cmd:"" help:"List all tasks."`
 	} `cmd:"" help:"Manage tasks."`
 }
 
@@ -42,10 +44,12 @@ func main() {
 		kong.Vars{"version": "v0.1.0"},
 	)
 
-	store, err := storage.New(CLI.Config)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error initializing storage: %v\n", err)
-		os.Exit(1)
+	// Determine storage type based on extension
+	var store storage.Provider
+	if len(CLI.Config) > 5 && CLI.Config[len(CLI.Config)-5:] == ".json" {
+		store = storage.NewJSONStore(CLI.Config)
+	} else {
+		store = storage.NewSQLiteStore(CLI.Config)
 	}
 
 	appCtx := &cli.Context{
@@ -53,7 +57,7 @@ func main() {
 		Scheduler: scheduler.New(),
 	}
 
-	err = ctx.Run(appCtx)
+	err := ctx.Run(appCtx)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)

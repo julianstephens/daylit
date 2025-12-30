@@ -3,10 +3,22 @@ package tasklist
 import (
 	"fmt"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/julianstephens/daylit/internal/models"
 )
+
+type AddTaskMsg struct{}
+
+type DeleteTaskMsg struct {
+	ID string
+}
+
+type EditTaskMsg struct {
+	Task models.Task
+}
 
 type Item struct {
 	Task models.Task
@@ -18,8 +30,32 @@ func (i Item) Description() string {
 }
 func (i Item) FilterValue() string { return i.Task.Name }
 
+type KeyMap struct {
+	Add    key.Binding
+	Edit   key.Binding
+	Delete key.Binding
+}
+
+func DefaultKeyMap() KeyMap {
+	return KeyMap{
+		Add: key.NewBinding(
+			key.WithKeys("a"),
+			key.WithHelp("a", "add"),
+		),
+		Edit: key.NewBinding(
+			key.WithKeys("e"),
+			key.WithHelp("e", "edit"),
+		),
+		Delete: key.NewBinding(
+			key.WithKeys("d"),
+			key.WithHelp("d", "delete"),
+		),
+	}
+}
+
 type Model struct {
 	list list.Model
+	keys KeyMap
 }
 
 func New(tasks []models.Task, width, height int) Model {
@@ -30,9 +66,27 @@ func New(tasks []models.Task, width, height int) Model {
 
 	l := list.New(items, list.NewDefaultDelegate(), width, height)
 	l.Title = "Tasks"
+	l.SetShowTitle(false)
 	l.SetShowHelp(false) // We handle help globally in the main model
 
-	return Model{list: l}
+	// Add custom keys to list additional short help
+	keys := DefaultKeyMap()
+	l.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{keys.Add, keys.Edit, keys.Delete}
+	}
+	l.AdditionalFullHelpKeys = func() []key.Binding {
+		return []key.Binding{keys.Add, keys.Edit, keys.Delete}
+	}
+
+	return Model{list: l, keys: keys}
+}
+
+func (m *Model) SetTasks(tasks []models.Task) {
+	items := make([]list.Item, len(tasks))
+	for i, t := range tasks {
+		items[i] = Item{Task: t}
+	}
+	m.list.SetItems(items)
 }
 
 func (m Model) Init() tea.Cmd {
@@ -41,11 +95,34 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	var cmd tea.Cmd
+
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		if m.list.FilterState() == list.Filtering {
+			break
+		}
+		switch {
+		case key.Matches(msg, m.keys.Add):
+			return m, func() tea.Msg { return AddTaskMsg{} }
+		case key.Matches(msg, m.keys.Edit):
+			if i, ok := m.list.SelectedItem().(Item); ok {
+				return m, func() tea.Msg { return EditTaskMsg(i) }
+			}
+		case key.Matches(msg, m.keys.Delete):
+			if i, ok := m.list.SelectedItem().(Item); ok {
+				return m, func() tea.Msg { return DeleteTaskMsg{ID: i.Task.ID} }
+			}
+		}
+	}
+
 	m.list, cmd = m.list.Update(msg)
 	return m, cmd
 }
 
 func (m Model) View() string {
+	if len(m.list.Items()) == 0 && m.list.FilterState() != list.Filtering {
+		return "\n  No tasks yet.\n  Press 'a' to add one."
+	}
 	return m.list.View()
 }
 

@@ -8,6 +8,7 @@ import (
 
 type TaskListCmd struct {
 	ActiveOnly bool `help:"Show only active tasks."`
+	ShowIDs    bool `help:"Show task IDs." name:"show-ids"`
 }
 
 func (c *TaskListCmd) Run(ctx *Context) error {
@@ -15,7 +16,10 @@ func (c *TaskListCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	tasks := ctx.Store.GetAllTasks()
+	tasks, err := ctx.Store.GetAllTasks()
+	if err != nil {
+		return fmt.Errorf("failed to get tasks: %w", err)
+	}
 	if len(tasks) == 0 {
 		fmt.Println("No tasks found")
 		return nil
@@ -32,9 +36,14 @@ func (c *TaskListCmd) Run(ctx *Context) error {
 			status = "inactive"
 		}
 
+		idStr := ""
+		if c.ShowIDs {
+			idStr = fmt.Sprintf(" (ID: %s)", task.ID)
+		}
+
 		recStr := formatRecurrence(task.Recurrence)
-		fmt.Printf("  [%s] %s - %dm (%s, priority %d)\n",
-			status, task.Name, task.DurationMin, recStr, task.Priority)
+		fmt.Printf("  [%s] %s%s - %dm (%s, priority %d)\n",
+			status, task.Name, idStr, task.DurationMin, recStr, task.Priority)
 
 		if task.Kind == models.TaskKindAppointment {
 			fmt.Printf("      Fixed: %s - %s\n", task.FixedStart, task.FixedEnd)
