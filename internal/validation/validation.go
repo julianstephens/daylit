@@ -38,7 +38,7 @@ type ValidationResult struct {
 
 // FixAction represents an action taken during auto-fix
 type FixAction struct {
-	Action         string  // Human-readable description of the action
+	Action         string   // Human-readable description of the action
 	SourceConflict Conflict // The conflict that triggered this fix action
 }
 
@@ -485,14 +485,14 @@ func AutoFixDuplicateTasks(conflicts []Conflict, tasks []models.Task, deleteFunc
 				actionMsg += fmt.Sprintf(" (failed to remove: %v)", failedIDs)
 			}
 			actions = append(actions, FixAction{
-				Action:      actionMsg,
-				ConflictRaw: conflict,
+				Action:         actionMsg,
+				SourceConflict: conflict,
 			})
 		} else if len(failedIDs) > 0 {
 			// All deletions failed
 			actions = append(actions, FixAction{
-				Action:      fmt.Sprintf("Failed to remove duplicates for \"%s\": %v", keepTask.Name, failedIDs),
-				ConflictRaw: conflict,
+				Action:         fmt.Sprintf("Failed to remove duplicates for \"%s\": %v", keepTask.Name, failedIDs),
+				SourceConflict: conflict,
 			})
 		}
 	}

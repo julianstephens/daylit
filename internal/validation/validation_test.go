@@ -745,3 +745,49 @@ func TestAutoFixDuplicateTasks_HandlesDeleteErrors(t *testing.T) {
 		}
 	}
 }
+
+func TestAutoFixDuplicateTasks_HandlesOrphanedConflictReferences(t *testing.T) {
+	// Test case where conflict.TaskIDs contains IDs that don't exist in tasks slice
+	tasks := []models.Task{
+		{ID: "1", Name: "Task A", Active: true, Kind: models.TaskKindFlexible},
+		{ID: "3", Name: "Task A", Active: true, Kind: models.TaskKindFlexible},
+	}
+
+	conflicts := []Conflict{
+		{
+			Type:        ConflictDuplicateTaskName,
+			Description: "Duplicate task name: \"Task A\" (IDs: [1 2 3])",
+			Items:       []string{"Task A"},
+			TaskIDs:     []string{"1", "2", "3"}, // ID "2" doesn't exist in tasks
+		},
+	}
+
+	deletedIDs := make(map[string]bool)
+	deleteFunc := func(id string) error {
+		deletedIDs[id] = true
+		return nil
+	}
+
+	actions := AutoFixDuplicateTasks(conflicts, tasks, deleteFunc)
+
+	// Should successfully process existing tasks while ignoring orphaned references
+	if len(actions) != 1 {
+		t.Errorf("Expected 1 action, got %d", len(actions))
+	}
+
+	// Should only delete ID 3 (ID 2 doesn't exist, ID 1 is kept)
+	if deletedIDs["1"] {
+		t.Error("Should not delete the lexicographically first task (ID: 1)")
+	}
+	if deletedIDs["2"] {
+		t.Error("Should not attempt to delete non-existent task (ID: 2)")
+	}
+	if !deletedIDs["3"] {
+		t.Error("Should delete duplicate task (ID: 3)")
+	}
+
+	// Verify only one task was deleted
+	if len(deletedIDs) != 1 {
+		t.Errorf("Expected exactly 1 deletion, got %d: %v", len(deletedIDs), deletedIDs)
+	}
+}
