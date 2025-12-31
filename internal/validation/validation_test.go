@@ -693,7 +693,7 @@ func TestAutoFixDuplicateTasks_SkipsAlreadyDeleted(t *testing.T) {
 	}
 
 	if deletedIDs["1"] {
-		t.Error("Should not delete the oldest task (ID: 1)")
+		t.Error("Should not delete the lexicographically first task (ID: 1)")
 	}
 	if deletedIDs["2"] {
 		t.Error("Should not try to delete already-deleted task (ID: 2)")
