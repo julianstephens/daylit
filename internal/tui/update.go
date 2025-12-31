@@ -13,6 +13,8 @@ import (
 
 	"github.com/julianstephens/daylit/internal/constants"
 	"github.com/julianstephens/daylit/internal/models"
+	"github.com/julianstephens/daylit/internal/tui/components/habits"
+	"github.com/julianstephens/daylit/internal/tui/components/settings"
 	"github.com/julianstephens/daylit/internal/tui/components/tasklist"
 )
 
@@ -77,6 +79,86 @@ func newEditForm(fm *TaskFormModel) *huh.Form {
 			huh.NewConfirm().
 				Title("Active").
 				Value(&fm.Active),
+		),
+	).WithTheme(huh.ThemeDracula())
+}
+
+func newHabitForm(fm *HabitFormModel) *huh.Form {
+	return huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Habit Name").
+				Value(&fm.Name).
+				Validate(func(s string) error {
+					if strings.TrimSpace(s) == "" {
+						return fmt.Errorf("habit name cannot be empty")
+					}
+					return nil
+				}),
+		),
+	).WithTheme(huh.ThemeDracula())
+}
+
+func newSettingsForm(fm *SettingsFormModel) *huh.Form {
+	return huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Day Start (HH:MM)").
+				Value(&fm.DayStart).
+				Validate(func(s string) error {
+					_, err := time.Parse("15:04", s)
+					if err != nil {
+						return fmt.Errorf("invalid time format, use HH:MM")
+					}
+					return nil
+				}),
+			huh.NewInput().
+				Title("Day End (HH:MM)").
+				Value(&fm.DayEnd).
+				Validate(func(s string) error {
+					endTime, err := time.Parse("15:04", s)
+					if err != nil {
+						return fmt.Errorf("invalid time format, use HH:MM")
+					}
+					// Cross-field validation: ensure Day End is after Day Start
+					startTime, err := time.Parse("15:04", fm.DayStart)
+					if err == nil && !endTime.After(startTime) {
+						return fmt.Errorf("day end must be after day start")
+					}
+					return nil
+				}),
+			huh.NewInput().
+				Title("Default Block (minutes)").
+				Value(&fm.DefaultBlockMin).
+				Validate(func(s string) error {
+					i, err := strconv.Atoi(s)
+					if err != nil {
+						return err
+					}
+					if i <= 0 {
+						return fmt.Errorf("must be a positive number")
+					}
+					return nil
+				}),
+			huh.NewConfirm().
+				Title("Prompt On Empty").
+				Value(&fm.PromptOnEmpty),
+			huh.NewConfirm().
+				Title("Strict Mode").
+				Value(&fm.StrictMode),
+			huh.NewInput().
+				Title("Default Log Days").
+				Value(&fm.DefaultLogDays).
+				Validate(func(s string) error {
+					i, err := strconv.Atoi(s)
+					if err != nil {
+						return err
+					}
+					if i < 0 {
+						return fmt.Errorf("must be a non-negative number")
+					}
+					return nil
+				}),
 		),
 	).WithTheme(huh.ThemeDracula())
 }
@@ -167,6 +249,110 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.state = StateTasks
 		case huh.StateAborted:
 			m.state = StateTasks
+		}
+		return m, tea.Batch(cmds...)
+	}
+
+	// Handle Add Habit State
+	if m.state == StateAddHabit {
+		if msg, ok := msg.(tea.KeyMsg); ok && msg.Type == tea.KeyEsc {
+			m.state = StateHabits
+			return m, nil
+		}
+
+		form, cmd := m.form.Update(msg)
+		if f, ok := form.(*huh.Form); ok {
+			m.form = f
+		}
+		cmds = append(cmds, cmd)
+
+		switch m.form.State {
+		case huh.StateCompleted:
+			// Create new habit
+			habit := models.Habit{
+				ID:        uuid.New().String(),
+				Name:      m.habitForm.Name,
+				CreatedAt: time.Now(),
+			}
+			if err := m.store.AddHabit(habit); err == nil {
+				// Refresh habits list only if add succeeded
+				today := time.Now().Format("2006-01-02")
+				habitsList, _ := m.store.GetAllHabits(false, true)
+				habitEntries, _ := m.store.GetHabitEntriesForDay(today)
+				m.habitsModel.SetHabits(habitsList, habitEntries)
+				m.state = StateHabits
+			} else {
+				// Stay in form state on error to allow retry
+				// The form will display, user can cancel with ESC or retry
+				m.form.State = huh.StateNormal
+			}
+		case huh.StateAborted:
+			m.state = StateHabits
+		}
+		return m, tea.Batch(cmds...)
+	}
+
+	// Handle Edit Settings State
+	if m.state == StateEditSettings {
+		if msg, ok := msg.(tea.KeyMsg); ok && msg.Type == tea.KeyEsc {
+			m.state = StateSettings
+			return m, nil
+		}
+
+		form, cmd := m.form.Update(msg)
+		if f, ok := form.(*huh.Form); ok {
+			m.form = f
+		}
+		cmds = append(cmds, cmd)
+
+		switch m.form.State {
+		case huh.StateCompleted:
+			// Apply settings changes
+			settings, _ := m.store.GetSettings()
+			settings.DayStart = m.settingsForm.DayStart
+			settings.DayEnd = m.settingsForm.DayEnd
+
+			// Parse and validate DefaultBlockMin
+			blockMin, err := strconv.Atoi(m.settingsForm.DefaultBlockMin)
+			if err != nil {
+				// Stay in form state on conversion error
+				m.form.State = huh.StateNormal
+				return m, tea.Batch(cmds...)
+			}
+			settings.DefaultBlockMin = blockMin
+
+			// Apply OT settings changes
+			otSettings, _ := m.store.GetOTSettings()
+			otSettings.PromptOnEmpty = m.settingsForm.PromptOnEmpty
+			otSettings.StrictMode = m.settingsForm.StrictMode
+
+			// Parse and validate DefaultLogDays
+			logDays, err := strconv.Atoi(m.settingsForm.DefaultLogDays)
+			if err != nil {
+				// Stay in form state on conversion error
+				m.form.State = huh.StateNormal
+				return m, tea.Batch(cmds...)
+			}
+			otSettings.DefaultLogDays = logDays
+
+			// Save settings and check for errors
+			if err := m.store.SaveSettings(settings); err != nil {
+				// Stay in form state on save error
+				m.form.State = huh.StateNormal
+				return m, tea.Batch(cmds...)
+			}
+
+			if err := m.store.SaveOTSettings(otSettings); err != nil {
+				// Stay in form state on save error
+				m.form.State = huh.StateNormal
+				return m, tea.Batch(cmds...)
+			}
+
+			// Refresh settings view only after successful save
+			m.settingsModel.SetSettings(settings, otSettings)
+			m.state = StateSettings
+		case huh.StateAborted:
+			m.state = StateSettings
 		}
 		return m, tea.Batch(cmds...)
 	}
@@ -372,6 +558,31 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// Handle Confirm Archive State
+	if m.state == StateConfirmArchive {
+		if msg, ok := msg.(tea.KeyMsg); ok {
+			switch msg.String() {
+			case "y", "Y":
+				if err := m.store.ArchiveHabit(m.habitToArchiveID); err != nil {
+					m.state = StateHabits
+					m.habitToArchiveID = ""
+					return m, nil
+				}
+				// Refresh habits list
+				today := time.Now().Format("2006-01-02")
+				habitsList, _ := m.store.GetAllHabits(false, true)
+				habitEntries, _ := m.store.GetHabitEntriesForDay(today)
+				m.habitsModel.SetHabits(habitsList, habitEntries)
+				m.state = StateHabits
+				m.habitToArchiveID = ""
+			case "n", "N", "esc", "q":
+				m.state = StateHabits
+				m.habitToArchiveID = ""
+			}
+		}
+		return m, nil
+	}
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -384,6 +595,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.taskList.SetSize(msg.Width-h, listHeight-v)
 		m.planModel.SetSize(msg.Width-h, listHeight-v)
 		m.nowModel.SetSize(msg.Width, listHeight)
+		m.habitsModel.SetSize(msg.Width-h, listHeight-v)
+		m.settingsModel.SetSize(msg.Width, listHeight)
 
 	case tasklist.DeleteTaskMsg:
 		m.taskToDeleteID = msg.ID
@@ -434,16 +647,92 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.state = StateEditing
 		return m, m.form.Init()
 
+	// Handle habit messages
+	case habits.AddHabitMsg:
+		m.habitForm = &HabitFormModel{
+			Name: "",
+		}
+		m.form = newHabitForm(m.habitForm)
+		m.state = StateAddHabit
+		return m, m.form.Init()
+
+	case habits.MarkHabitMsg:
+		today := time.Now().Format("2006-01-02")
+		entry := models.HabitEntry{
+			ID:        uuid.New().String(),
+			HabitID:   msg.ID,
+			Day:       today,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+		if err := m.store.AddHabitEntry(entry); err == nil {
+			habitsList, _ := m.store.GetAllHabits(false, true)
+			habitEntries, _ := m.store.GetHabitEntriesForDay(today)
+			m.habitsModel.SetHabits(habitsList, habitEntries)
+		}
+		return m, nil
+
+	case habits.UnmarkHabitMsg:
+		today := time.Now().Format("2006-01-02")
+		entry, err := m.store.GetHabitEntry(msg.ID, today)
+		if err == nil {
+			if err := m.store.DeleteHabitEntry(entry.ID); err == nil {
+				habitsList, _ := m.store.GetAllHabits(false, true)
+				habitEntries, _ := m.store.GetHabitEntriesForDay(today)
+				m.habitsModel.SetHabits(habitsList, habitEntries)
+			}
+		}
+		return m, nil
+
+	case habits.ArchiveHabitMsg:
+		m.habitToArchiveID = msg.ID
+		m.state = StateConfirmArchive
+		return m, nil
+
+	case habits.DeleteHabitMsg:
+		if err := m.store.DeleteHabit(msg.ID); err == nil {
+			today := time.Now().Format("2006-01-02")
+			habitsList, _ := m.store.GetAllHabits(false, true)
+			habitEntries, _ := m.store.GetHabitEntriesForDay(today)
+			m.habitsModel.SetHabits(habitsList, habitEntries)
+		}
+		return m, nil
+
+	case habits.RestoreHabitMsg:
+		if err := m.store.RestoreHabit(msg.ID); err == nil {
+			today := time.Now().Format("2006-01-02")
+			habitsList, _ := m.store.GetAllHabits(false, true)
+			habitEntries, _ := m.store.GetHabitEntriesForDay(today)
+			m.habitsModel.SetHabits(habitsList, habitEntries)
+		}
+		return m, nil
+
+	// Handle settings messages
+	case settings.EditSettingsMsg:
+		currentSettings, _ := m.store.GetSettings()
+		currentOTSettings, _ := m.store.GetOTSettings()
+		m.settingsForm = &SettingsFormModel{
+			DayStart:        currentSettings.DayStart,
+			DayEnd:          currentSettings.DayEnd,
+			DefaultBlockMin: strconv.Itoa(currentSettings.DefaultBlockMin),
+			PromptOnEmpty:   currentOTSettings.PromptOnEmpty,
+			StrictMode:      currentOTSettings.StrictMode,
+			DefaultLogDays:  strconv.Itoa(currentOTSettings.DefaultLogDays),
+		}
+		m.form = newSettingsForm(m.settingsForm)
+		m.state = StateEditSettings
+		return m, m.form.Init()
+
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, m.keys.Quit):
 			m.quitting = true
 			return m, tea.Quit
 		case key.Matches(msg, m.keys.Tab, m.keys.Right):
-			m.state = (m.state + 1) % 3 // Only cycle through main 3 tabs
+			m.state = (m.state + 1) % 5 // Cycle through 5 main tabs
 			return m, nil
 		case key.Matches(msg, m.keys.ShiftTab, m.keys.Left):
-			m.state = (m.state - 1 + 3) % 3
+			m.state = (m.state - 1 + 5) % 5
 			return m, nil
 		case key.Matches(msg, m.keys.Help):
 			m.help.ShowAll = !m.help.ShowAll
@@ -524,6 +813,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		m.planModel, cmd = m.planModel.Update(msg)
+		cmds = append(cmds, cmd)
+	case StateHabits:
+		m.habitsModel, cmd = m.habitsModel.Update(msg)
+		cmds = append(cmds, cmd)
+	case StateSettings:
+		m.settingsModel, cmd = m.settingsModel.Update(msg)
 		cmds = append(cmds, cmd)
 	case StateNow:
 		// nowModel is already updated above, but if we add specific keys for Now view, handle them here

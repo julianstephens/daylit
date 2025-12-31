@@ -20,9 +20,13 @@ func (m Model) View() string {
 		content = m.viewPlan()
 	case StateTasks:
 		content = m.viewTasks()
+	case StateHabits:
+		content = m.viewHabits()
+	case StateSettings:
+		content = m.viewSettings()
 	case StateFeedback:
 		content = m.viewFeedback()
-	case StateEditing:
+	case StateEditing, StateAddHabit, StateEditSettings:
 		content = m.form.View()
 	case StateConfirmDelete:
 		content = m.viewConfirmDelete()
@@ -30,6 +34,8 @@ func (m Model) View() string {
 		content = m.viewConfirmRestore()
 	case StateConfirmOverwrite:
 		content = m.viewConfirmOverwrite()
+	case StateConfirmArchive:
+		content = m.viewConfirmArchive()
 	}
 
 	var banner string
@@ -54,7 +60,8 @@ func (m Model) View() string {
 
 func (m Model) viewTabs() string {
 	var tabs []string
-	for i, title := range []string{"Now", "Plan", "Tasks"} {
+	tabTitles := []string{"Now", "Plan", "Tasks", "Habits", "Settings"}
+	for i, title := range tabTitles {
 		if m.state == SessionState(i) {
 			tabs = append(tabs, activeTabStyle.Render(title))
 		} else {
@@ -74,6 +81,14 @@ func (m Model) viewPlan() string {
 
 func (m Model) viewTasks() string {
 	return docStyle.Render(m.taskList.View())
+}
+
+func (m Model) viewHabits() string {
+	return docStyle.Render(m.habitsModel.View())
+}
+
+func (m Model) viewSettings() string {
+	return m.settingsModel.View()
 }
 
 func (m Model) viewFeedback() string {
@@ -147,4 +162,16 @@ func (m Model) viewConflictBanner() string {
 
 	bannerText := fmt.Sprintf("⚠ %d CONFLICT(S) DETECTED", len(m.validationConflicts))
 	return bannerStyle.Render(bannerText)
+}
+
+func (m Model) viewConfirmArchive() string {
+	return lipgloss.Place(m.width, m.height-4,
+		lipgloss.Center, lipgloss.Center,
+		lipgloss.JoinVertical(lipgloss.Center,
+			warningStyle.Render("Are you sure you want to archive this habit?"),
+			"",
+			"[y] Yes",
+			"[n] No",
+		),
+	)
 }
