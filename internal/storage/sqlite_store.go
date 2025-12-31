@@ -729,13 +729,22 @@ func (s *SQLiteStore) GetHabit(id string) (models.Habit, error) {
 		return models.Habit{}, err
 	}
 
-	h.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
+	h.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
+	if err != nil {
+		return models.Habit{}, fmt.Errorf("failed to parse created_at: %w", err)
+	}
 	if archivedAt.Valid {
-		t, _ := time.Parse(time.RFC3339, archivedAt.String)
+		t, err := time.Parse(time.RFC3339, archivedAt.String)
+		if err != nil {
+			return models.Habit{}, fmt.Errorf("failed to parse archived_at: %w", err)
+		}
 		h.ArchivedAt = &t
 	}
 	if deletedAt.Valid {
-		t, _ := time.Parse(time.RFC3339, deletedAt.String)
+		t, err := time.Parse(time.RFC3339, deletedAt.String)
+		if err != nil {
+			return models.Habit{}, fmt.Errorf("failed to parse deleted_at: %w", err)
+		}
 		h.DeletedAt = &t
 	}
 
@@ -756,13 +765,22 @@ func (s *SQLiteStore) GetHabitByName(name string) (models.Habit, error) {
 		return models.Habit{}, err
 	}
 
-	h.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
+	h.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
+	if err != nil {
+		return models.Habit{}, fmt.Errorf("failed to parse created_at: %w", err)
+	}
 	if archivedAt.Valid {
-		t, _ := time.Parse(time.RFC3339, archivedAt.String)
+		t, err := time.Parse(time.RFC3339, archivedAt.String)
+		if err != nil {
+			return models.Habit{}, fmt.Errorf("failed to parse archived_at: %w", err)
+		}
 		h.ArchivedAt = &t
 	}
 	if deletedAt.Valid {
-		t, _ := time.Parse(time.RFC3339, deletedAt.String)
+		t, err := time.Parse(time.RFC3339, deletedAt.String)
+		if err != nil {
+			return models.Habit{}, fmt.Errorf("failed to parse deleted_at: %w", err)
+		}
 		h.DeletedAt = &t
 	}
 
@@ -796,13 +814,22 @@ func (s *SQLiteStore) GetAllHabits(includeArchived, includeDeleted bool) ([]mode
 			return nil, err
 		}
 
-		h.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
+		h.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse created_at for habit %s: %w", h.ID, err)
+		}
 		if archivedAt.Valid {
-			t, _ := time.Parse(time.RFC3339, archivedAt.String)
+			t, err := time.Parse(time.RFC3339, archivedAt.String)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse archived_at for habit %s: %w", h.ID, err)
+			}
 			h.ArchivedAt = &t
 		}
 		if deletedAt.Valid {
-			t, _ := time.Parse(time.RFC3339, deletedAt.String)
+			t, err := time.Parse(time.RFC3339, deletedAt.String)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse deleted_at for habit %s: %w", h.ID, err)
+			}
 			h.DeletedAt = &t
 		}
 
@@ -926,10 +953,19 @@ func (s *SQLiteStore) GetHabitEntry(habitID, day string) (models.HabitEntry, err
 		return models.HabitEntry{}, err
 	}
 
-	e.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
-	e.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+	e.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
+	if err != nil {
+		return models.HabitEntry{}, fmt.Errorf("failed to parse created_at: %w", err)
+	}
+	e.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt)
+	if err != nil {
+		return models.HabitEntry{}, fmt.Errorf("failed to parse updated_at: %w", err)
+	}
 	if deletedAt.Valid {
-		t, _ := time.Parse(time.RFC3339, deletedAt.String)
+		t, err := time.Parse(time.RFC3339, deletedAt.String)
+		if err != nil {
+			return models.HabitEntry{}, fmt.Errorf("failed to parse deleted_at: %w", err)
+		}
 		e.DeletedAt = &t
 	}
 
@@ -957,10 +993,19 @@ func (s *SQLiteStore) GetHabitEntriesForDay(day string) ([]models.HabitEntry, er
 			return nil, err
 		}
 
-		e.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
-		e.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+		e.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse created_at for entry %s: %w", e.ID, err)
+		}
+		e.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse updated_at for entry %s: %w", e.ID, err)
+		}
 		if deletedAt.Valid {
-			t, _ := time.Parse(time.RFC3339, deletedAt.String)
+			t, err := time.Parse(time.RFC3339, deletedAt.String)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse deleted_at for entry %s: %w", e.ID, err)
+			}
 			e.DeletedAt = &t
 		}
 
@@ -992,10 +1037,19 @@ func (s *SQLiteStore) GetHabitEntriesForHabit(habitID string, startDay, endDay s
 			return nil, err
 		}
 
-		e.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
-		e.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+		e.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse created_at for entry %s: %w", e.ID, err)
+		}
+		e.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse updated_at for entry %s: %w", e.ID, err)
+		}
 		if deletedAt.Valid {
-			t, _ := time.Parse(time.RFC3339, deletedAt.String)
+			t, err := time.Parse(time.RFC3339, deletedAt.String)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse deleted_at for entry %s: %w", e.ID, err)
+			}
 			e.DeletedAt = &t
 		}
 
@@ -1116,10 +1170,19 @@ func (s *SQLiteStore) GetOTEntry(day string) (models.OTEntry, error) {
 		return models.OTEntry{}, err
 	}
 
-	e.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
-	e.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+	e.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
+	if err != nil {
+		return models.OTEntry{}, fmt.Errorf("failed to parse created_at: %w", err)
+	}
+	e.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt)
+	if err != nil {
+		return models.OTEntry{}, fmt.Errorf("failed to parse updated_at: %w", err)
+	}
 	if deletedAt.Valid {
-		t, _ := time.Parse(time.RFC3339, deletedAt.String)
+		t, err := time.Parse(time.RFC3339, deletedAt.String)
+		if err != nil {
+			return models.OTEntry{}, fmt.Errorf("failed to parse deleted_at: %w", err)
+		}
 		e.DeletedAt = &t
 	}
 
@@ -1152,10 +1215,19 @@ func (s *SQLiteStore) GetOTEntries(startDay, endDay string, includeDeleted bool)
 			return nil, err
 		}
 
-		e.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
-		e.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+		e.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse created_at for entry %s: %w", e.ID, err)
+		}
+		e.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse updated_at for entry %s: %w", e.ID, err)
+		}
 		if deletedAt.Valid {
-			t, _ := time.Parse(time.RFC3339, deletedAt.String)
+			t, err := time.Parse(time.RFC3339, deletedAt.String)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse deleted_at for entry %s: %w", e.ID, err)
+			}
 			e.DeletedAt = &t
 		}
 

@@ -263,7 +263,12 @@ func (c *HabitLogCmd) Run(ctx *Context) error {
 		// Truncate or pad habit name
 		name := habit.Name
 		if len(name) > maxNameLen {
-			name = name[:maxNameLen-3] + "..."
+			// Ensure we don't go negative
+			if maxNameLen > 3 {
+				name = name[:maxNameLen-3] + "..."
+			} else {
+				name = name[:maxNameLen]
+			}
 		} else {
 			name = name + strings.Repeat(" ", maxNameLen-len(name))
 		}
