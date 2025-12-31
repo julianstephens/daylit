@@ -1,3 +1,13 @@
+## v0.3.0
+
+- Adds `daylit backup` for database backups and restoration
+- Adds `daylit migrate` for schema version tracking and migrations
+- Adds `daylit doctor` and `daylit debug` for diagnostics
+- Adds `daylit validate` for conflict detection
+- Adds soft delete and restore functionality for tasks and plans
+- Adds plan revisioning and immutability
+- Updates TUI to surface new safety features
+
 ## v0.2.0
 
 - Adds SQLite storage option (JSON storage still supported)
