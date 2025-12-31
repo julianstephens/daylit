@@ -598,7 +598,7 @@ func TestAutoFixDuplicateTasks(t *testing.T) {
 
 	// Verify that only duplicates were deleted, not the original
 	if deletedIDs["1"] {
-		t.Error("Should not delete the oldest task (ID: 1)")
+		t.Error("Should not delete the lexicographically first task (ID: 1)")
 	}
 	if !deletedIDs["3"] {
 		t.Error("Should delete duplicate task (ID: 3)")
