@@ -23,6 +23,9 @@ func (c *InitCmd) Run(ctx *Context) error {
 				return fmt.Errorf("failed to delete existing database: %w", err)
 			}
 			fmt.Printf("Deleted existing database at: %s\n", dbPath)
+		} else if !os.IsNotExist(err) {
+			// Some other error occurred while checking the database; surface it to the user
+			return fmt.Errorf("failed to access existing database: %w", err)
 		}
 	}
 
