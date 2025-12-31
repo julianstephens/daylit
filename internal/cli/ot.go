@@ -305,7 +305,7 @@ func (c *OTDoctorCmd) Run(ctx *Context) error {
 		var invalidCount int
 		err := db.QueryRow(`
 			SELECT COUNT(*) FROM ot_entries
-			WHERE day NOT LIKE '____-__-__'
+			WHERE day NOT GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
 		`).Scan(&invalidCount)
 		if err != nil {
 			fmt.Printf("❌ Date validation: FAIL\n")

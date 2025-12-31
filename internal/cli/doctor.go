@@ -396,7 +396,7 @@ func checkOTEntriesDates(ctx *Context) error {
 	err := db.QueryRow(`
 		SELECT COUNT(*)
 		FROM ot_entries
-		WHERE day NOT LIKE '____-__-__'
+		WHERE day NOT GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
 	`).Scan(&invalidCount)
 	if err != nil {
 		return fmt.Errorf("failed to check OT entry dates: %w", err)
@@ -409,7 +409,7 @@ func checkOTEntriesDates(ctx *Context) error {
 	err = db.QueryRow(`
 		SELECT COUNT(*)
 		FROM habit_entries
-		WHERE day NOT LIKE '____-__-__'
+		WHERE day NOT GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
 	`).Scan(&invalidCount)
 	if err != nil {
 		return fmt.Errorf("failed to check habit entry dates: %w", err)

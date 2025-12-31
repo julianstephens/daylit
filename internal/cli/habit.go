@@ -243,11 +243,11 @@ func (c *HabitLogCmd) Run(ctx *Context) error {
 	fmt.Printf("Habit log (last %d days):\n\n", c.Days)
 
 	// Print header with dates
-	fmt.Print("Habit")
+	fmt.Print("Habit               ")
 	maxNameLen := 20
 	for i := 0; i < c.Days; i++ {
 		day := startDay.AddDate(0, 0, i)
-		fmt.Printf(" %s", day.Format("01/02"))
+		fmt.Printf(" %5s", day.Format("01/02"))
 	}
 	fmt.Println()
 
@@ -296,9 +296,9 @@ func (c *HabitLogCmd) Run(ctx *Context) error {
 			day := startDay.AddDate(0, 0, i)
 			dayStr := day.Format("2006-01-02")
 			if entryMap[dayStr] {
-				fmt.Print("   x  ")
+				fmt.Print("  x   ")
 			} else {
-				fmt.Print("   .  ")
+				fmt.Print("  .   ")
 			}
 		}
 		fmt.Println()

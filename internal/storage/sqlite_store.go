@@ -1066,8 +1066,12 @@ func (s *SQLiteStore) UpdateHabitEntry(entry models.HabitEntry) error {
 	}
 
 	_, err := s.db.Exec(`
-		INSERT OR REPLACE INTO habit_entries (id, habit_id, day, note, created_at, updated_at, deleted_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		INSERT INTO habit_entries (id, habit_id, day, note, created_at, updated_at, deleted_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(habit_id, day) DO UPDATE SET
+			note = excluded.note,
+			updated_at = excluded.updated_at,
+			deleted_at = excluded.deleted_at`,
 		entry.ID, entry.HabitID, entry.Day, entry.Note,
 		entry.CreatedAt.Format(time.RFC3339), entry.UpdatedAt.Format(time.RFC3339), deletedAt)
 
@@ -1244,8 +1248,13 @@ func (s *SQLiteStore) UpdateOTEntry(entry models.OTEntry) error {
 	}
 
 	_, err := s.db.Exec(`
-		INSERT OR REPLACE INTO ot_entries (id, day, title, note, created_at, updated_at, deleted_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		INSERT INTO ot_entries (id, day, title, note, created_at, updated_at, deleted_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(day) DO UPDATE SET
+			title = excluded.title,
+			note = excluded.note,
+			updated_at = excluded.updated_at,
+			deleted_at = excluded.deleted_at`,
 		entry.ID, entry.Day, entry.Title, entry.Note,
 		entry.CreatedAt.Format(time.RFC3339), entry.UpdatedAt.Format(time.RFC3339), deletedAt)
 
