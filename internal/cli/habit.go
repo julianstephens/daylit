@@ -263,10 +263,11 @@ func (c *HabitLogCmd) Run(ctx *Context) error {
 		// Truncate or pad habit name
 		name := habit.Name
 		if len(name) > maxNameLen {
-			// Ensure we don't go negative
-			if maxNameLen > 3 {
+			// Ensure we keep at least 1 character of the name visible
+			if maxNameLen >= 5 {
 				name = name[:maxNameLen-3] + "..."
-			} else {
+			} else if maxNameLen > 0 {
+				// For very small widths, just truncate without ellipsis
 				name = name[:maxNameLen]
 			}
 		} else {

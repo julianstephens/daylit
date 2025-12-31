@@ -115,16 +115,6 @@ func (c *OTSetCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	// Check strict mode
-	settings, err := ctx.Store.GetOTSettings()
-	if err != nil {
-		return fmt.Errorf("OT settings not found. Run 'daylit ot init' first")
-	}
-
-	if settings.StrictMode && c.Title == "" {
-		return fmt.Errorf("strict mode requires a title")
-	}
-
 	// Determine the date
 	day := c.Day
 	if day == "" {
