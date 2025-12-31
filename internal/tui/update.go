@@ -116,9 +116,14 @@ func newSettingsForm(fm *SettingsFormModel) *huh.Form {
 				Title("Day End (HH:MM)").
 				Value(&fm.DayEnd).
 				Validate(func(s string) error {
-					_, err := time.Parse("15:04", s)
+					endTime, err := time.Parse("15:04", s)
 					if err != nil {
 						return fmt.Errorf("invalid time format, use HH:MM")
+					}
+					// Cross-field validation: ensure Day End is after Day Start
+					startTime, err := time.Parse("15:04", fm.DayStart)
+					if err == nil && !endTime.After(startTime) {
+						return fmt.Errorf("day end must be after day start")
 					}
 					return nil
 				}),
@@ -270,13 +275,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				CreatedAt: time.Now(),
 			}
 			if err := m.store.AddHabit(habit); err == nil {
-				// Refresh habits list
+				// Refresh habits list only if add succeeded
 				today := time.Now().Format("2006-01-02")
 				habitsList, _ := m.store.GetAllHabits(false, true)
 				habitEntries, _ := m.store.GetHabitEntriesForDay(today)
 				m.habitsModel.SetHabits(habitsList, habitEntries)
+				m.state = StateHabits
+			} else {
+				// Stay in form state on error to allow retry
+				// The form will display, user can cancel with ESC or retry
+				m.form.State = huh.StateNormal
 			}
-			m.state = StateHabits
 		case huh.StateAborted:
 			m.state = StateHabits
 		}
@@ -302,21 +311,44 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			settings, _ := m.store.GetSettings()
 			settings.DayStart = m.settingsForm.DayStart
 			settings.DayEnd = m.settingsForm.DayEnd
-			if blockMin, err := strconv.Atoi(m.settingsForm.DefaultBlockMin); err == nil {
-				settings.DefaultBlockMin = blockMin
+			
+			// Parse and validate DefaultBlockMin
+			blockMin, err := strconv.Atoi(m.settingsForm.DefaultBlockMin)
+			if err != nil {
+				// Stay in form state on conversion error
+				m.form.State = huh.StateNormal
+				return m, tea.Batch(cmds...)
 			}
-			m.store.SaveSettings(settings)
+			settings.DefaultBlockMin = blockMin
 
 			// Apply OT settings changes
 			otSettings, _ := m.store.GetOTSettings()
 			otSettings.PromptOnEmpty = m.settingsForm.PromptOnEmpty
 			otSettings.StrictMode = m.settingsForm.StrictMode
-			if logDays, err := strconv.Atoi(m.settingsForm.DefaultLogDays); err == nil {
-				otSettings.DefaultLogDays = logDays
+			
+			// Parse and validate DefaultLogDays
+			logDays, err := strconv.Atoi(m.settingsForm.DefaultLogDays)
+			if err != nil {
+				// Stay in form state on conversion error
+				m.form.State = huh.StateNormal
+				return m, tea.Batch(cmds...)
 			}
-			m.store.SaveOTSettings(otSettings)
+			otSettings.DefaultLogDays = logDays
 
-			// Refresh settings view
+			// Save settings and check for errors
+			if err := m.store.SaveSettings(settings); err != nil {
+				// Stay in form state on save error
+				m.form.State = huh.StateNormal
+				return m, tea.Batch(cmds...)
+			}
+
+			if err := m.store.SaveOTSettings(otSettings); err != nil {
+				// Stay in form state on save error
+				m.form.State = huh.StateNormal
+				return m, tea.Batch(cmds...)
+			}
+
+			// Refresh settings view only after successful save
 			m.settingsModel.SetSettings(settings, otSettings)
 			m.state = StateSettings
 		case huh.StateAborted:

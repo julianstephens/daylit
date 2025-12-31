@@ -84,8 +84,6 @@ type Model struct {
 	taskToDeleteID      string
 	taskToRestoreID     string
 	habitToArchiveID    string
-	habitToDeleteID     string
-	habitToRestoreID    string
 	validationWarning   string                // Validation warning message to display
 	validationConflicts []validation.Conflict // Detailed conflict information
 	planToDeleteDate    string
