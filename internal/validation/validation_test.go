@@ -662,7 +662,8 @@ func TestAutoFixDuplicateTasks_OnlyNonDuplicateConflicts(t *testing.T) {
 }
 
 func TestAutoFixDuplicateTasks_SkipsAlreadyDeleted(t *testing.T) {
-	deleted := time.Now().UTC().Format(time.RFC3339)
+	// Use a fixed timestamp for deterministic testing
+	deleted := time.Date(2024, 1, 15, 10, 0, 0, 0, time.UTC).Format(time.RFC3339)
 	tasks := []models.Task{
 		{ID: "1", Name: "Task A", Active: true, Kind: models.TaskKindFlexible},
 		{ID: "2", Name: "Task A", Active: true, Kind: models.TaskKindFlexible, DeletedAt: &deleted}, // Already deleted

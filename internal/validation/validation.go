@@ -457,6 +457,9 @@ func AutoFixDuplicateTasks(conflicts []Conflict, tasks []models.Task, deleteFunc
 		}
 
 		// Sort by ID for deterministic behavior
+		// Note: This uses lexicographic ordering of ID strings (e.g., UUIDs).
+		// While this doesn't reflect creation order, it ensures consistent behavior
+		// across runs for the same set of duplicates.
 		sort.Slice(tasksToCheck, func(i, j int) bool {
 			return tasksToCheck[i].ID < tasksToCheck[j].ID
 		})
