@@ -9,9 +9,12 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build binaries
+  build-cli:
+    name: Build CLI binaries
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./daylit-cli
 
     strategy:
       matrix:
@@ -32,12 +35,12 @@ jobs:
 
       - name: Build
         run: |
-          mkdir -p dist
-          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o dist/${BINARY_NAME}-${{ matrix.goos }}-${{ matrix.goarch }} ./cmd/daylit
+          mkdir -p ../dist
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o ../dist/${BINARY_NAME}-${{ matrix.goos }}-${{ matrix.goarch }} ./cmd/daylit
 
       - name: Archive binary
+        working-directory: ./dist
         run: |
-          cd dist
           if [ "${{ matrix.goos }}" = "windows" ]; then
             mv "${BINARY_NAME}-${{ matrix.goos }}-${{ matrix.goarch }}" "${BINARY_NAME}-${{ matrix.goos }}-${{ matrix.goarch }}.exe"
             zip "${BINARY_NAME}-${{ matrix.goos }}-${{ matrix.goarch }}.zip" "${BINARY_NAME}-${{ matrix.goos }}-${{ matrix.goarch }}.exe"
@@ -53,7 +56,7 @@ jobs:
 
   release:
     name: Create GitHub Release
-    needs: build
+    needs: build-cli
     runs-on: ubuntu-latest
 
     steps:
