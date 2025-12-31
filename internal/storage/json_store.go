@@ -459,6 +459,103 @@ func (s *JSONStore) RestorePlan(date string) error {
 	return s.save()
 }
 
+// Habit stubs - JSON store doesn't support habits yet
+func (s *JSONStore) AddHabit(habit models.Habit) error {
+	return fmt.Errorf("habits are not supported in JSON store, please use SQLite")
+}
+
+func (s *JSONStore) GetHabit(id string) (models.Habit, error) {
+	return models.Habit{}, fmt.Errorf("habits are not supported in JSON store, please use SQLite")
+}
+
+func (s *JSONStore) GetHabitByName(name string) (models.Habit, error) {
+	return models.Habit{}, fmt.Errorf("habits are not supported in JSON store, please use SQLite")
+}
+
+func (s *JSONStore) GetAllHabits(includeArchived, includeDeleted bool) ([]models.Habit, error) {
+	return nil, fmt.Errorf("habits are not supported in JSON store, please use SQLite")
+}
+
+func (s *JSONStore) UpdateHabit(habit models.Habit) error {
+	return fmt.Errorf("habits are not supported in JSON store, please use SQLite")
+}
+
+func (s *JSONStore) ArchiveHabit(id string) error {
+	return fmt.Errorf("habits are not supported in JSON store, please use SQLite")
+}
+
+func (s *JSONStore) UnarchiveHabit(id string) error {
+	return fmt.Errorf("habits are not supported in JSON store, please use SQLite")
+}
+
+func (s *JSONStore) DeleteHabit(id string) error {
+	return fmt.Errorf("habits are not supported in JSON store, please use SQLite")
+}
+
+func (s *JSONStore) RestoreHabit(id string) error {
+	return fmt.Errorf("habits are not supported in JSON store, please use SQLite")
+}
+
+func (s *JSONStore) AddHabitEntry(entry models.HabitEntry) error {
+	return fmt.Errorf("habit entries are not supported in JSON store, please use SQLite")
+}
+
+func (s *JSONStore) GetHabitEntry(habitID, day string) (models.HabitEntry, error) {
+	return models.HabitEntry{}, fmt.Errorf("habit entries are not supported in JSON store, please use SQLite")
+}
+
+func (s *JSONStore) GetHabitEntriesForDay(day string) ([]models.HabitEntry, error) {
+	return nil, fmt.Errorf("habit entries are not supported in JSON store, please use SQLite")
+}
+
+func (s *JSONStore) GetHabitEntriesForHabit(habitID string, startDay, endDay string) ([]models.HabitEntry, error) {
+	return nil, fmt.Errorf("habit entries are not supported in JSON store, please use SQLite")
+}
+
+func (s *JSONStore) UpdateHabitEntry(entry models.HabitEntry) error {
+	return fmt.Errorf("habit entries are not supported in JSON store, please use SQLite")
+}
+
+func (s *JSONStore) DeleteHabitEntry(id string) error {
+	return fmt.Errorf("habit entries are not supported in JSON store, please use SQLite")
+}
+
+func (s *JSONStore) RestoreHabitEntry(id string) error {
+	return fmt.Errorf("habit entries are not supported in JSON store, please use SQLite")
+}
+
+func (s *JSONStore) GetOTSettings() (models.OTSettings, error) {
+	return models.OTSettings{}, fmt.Errorf("OT is not supported in JSON store, please use SQLite")
+}
+
+func (s *JSONStore) SaveOTSettings(settings models.OTSettings) error {
+	return fmt.Errorf("OT is not supported in JSON store, please use SQLite")
+}
+
+func (s *JSONStore) AddOTEntry(entry models.OTEntry) error {
+	return fmt.Errorf("OT entries are not supported in JSON store, please use SQLite")
+}
+
+func (s *JSONStore) GetOTEntry(day string) (models.OTEntry, error) {
+	return models.OTEntry{}, fmt.Errorf("OT entries are not supported in JSON store, please use SQLite")
+}
+
+func (s *JSONStore) GetOTEntries(startDay, endDay string, includeDeleted bool) ([]models.OTEntry, error) {
+	return nil, fmt.Errorf("OT entries are not supported in JSON store, please use SQLite")
+}
+
+func (s *JSONStore) UpdateOTEntry(entry models.OTEntry) error {
+	return fmt.Errorf("OT entries are not supported in JSON store, please use SQLite")
+}
+
+func (s *JSONStore) DeleteOTEntry(day string) error {
+	return fmt.Errorf("OT entries are not supported in JSON store, please use SQLite")
+}
+
+func (s *JSONStore) RestoreOTEntry(day string) error {
+	return fmt.Errorf("OT entries are not supported in JSON store, please use SQLite")
+}
+
 func (s *JSONStore) GetConfigPath() string {
 	return s.path
 }
