@@ -188,13 +188,16 @@ func (v *Validator) ValidateTasks(tasks []models.Task) ValidationResult {
 
 			// Check if times overlap (ignoring dates since these are time-of-day based)
 			if timesOverlap(t1.FixedStart, t1.FixedEnd, t2.FixedStart, t2.FixedEnd) {
-				result.Conflicts = append(result.Conflicts, Conflict{
-					Type: ConflictOverlappingFixedTasks,
-					Description: fmt.Sprintf("Fixed appointments overlap: \"%s\" (%s-%s) and \"%s\" (%s-%s)",
-						t1.Name, t1.FixedStart, t1.FixedEnd, t2.Name, t2.FixedStart, t2.FixedEnd),
-					Items:     []string{t1.Name, t2.Name},
-					TimeRange: fmt.Sprintf("%s-%s", t1.FixedStart, t1.FixedEnd),
-				})
+				// Check if recurrence patterns overlap
+				if recurrenceOverlaps(t1.Recurrence, t2.Recurrence) {
+					result.Conflicts = append(result.Conflicts, Conflict{
+						Type: ConflictOverlappingFixedTasks,
+						Description: fmt.Sprintf("Appointments overlap: \"%s\" (%s-%s) and \"%s\" (%s-%s)",
+							t1.Name, t1.FixedStart, t1.FixedEnd, t2.Name, t2.FixedStart, t2.FixedEnd),
+						Items:     []string{t1.Name, t2.Name},
+						TimeRange: fmt.Sprintf("%s-%s", t1.FixedStart, t1.FixedEnd),
+					})
+				}
 			}
 		}
 	}
@@ -498,4 +501,32 @@ func AutoFixDuplicateTasks(conflicts []Conflict, tasks []models.Task, deleteFunc
 	}
 
 	return actions
+}
+
+// recurrenceOverlaps checks if two recurrence patterns can occur on the same day
+func recurrenceOverlaps(r1, r2 models.Recurrence) bool {
+	// If either is daily, they overlap (unless the other is weekly with empty mask, which shouldn't happen)
+	if r1.Type == models.RecurrenceDaily || r2.Type == models.RecurrenceDaily {
+		return true
+	}
+
+	// If both are weekly, check for common weekdays
+	if r1.Type == models.RecurrenceWeekly && r2.Type == models.RecurrenceWeekly {
+		// If either mask is empty, assume overlap (conservative)
+		if len(r1.WeekdayMask) == 0 || len(r2.WeekdayMask) == 0 {
+			return true
+		}
+
+		for _, d1 := range r1.WeekdayMask {
+			for _, d2 := range r2.WeekdayMask {
+				if d1 == d2 {
+					return true
+				}
+			}
+		}
+		return false
+	}
+
+	// For other combinations (e.g. NDays, AdHoc), assume overlap to be safe
+	return true
 }
