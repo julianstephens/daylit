@@ -312,7 +312,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					// Restore succeeded - refresh plan
 					today := time.Now().Format("2006-01-02")
 					plan, err := m.store.GetPlan(today)
-					tasks, _ := m.store.GetAllTasks()
+					tasks, _ := m.store.GetAllTasksIncludingDeleted()
 					if err == nil {
 						m.planModel.SetPlan(plan, tasks)
 						m.nowModel.SetPlan(plan, tasks)
@@ -322,7 +322,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.planToRestoreDate = ""
 				}
 			case "n", "N", "esc", "q":
-				m.state = StateTasks
+				if m.planToRestoreDate != "" {
+					m.state = StatePlan
+				} else {
+					m.state = StateTasks
+				}
 				m.taskToRestoreID = ""
 				m.planToRestoreDate = ""
 			}
@@ -351,8 +355,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					plan, err := m.scheduler.GeneratePlan(m.planToOverwriteDate, tasks, dayStart, dayEnd)
 					if err == nil {
 						m.store.SavePlan(plan)
-						m.planModel.SetPlan(plan, tasks)
-						m.nowModel.SetPlan(plan, tasks)
+						allTasks, _ := m.store.GetAllTasksIncludingDeleted()
+						m.planModel.SetPlan(plan, allTasks)
+						m.nowModel.SetPlan(plan, allTasks)
+						m.taskList.SetTasks(allTasks)
 						m.updateValidationStatus()
 					}
 				}
