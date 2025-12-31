@@ -36,6 +36,38 @@ type Provider interface {
 	DeletePlan(date string) error
 	RestorePlan(date string) error
 
+	// Habits
+	AddHabit(models.Habit) error
+	GetHabit(id string) (models.Habit, error)
+	GetHabitByName(name string) (models.Habit, error)
+	GetAllHabits(includeArchived, includeDeleted bool) ([]models.Habit, error)
+	UpdateHabit(models.Habit) error
+	ArchiveHabit(id string) error
+	UnarchiveHabit(id string) error
+	DeleteHabit(id string) error
+	RestoreHabit(id string) error
+
+	// Habit Entries
+	AddHabitEntry(models.HabitEntry) error
+	GetHabitEntry(habitID, day string) (models.HabitEntry, error)
+	GetHabitEntriesForDay(day string) ([]models.HabitEntry, error)
+	GetHabitEntriesForHabit(habitID string, startDay, endDay string) ([]models.HabitEntry, error)
+	UpdateHabitEntry(models.HabitEntry) error
+	DeleteHabitEntry(id string) error
+	RestoreHabitEntry(id string) error
+
+	// OT Settings
+	GetOTSettings() (models.OTSettings, error)
+	SaveOTSettings(models.OTSettings) error
+
+	// OT Entries
+	AddOTEntry(models.OTEntry) error
+	GetOTEntry(day string) (models.OTEntry, error)
+	GetOTEntries(startDay, endDay string, includeDeleted bool) ([]models.OTEntry, error)
+	UpdateOTEntry(models.OTEntry) error
+	DeleteOTEntry(day string) error
+	RestoreOTEntry(day string) error
+
 	// Utils
 	GetConfigPath() string
 }

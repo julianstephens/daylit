@@ -709,6 +709,600 @@ func (s *SQLiteStore) RestorePlan(date string) error {
 	return tx.Commit()
 }
 
+// Habits
+
+func (s *SQLiteStore) AddHabit(habit models.Habit) error {
+	return s.UpdateHabit(habit)
+}
+
+func (s *SQLiteStore) GetHabit(id string) (models.Habit, error) {
+	row := s.db.QueryRow(`
+		SELECT id, name, created_at, archived_at, deleted_at
+		FROM habits WHERE id = ? AND deleted_at IS NULL`, id)
+
+	var h models.Habit
+	var createdAt string
+	var archivedAt, deletedAt sql.NullString
+
+	err := row.Scan(&h.ID, &h.Name, &createdAt, &archivedAt, &deletedAt)
+	if err != nil {
+		return models.Habit{}, err
+	}
+
+	h.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
+	if err != nil {
+		return models.Habit{}, fmt.Errorf("failed to parse created_at: %w", err)
+	}
+	if archivedAt.Valid {
+		t, err := time.Parse(time.RFC3339, archivedAt.String)
+		if err != nil {
+			return models.Habit{}, fmt.Errorf("failed to parse archived_at: %w", err)
+		}
+		h.ArchivedAt = &t
+	}
+	if deletedAt.Valid {
+		t, err := time.Parse(time.RFC3339, deletedAt.String)
+		if err != nil {
+			return models.Habit{}, fmt.Errorf("failed to parse deleted_at: %w", err)
+		}
+		h.DeletedAt = &t
+	}
+
+	return h, nil
+}
+
+func (s *SQLiteStore) GetHabitByName(name string) (models.Habit, error) {
+	row := s.db.QueryRow(`
+		SELECT id, name, created_at, archived_at, deleted_at
+		FROM habits WHERE name = ? AND deleted_at IS NULL`, name)
+
+	var h models.Habit
+	var createdAt string
+	var archivedAt, deletedAt sql.NullString
+
+	err := row.Scan(&h.ID, &h.Name, &createdAt, &archivedAt, &deletedAt)
+	if err != nil {
+		return models.Habit{}, err
+	}
+
+	h.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
+	if err != nil {
+		return models.Habit{}, fmt.Errorf("failed to parse created_at: %w", err)
+	}
+	if archivedAt.Valid {
+		t, err := time.Parse(time.RFC3339, archivedAt.String)
+		if err != nil {
+			return models.Habit{}, fmt.Errorf("failed to parse archived_at: %w", err)
+		}
+		h.ArchivedAt = &t
+	}
+	if deletedAt.Valid {
+		t, err := time.Parse(time.RFC3339, deletedAt.String)
+		if err != nil {
+			return models.Habit{}, fmt.Errorf("failed to parse deleted_at: %w", err)
+		}
+		h.DeletedAt = &t
+	}
+
+	return h, nil
+}
+
+func (s *SQLiteStore) GetAllHabits(includeArchived, includeDeleted bool) ([]models.Habit, error) {
+	query := "SELECT id, name, created_at, archived_at, deleted_at FROM habits WHERE 1=1"
+	if !includeDeleted {
+		query += " AND deleted_at IS NULL"
+	}
+	if !includeArchived {
+		query += " AND archived_at IS NULL"
+	}
+	query += " ORDER BY created_at"
+
+	rows, err := s.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var habits []models.Habit
+	for rows.Next() {
+		var h models.Habit
+		var createdAt string
+		var archivedAt, deletedAt sql.NullString
+
+		err := rows.Scan(&h.ID, &h.Name, &createdAt, &archivedAt, &deletedAt)
+		if err != nil {
+			return nil, err
+		}
+
+		h.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse created_at for habit %s: %w", h.ID, err)
+		}
+		if archivedAt.Valid {
+			t, err := time.Parse(time.RFC3339, archivedAt.String)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse archived_at for habit %s: %w", h.ID, err)
+			}
+			h.ArchivedAt = &t
+		}
+		if deletedAt.Valid {
+			t, err := time.Parse(time.RFC3339, deletedAt.String)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse deleted_at for habit %s: %w", h.ID, err)
+			}
+			h.DeletedAt = &t
+		}
+
+		habits = append(habits, h)
+	}
+
+	return habits, nil
+}
+
+func (s *SQLiteStore) UpdateHabit(habit models.Habit) error {
+	var archivedAt, deletedAt sql.NullString
+	if habit.ArchivedAt != nil {
+		archivedAt = sql.NullString{String: habit.ArchivedAt.Format(time.RFC3339), Valid: true}
+	}
+	if habit.DeletedAt != nil {
+		deletedAt = sql.NullString{String: habit.DeletedAt.Format(time.RFC3339), Valid: true}
+	}
+
+	_, err := s.db.Exec(`
+		INSERT INTO habits (id, name, created_at, archived_at, deleted_at)
+		VALUES (?, ?, ?, ?, ?)
+		ON CONFLICT(id) DO UPDATE SET
+			name = excluded.name,
+			archived_at = excluded.archived_at,
+			deleted_at = excluded.deleted_at`,
+		habit.ID, habit.Name, habit.CreatedAt.Format(time.RFC3339), archivedAt, deletedAt)
+
+	return err
+}
+
+func (s *SQLiteStore) ArchiveHabit(id string) error {
+	result, err := s.db.Exec(`
+		UPDATE habits SET archived_at = ? WHERE id = ? AND deleted_at IS NULL AND archived_at IS NULL`,
+		time.Now().Format(time.RFC3339), id)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return fmt.Errorf("habit not found or already archived/deleted")
+	}
+
+	return nil
+}
+
+func (s *SQLiteStore) UnarchiveHabit(id string) error {
+	result, err := s.db.Exec(`
+		UPDATE habits SET archived_at = NULL WHERE id = ? AND deleted_at IS NULL AND archived_at IS NOT NULL`,
+		id)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return fmt.Errorf("habit not found or not archived")
+	}
+
+	return nil
+}
+
+func (s *SQLiteStore) DeleteHabit(id string) error {
+	result, err := s.db.Exec(`
+		UPDATE habits SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL`,
+		time.Now().Format(time.RFC3339), id)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return fmt.Errorf("habit not found or already deleted")
+	}
+
+	return nil
+}
+
+func (s *SQLiteStore) RestoreHabit(id string) error {
+	result, err := s.db.Exec(`
+		UPDATE habits SET deleted_at = NULL WHERE id = ? AND deleted_at IS NOT NULL`,
+		id)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return fmt.Errorf("habit not found or not deleted")
+	}
+
+	return nil
+}
+
+// Habit Entries
+
+func (s *SQLiteStore) AddHabitEntry(entry models.HabitEntry) error {
+	return s.UpdateHabitEntry(entry)
+}
+
+func (s *SQLiteStore) GetHabitEntry(habitID, day string) (models.HabitEntry, error) {
+	row := s.db.QueryRow(`
+		SELECT id, habit_id, day, note, created_at, updated_at, deleted_at
+		FROM habit_entries WHERE habit_id = ? AND day = ? AND deleted_at IS NULL`,
+		habitID, day)
+
+	var e models.HabitEntry
+	var createdAt, updatedAt string
+	var deletedAt sql.NullString
+
+	err := row.Scan(&e.ID, &e.HabitID, &e.Day, &e.Note, &createdAt, &updatedAt, &deletedAt)
+	if err != nil {
+		return models.HabitEntry{}, err
+	}
+
+	e.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
+	if err != nil {
+		return models.HabitEntry{}, fmt.Errorf("failed to parse created_at: %w", err)
+	}
+	e.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt)
+	if err != nil {
+		return models.HabitEntry{}, fmt.Errorf("failed to parse updated_at: %w", err)
+	}
+	if deletedAt.Valid {
+		t, err := time.Parse(time.RFC3339, deletedAt.String)
+		if err != nil {
+			return models.HabitEntry{}, fmt.Errorf("failed to parse deleted_at: %w", err)
+		}
+		e.DeletedAt = &t
+	}
+
+	return e, nil
+}
+
+func (s *SQLiteStore) GetHabitEntriesForDay(day string) ([]models.HabitEntry, error) {
+	rows, err := s.db.Query(`
+		SELECT id, habit_id, day, note, created_at, updated_at, deleted_at
+		FROM habit_entries WHERE day = ? AND deleted_at IS NULL
+		ORDER BY created_at`, day)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []models.HabitEntry
+	for rows.Next() {
+		var e models.HabitEntry
+		var createdAt, updatedAt string
+		var deletedAt sql.NullString
+
+		err := rows.Scan(&e.ID, &e.HabitID, &e.Day, &e.Note, &createdAt, &updatedAt, &deletedAt)
+		if err != nil {
+			return nil, err
+		}
+
+		e.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse created_at for entry %s: %w", e.ID, err)
+		}
+		e.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse updated_at for entry %s: %w", e.ID, err)
+		}
+		if deletedAt.Valid {
+			t, err := time.Parse(time.RFC3339, deletedAt.String)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse deleted_at for entry %s: %w", e.ID, err)
+			}
+			e.DeletedAt = &t
+		}
+
+		entries = append(entries, e)
+	}
+
+	return entries, nil
+}
+
+func (s *SQLiteStore) GetHabitEntriesForHabit(habitID string, startDay, endDay string) ([]models.HabitEntry, error) {
+	rows, err := s.db.Query(`
+		SELECT id, habit_id, day, note, created_at, updated_at, deleted_at
+		FROM habit_entries
+		WHERE habit_id = ? AND day >= ? AND day <= ? AND deleted_at IS NULL
+		ORDER BY day DESC`, habitID, startDay, endDay)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []models.HabitEntry
+	for rows.Next() {
+		var e models.HabitEntry
+		var createdAt, updatedAt string
+		var deletedAt sql.NullString
+
+		err := rows.Scan(&e.ID, &e.HabitID, &e.Day, &e.Note, &createdAt, &updatedAt, &deletedAt)
+		if err != nil {
+			return nil, err
+		}
+
+		e.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse created_at for entry %s: %w", e.ID, err)
+		}
+		e.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse updated_at for entry %s: %w", e.ID, err)
+		}
+		if deletedAt.Valid {
+			t, err := time.Parse(time.RFC3339, deletedAt.String)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse deleted_at for entry %s: %w", e.ID, err)
+			}
+			e.DeletedAt = &t
+		}
+
+		entries = append(entries, e)
+	}
+
+	return entries, nil
+}
+
+func (s *SQLiteStore) UpdateHabitEntry(entry models.HabitEntry) error {
+	var deletedAt sql.NullString
+	if entry.DeletedAt != nil {
+		deletedAt = sql.NullString{String: entry.DeletedAt.Format(time.RFC3339), Valid: true}
+	}
+
+	_, err := s.db.Exec(`
+		INSERT INTO habit_entries (id, habit_id, day, note, created_at, updated_at, deleted_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(habit_id, day) DO UPDATE SET
+			note = excluded.note,
+			updated_at = excluded.updated_at,
+			deleted_at = excluded.deleted_at`,
+		entry.ID, entry.HabitID, entry.Day, entry.Note,
+		entry.CreatedAt.Format(time.RFC3339), entry.UpdatedAt.Format(time.RFC3339), deletedAt)
+
+	return err
+}
+
+func (s *SQLiteStore) DeleteHabitEntry(id string) error {
+	result, err := s.db.Exec(`
+		UPDATE habit_entries SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL`,
+		time.Now().Format(time.RFC3339), id)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return fmt.Errorf("habit entry not found or already deleted")
+	}
+
+	return nil
+}
+
+func (s *SQLiteStore) RestoreHabitEntry(id string) error {
+	result, err := s.db.Exec(`
+		UPDATE habit_entries SET deleted_at = NULL WHERE id = ? AND deleted_at IS NOT NULL`,
+		id)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return fmt.Errorf("habit entry not found or not deleted")
+	}
+
+	return nil
+}
+
+// OT Settings
+
+func (s *SQLiteStore) GetOTSettings() (models.OTSettings, error) {
+	row := s.db.QueryRow(`
+		SELECT id, prompt_on_empty, strict_mode, default_log_days
+		FROM ot_settings WHERE id = 1`)
+
+	var settings models.OTSettings
+	var promptOnEmpty, strictMode int
+
+	err := row.Scan(&settings.ID, &promptOnEmpty, &strictMode, &settings.DefaultLogDays)
+	if err != nil {
+		return models.OTSettings{}, err
+	}
+
+	settings.PromptOnEmpty = promptOnEmpty == 1
+	settings.StrictMode = strictMode == 1
+
+	return settings, nil
+}
+
+func (s *SQLiteStore) SaveOTSettings(settings models.OTSettings) error {
+	var promptOnEmpty, strictMode int
+	if settings.PromptOnEmpty {
+		promptOnEmpty = 1
+	}
+	if settings.StrictMode {
+		strictMode = 1
+	}
+
+	_, err := s.db.Exec(`
+		INSERT OR REPLACE INTO ot_settings (id, prompt_on_empty, strict_mode, default_log_days)
+		VALUES (1, ?, ?, ?)`,
+		promptOnEmpty, strictMode, settings.DefaultLogDays)
+
+	return err
+}
+
+// OT Entries
+
+func (s *SQLiteStore) AddOTEntry(entry models.OTEntry) error {
+	return s.UpdateOTEntry(entry)
+}
+
+func (s *SQLiteStore) GetOTEntry(day string) (models.OTEntry, error) {
+	row := s.db.QueryRow(`
+		SELECT id, day, title, note, created_at, updated_at, deleted_at
+		FROM ot_entries WHERE day = ? AND deleted_at IS NULL`, day)
+
+	var e models.OTEntry
+	var createdAt, updatedAt string
+	var deletedAt sql.NullString
+
+	err := row.Scan(&e.ID, &e.Day, &e.Title, &e.Note, &createdAt, &updatedAt, &deletedAt)
+	if err != nil {
+		return models.OTEntry{}, err
+	}
+
+	e.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
+	if err != nil {
+		return models.OTEntry{}, fmt.Errorf("failed to parse created_at: %w", err)
+	}
+	e.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt)
+	if err != nil {
+		return models.OTEntry{}, fmt.Errorf("failed to parse updated_at: %w", err)
+	}
+	if deletedAt.Valid {
+		t, err := time.Parse(time.RFC3339, deletedAt.String)
+		if err != nil {
+			return models.OTEntry{}, fmt.Errorf("failed to parse deleted_at: %w", err)
+		}
+		e.DeletedAt = &t
+	}
+
+	return e, nil
+}
+
+func (s *SQLiteStore) GetOTEntries(startDay, endDay string, includeDeleted bool) ([]models.OTEntry, error) {
+	query := `
+		SELECT id, day, title, note, created_at, updated_at, deleted_at
+		FROM ot_entries WHERE day >= ? AND day <= ?`
+	if !includeDeleted {
+		query += " AND deleted_at IS NULL"
+	}
+	query += " ORDER BY day DESC"
+
+	rows, err := s.db.Query(query, startDay, endDay)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []models.OTEntry
+	for rows.Next() {
+		var e models.OTEntry
+		var createdAt, updatedAt string
+		var deletedAt sql.NullString
+
+		err := rows.Scan(&e.ID, &e.Day, &e.Title, &e.Note, &createdAt, &updatedAt, &deletedAt)
+		if err != nil {
+			return nil, err
+		}
+
+		e.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse created_at for entry %s: %w", e.ID, err)
+		}
+		e.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse updated_at for entry %s: %w", e.ID, err)
+		}
+		if deletedAt.Valid {
+			t, err := time.Parse(time.RFC3339, deletedAt.String)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse deleted_at for entry %s: %w", e.ID, err)
+			}
+			e.DeletedAt = &t
+		}
+
+		entries = append(entries, e)
+	}
+
+	return entries, nil
+}
+
+func (s *SQLiteStore) UpdateOTEntry(entry models.OTEntry) error {
+	var deletedAt sql.NullString
+	if entry.DeletedAt != nil {
+		deletedAt = sql.NullString{String: entry.DeletedAt.Format(time.RFC3339), Valid: true}
+	}
+
+	_, err := s.db.Exec(`
+		INSERT INTO ot_entries (id, day, title, note, created_at, updated_at, deleted_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(day) DO UPDATE SET
+			title = excluded.title,
+			note = excluded.note,
+			updated_at = excluded.updated_at,
+			deleted_at = excluded.deleted_at`,
+		entry.ID, entry.Day, entry.Title, entry.Note,
+		entry.CreatedAt.Format(time.RFC3339), entry.UpdatedAt.Format(time.RFC3339), deletedAt)
+
+	return err
+}
+
+func (s *SQLiteStore) DeleteOTEntry(day string) error {
+	result, err := s.db.Exec(`
+		UPDATE ot_entries SET deleted_at = ? WHERE day = ? AND deleted_at IS NULL`,
+		time.Now().Format(time.RFC3339), day)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return fmt.Errorf("OT entry not found or already deleted")
+	}
+
+	return nil
+}
+
+func (s *SQLiteStore) RestoreOTEntry(day string) error {
+	result, err := s.db.Exec(`
+		UPDATE ot_entries SET deleted_at = NULL WHERE day = ? AND deleted_at IS NOT NULL`,
+		day)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return fmt.Errorf("OT entry not found or not deleted")
+	}
+
+	return nil
+}
+
 func (s *SQLiteStore) GetConfigPath() string {
 	return s.path
 }

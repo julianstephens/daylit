@@ -84,6 +84,71 @@ func (cmd *DoctorCmd) Run(ctx *Context) error {
 		fmt.Printf("✓ Clock/timezone: OK\n")
 	}
 
+	// Check 7: Habit integrity (only if DB is reachable)
+	if dbReachable {
+		if err := checkHabitsIntegrity(ctx); err != nil {
+			fmt.Printf("❌ Habit integrity: FAIL\n")
+			fmt.Printf("   Error: %v\n", err)
+			hasError = true
+		} else {
+			fmt.Printf("✓ Habit integrity: OK\n")
+		}
+	} else {
+		fmt.Printf("⊘ Habit integrity: SKIPPED (database not reachable)\n")
+	}
+
+	// Check 8: Habit entries duplicates (only if DB is reachable)
+	if dbReachable {
+		if err := checkHabitEntriesDuplicates(ctx); err != nil {
+			fmt.Printf("❌ Habit entries duplicates: FAIL\n")
+			fmt.Printf("   Error: %v\n", err)
+			hasError = true
+		} else {
+			fmt.Printf("✓ Habit entries duplicates: OK\n")
+		}
+	} else {
+		fmt.Printf("⊘ Habit entries duplicates: SKIPPED (database not reachable)\n")
+	}
+
+	// Check 9: OT settings (only if DB is reachable)
+	if dbReachable {
+		if err := checkOTSettings(ctx); err != nil {
+			fmt.Printf("❌ OT settings: FAIL\n")
+			fmt.Printf("   Error: %v\n", err)
+			hasError = true
+		} else {
+			fmt.Printf("✓ OT settings: OK\n")
+		}
+	} else {
+		fmt.Printf("⊘ OT settings: SKIPPED (database not reachable)\n")
+	}
+
+	// Check 10: Date formats (only if DB is reachable)
+	if dbReachable {
+		if err := checkOTEntriesDates(ctx); err != nil {
+			fmt.Printf("❌ Date formats: FAIL\n")
+			fmt.Printf("   Error: %v\n", err)
+			hasError = true
+		} else {
+			fmt.Printf("✓ Date formats: OK\n")
+		}
+	} else {
+		fmt.Printf("⊘ Date formats: SKIPPED (database not reachable)\n")
+	}
+
+	// Check 11: Timestamp integrity (only if DB is reachable)
+	if dbReachable {
+		if err := checkTimestampIntegrity(ctx); err != nil {
+			fmt.Printf("❌ Timestamp integrity: FAIL\n")
+			fmt.Printf("   Error: %v\n", err)
+			hasError = true
+		} else {
+			fmt.Printf("✓ Timestamp integrity: OK\n")
+		}
+	} else {
+		fmt.Printf("⊘ Timestamp integrity: SKIPPED (database not reachable)\n")
+	}
+
 	fmt.Println()
 	if hasError {
 		fmt.Println("Diagnostics completed with errors.")
@@ -224,6 +289,187 @@ func checkClockTimezone() error {
 	// Check if time is in a reasonable range (after 2020 and before 2100)
 	if now.Year() < 2020 || now.Year() > 2100 {
 		return fmt.Errorf("system time appears incorrect: %s", now.Format(time.RFC3339))
+	}
+
+	return nil
+}
+
+func checkHabitsIntegrity(ctx *Context) error {
+	sqliteStore, ok := ctx.Store.(*storage.SQLiteStore)
+	if !ok {
+		return nil // Not SQLite, skip
+	}
+
+	db := sqliteStore.GetDB()
+	if db == nil {
+		return fmt.Errorf("database connection is nil")
+	}
+
+	// Check for orphaned habit entries (entries referencing non-existent habits)
+	var orphanedCount int
+	err := db.QueryRow(`
+		SELECT COUNT(*)
+		FROM habit_entries he
+		LEFT JOIN habits h ON he.habit_id = h.id
+		WHERE h.id IS NULL AND he.deleted_at IS NULL
+	`).Scan(&orphanedCount)
+	if err != nil {
+		return fmt.Errorf("failed to check orphaned habit entries: %w", err)
+	}
+	if orphanedCount > 0 {
+		return fmt.Errorf("found %d orphaned habit entries (referencing non-existent habits)", orphanedCount)
+	}
+
+	return nil
+}
+
+func checkHabitEntriesDuplicates(ctx *Context) error {
+	sqliteStore, ok := ctx.Store.(*storage.SQLiteStore)
+	if !ok {
+		return nil // Not SQLite, skip
+	}
+
+	db := sqliteStore.GetDB()
+	if db == nil {
+		return fmt.Errorf("database connection is nil")
+	}
+
+	// Check for duplicate habit entries (multiple entries for same habit + day)
+	var duplicateCount int
+	err := db.QueryRow(`
+		SELECT COUNT(*)
+		FROM (
+			SELECT habit_id, day, COUNT(*) as cnt
+			FROM habit_entries
+			WHERE deleted_at IS NULL
+			GROUP BY habit_id, day
+			HAVING cnt > 1
+		)
+	`).Scan(&duplicateCount)
+	if err != nil {
+		return fmt.Errorf("failed to check duplicate habit entries: %w", err)
+	}
+	if duplicateCount > 0 {
+		return fmt.Errorf("found %d habit+day combinations with duplicate entries", duplicateCount)
+	}
+
+	return nil
+}
+
+func checkOTSettings(ctx *Context) error {
+	sqliteStore, ok := ctx.Store.(*storage.SQLiteStore)
+	if !ok {
+		return nil // Not SQLite, skip
+	}
+
+	db := sqliteStore.GetDB()
+	if db == nil {
+		return fmt.Errorf("database connection is nil")
+	}
+
+	// Check if ot_settings row exists
+	var count int
+	err := db.QueryRow(`SELECT COUNT(*) FROM ot_settings WHERE id = 1`).Scan(&count)
+	if err != nil {
+		return fmt.Errorf("failed to check ot_settings: %w", err)
+	}
+	if count == 0 {
+		return fmt.Errorf("ot_settings row missing (run 'daylit ot init')")
+	}
+
+	return nil
+}
+
+func checkOTEntriesDates(ctx *Context) error {
+	sqliteStore, ok := ctx.Store.(*storage.SQLiteStore)
+	if !ok {
+		return nil // Not SQLite, skip
+	}
+
+	db := sqliteStore.GetDB()
+	if db == nil {
+		return fmt.Errorf("database connection is nil")
+	}
+
+	// Check for invalid date formats
+	var invalidCount int
+	err := db.QueryRow(`
+		SELECT COUNT(*)
+		FROM ot_entries
+		WHERE day NOT GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
+	`).Scan(&invalidCount)
+	if err != nil {
+		return fmt.Errorf("failed to check OT entry dates: %w", err)
+	}
+	if invalidCount > 0 {
+		return fmt.Errorf("found %d OT entries with invalid date format", invalidCount)
+	}
+
+	// Check for invalid date formats in habit_entries
+	err = db.QueryRow(`
+		SELECT COUNT(*)
+		FROM habit_entries
+		WHERE day NOT GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
+	`).Scan(&invalidCount)
+	if err != nil {
+		return fmt.Errorf("failed to check habit entry dates: %w", err)
+	}
+	if invalidCount > 0 {
+		return fmt.Errorf("found %d habit entries with invalid date format", invalidCount)
+	}
+
+	return nil
+}
+
+func checkTimestampIntegrity(ctx *Context) error {
+	sqliteStore, ok := ctx.Store.(*storage.SQLiteStore)
+	if !ok {
+		return nil // Not SQLite, skip
+	}
+
+	db := sqliteStore.GetDB()
+	if db == nil {
+		return fmt.Errorf("database connection is nil")
+	}
+
+	// Check habit entries
+	var corruptedCount int
+	err := db.QueryRow(`
+		SELECT COUNT(*)
+		FROM habit_entries
+		WHERE created_at = '' OR updated_at = ''
+	`).Scan(&corruptedCount)
+	if err != nil {
+		return fmt.Errorf("failed to check habit entry timestamps: %w", err)
+	}
+	if corruptedCount > 0 {
+		return fmt.Errorf("found %d habit entries with corrupted timestamps", corruptedCount)
+	}
+
+	// Check OT entries
+	err = db.QueryRow(`
+		SELECT COUNT(*)
+		FROM ot_entries
+		WHERE created_at = '' OR updated_at = ''
+	`).Scan(&corruptedCount)
+	if err != nil {
+		return fmt.Errorf("failed to check OT entry timestamps: %w", err)
+	}
+	if corruptedCount > 0 {
+		return fmt.Errorf("found %d OT entries with corrupted timestamps", corruptedCount)
+	}
+
+	// Check habits
+	err = db.QueryRow(`
+		SELECT COUNT(*)
+		FROM habits
+		WHERE created_at = ''
+	`).Scan(&corruptedCount)
+	if err != nil {
+		return fmt.Errorf("failed to check habit timestamps: %w", err)
+	}
+	if corruptedCount > 0 {
+		return fmt.Errorf("found %d habits with corrupted timestamps", corruptedCount)
 	}
 
 	return nil
