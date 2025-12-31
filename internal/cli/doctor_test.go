@@ -13,7 +13,7 @@ import (
 func setupTestDoctorDB(t *testing.T) (*Context, func()) {
 	tempDir := t.TempDir()
 	dbPath := filepath.Join(tempDir, "test.db")
-	
+
 	store := storage.NewSQLiteStore(dbPath)
 	if err := store.Init(); err != nil {
 		t.Fatalf("failed to initialize store: %v", err)
@@ -37,7 +37,7 @@ func TestDoctorCmd_HealthyDB(t *testing.T) {
 
 	cmd := &DoctorCmd{}
 	err := cmd.Run(ctx)
-	
+
 	// Should pass all checks (except backups which is a warning)
 	if err != nil {
 		t.Errorf("doctor command failed on healthy database: %v", err)
@@ -50,7 +50,7 @@ func TestDoctorCmd_MissingBackups(t *testing.T) {
 
 	cmd := &DoctorCmd{}
 	err := cmd.Run(ctx)
-	
+
 	// Missing backups is a warning, not a failure
 	if err != nil {
 		t.Errorf("doctor command should not fail on missing backups: %v", err)
@@ -84,7 +84,7 @@ func TestDoctorCmd_BrokenSchema(t *testing.T) {
 
 	cmd := &DoctorCmd{}
 	err = cmd.Run(ctx)
-	
+
 	// Should fail with schema error
 	if err == nil {
 		t.Error("doctor command should fail with corrupted schema")
@@ -104,7 +104,7 @@ func TestDoctorCmd_WithBackups(t *testing.T) {
 
 	cmd := &DoctorCmd{}
 	err = cmd.Run(ctx)
-	
+
 	// Should pass all checks including backups
 	if err != nil {
 		t.Errorf("doctor command failed with backups present: %v", err)
