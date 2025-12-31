@@ -486,7 +486,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg, ok := msg.(tea.KeyMsg); ok && key.Matches(msg, m.keys.Generate) {
 			// Generate plan
 			today := time.Now().Format("2006-01-02")
-			
+
 			// Check if plan already exists
 			_, err := m.store.GetPlan(today)
 			if err == nil {
@@ -495,7 +495,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.state = StateConfirmOverwrite
 				return m, nil
 			}
-			
+
 			settings, _ := m.store.GetSettings()
 
 			// Default settings if not set

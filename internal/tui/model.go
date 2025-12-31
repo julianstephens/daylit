@@ -41,29 +41,29 @@ type TaskFormModel struct {
 }
 
 type Model struct {
-	store                storage.Provider
-	scheduler            *scheduler.Scheduler
-	state                SessionState
-	previousState        SessionState
-	keys                 KeyMap
-	help                 help.Model
-	taskList             tasklist.Model
-	planModel            plan.Model
-	nowModel             now.Model
-	form                 *huh.Form
-	taskForm             *TaskFormModel
-	editingTask          *models.Task
-	quitting             bool
-	width                int
-	height               int
-	feedbackSlotID       int // Index of the slot being rated
-	taskToDeleteID       string
-	taskToRestoreID      string
-	validationWarning    string                   // Validation warning message to display
-	validationConflicts  []validation.Conflict    // Detailed conflict information
-	planToDeleteDate     string
-	planToRestoreDate    string
-	planToOverwriteDate  string
+	store               storage.Provider
+	scheduler           *scheduler.Scheduler
+	state               SessionState
+	previousState       SessionState
+	keys                KeyMap
+	help                help.Model
+	taskList            tasklist.Model
+	planModel           plan.Model
+	nowModel            now.Model
+	form                *huh.Form
+	taskForm            *TaskFormModel
+	editingTask         *models.Task
+	quitting            bool
+	width               int
+	height              int
+	feedbackSlotID      int // Index of the slot being rated
+	taskToDeleteID      string
+	taskToRestoreID     string
+	validationWarning   string                // Validation warning message to display
+	validationConflicts []validation.Conflict // Detailed conflict information
+	planToDeleteDate    string
+	planToRestoreDate   string
+	planToOverwriteDate string
 }
 
 func NewModel(store storage.Provider, sched *scheduler.Scheduler) Model {
