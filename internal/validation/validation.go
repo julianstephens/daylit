@@ -420,7 +420,7 @@ func formatDate(t time.Time) string {
 	return t.Format("Mon")
 }
 
-// AutoFixDuplicateTasks fixes duplicate task conflicts by keeping the oldest task and soft-deleting others
+// AutoFixDuplicateTasks fixes duplicate task conflicts by keeping a single task and soft-deleting the others
 // Returns a slice of FixActions describing what was fixed
 func AutoFixDuplicateTasks(conflicts []Conflict, tasks []models.Task, deleteFunc func(id string) error) []FixAction {
 	actions := []FixAction{}
