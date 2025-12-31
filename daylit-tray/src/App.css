@@ -59,3 +59,22 @@ body, #root {
   font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.6);
 }
+.app-actions {
+  margin-top: 2rem;
+}
+
+.settings-link {
+  display: inline-block;
+  padding: 0.6rem 1.2rem;
+  background-color: #333;
+  color: #f6f6f6;
+  text-decoration: none;
+  border-radius: 4px;
+  border: 1px solid #555;
+  transition: background-color 0.2s;
+}
+
+.settings-link:hover {
+  background-color: #444;
+}
+

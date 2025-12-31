@@ -1,5 +1,6 @@
 import { getVersion } from '@tauri-apps/api/app';
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import './App.css';
 
 function App() {
@@ -23,6 +24,9 @@ function App() {
             Version: {appVersion}
           </p>
         )}
+        <div className="app-actions">
+          <Link to="/settings" className="settings-link">Settings</Link>
+        </div>
       </div>
     </div>
   );

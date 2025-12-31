@@ -1,23 +1,29 @@
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use std::thread;
 use std::{fs, sync::Mutex};
 use tauri::Emitter;
 use tauri::Listener;
 use tauri::{
+    AppHandle, LogicalPosition, LogicalSize, Manager, State, WebviewWindow, Wry,
     image::Image,
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
-    AppHandle, Manager, State, WebviewWindow, Wry,
 };
-use std::sync::Arc;
-use tauri_plugin_store::{Store, StoreExt};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tauri_plugin_log::log::info;
+use tauri_plugin_store::{Store, StoreExt};
 use tiny_http::{Response, Server};
+
+const WINDOW_WIDTH: f64 = 560.0;
+const WINDOW_HEIGHT: f64 = 600.0;
+const WINDOW_X: f64 = 400.0;
+const WINDOW_Y: f64 = 400.0;
 
 // --- Struct Definitions for State and Payloads ---
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(default)]
 pub struct Settings {
     font_size: String,
     launch_at_login: bool,
@@ -68,34 +74,21 @@ fn get_settings(state: State<AppState>) -> Result<Settings, String> {
 }
 
 #[tauri::command]
-fn set_font_size(font_size: String, state: State<AppState>) -> Result<(), String> {
-    let mut settings = Settings::load(&state.settings);
-    settings.font_size = font_size;
+async fn save_settings(settings: Settings, app: AppHandle) -> Result<(), String> {
+    let state: State<AppState> = app.state();
 
-    state.settings.set(
-        "settings",
-        serde_json::to_value(settings).map_err(|e| e.to_string())?,
-    );
-    state.settings.save().map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn set_launch_at_login(enable: bool, app: AppHandle) -> Result<(), String> {
+    // Handle side effects
     let autostart_manager = app.autolaunch();
-    if enable {
+    if settings.launch_at_login {
         autostart_manager.enable().map_err(|e| e.to_string())?;
     } else {
         autostart_manager.disable().map_err(|e| e.to_string())?;
     }
 
-    let state: State<AppState> = app.state();
-    let mut settings = Settings::load(&state.settings);
-
-    settings.launch_at_login = enable;
-
+    // Save to store
     state.settings.set(
         "settings",
-        serde_json::to_value(settings).map_err(|e| e.to_string())?,
+        serde_json::to_value(&settings).map_err(|e| e.to_string())?,
     );
     state.settings.save().map_err(|e| e.to_string())
 }
@@ -143,49 +136,52 @@ fn start_webhook_server(app_handle: AppHandle) {
                 *state.payload.lock().unwrap() = Some(payload.clone());
 
                 let app_handle_clone = app_handle.clone();
-                app_handle.run_on_main_thread(move || {
-                    // --- Re-use or Create Window Logic ---
-                    if let Some(existing_window) =
-                        app_handle_clone.get_webview_window("notification_dialog")
-                    {
-                        info!("Dialog exists. Re-using and sending new data.");
-                        existing_window.set_focus().unwrap();
-                        existing_window.emit(
-                                "update_notification",
-                                &UpdatePayload {
-                                    text: payload.text,
-                                    duration_ms: payload.duration_ms,
-                                },
-                            )
-                            .unwrap();
-                    } else {
-                        info!("Dialog does not exist. Creating a new one.");
-                        if let Ok(Some(monitor)) = app_handle_clone
-                            .get_webview_window("main")
-                            .unwrap()
-                            .primary_monitor()
+                app_handle
+                    .run_on_main_thread(move || {
+                        // --- Re-use or Create Window Logic ---
+                        if let Some(existing_window) =
+                            app_handle_clone.get_webview_window("notification_dialog")
                         {
-                            let monitor_size = monitor.size();
-                            let dialog_width = 1000.0;
-                            let dialog_height = 100.0;
-                            let pos_x = (monitor_size.width as f64 - dialog_width) / 2.0;
-                            let pos_y = 60.0;
+                            info!("Dialog exists. Re-using and sending new data.");
+                            existing_window.set_focus().unwrap();
+                            existing_window
+                                .emit(
+                                    "update_notification",
+                                    &UpdatePayload {
+                                        text: payload.text,
+                                        duration_ms: payload.duration_ms,
+                                    },
+                                )
+                                .unwrap();
+                        } else {
+                            info!("Dialog does not exist. Creating a new one.");
+                            if let Ok(Some(monitor)) = app_handle_clone
+                                .get_webview_window("main")
+                                .unwrap()
+                                .primary_monitor()
+                            {
+                                let monitor_size = monitor.size();
+                                let dialog_width = 1000.0;
+                                let dialog_height = 100.0;
+                                let pos_x = (monitor_size.width as f64 - dialog_width) / 2.0;
+                                let pos_y = 60.0;
 
-                            tauri::WebviewWindowBuilder::new(
-                                &app_handle_clone,
-                                "notification_dialog",
-                                tauri::WebviewUrl::App("/notification".into()),
-                            )
-                            .inner_size(dialog_width, dialog_height)
-                            .position(pos_x, pos_y)
-                            .always_on_top(true)
-                            .decorations(false)
-                            .transparent(true)
-                            .build()
-                            .unwrap();
+                                tauri::WebviewWindowBuilder::new(
+                                    &app_handle_clone,
+                                    "notification_dialog",
+                                    tauri::WebviewUrl::App("/notification".into()),
+                                )
+                                .inner_size(dialog_width, dialog_height)
+                                .position(pos_x, pos_y)
+                                .always_on_top(true)
+                                .decorations(false)
+                                .transparent(true)
+                                .build()
+                                .unwrap();
+                            }
                         }
-                    }
-                }).unwrap();
+                    })
+                    .unwrap();
 
                 let response = Response::from_string("Dialog triggered");
                 request.respond(response).unwrap();
@@ -199,7 +195,10 @@ fn start_webhook_server(app_handle: AppHandle) {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::default().build())
-        .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, Some(vec!["--flag-from-autostart"])))
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            Some(vec!["--flag-from-autostart"]),
+        ))
         .plugin(
             tauri_plugin_log::Builder::new()
                 .level(tauri_plugin_log::log::LevelFilter::Info)
@@ -212,8 +211,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
             get_settings,
-            set_font_size,
-            set_launch_at_login,
+            save_settings,
             get_notification_payload,
             close_notification_window
         ])
@@ -259,6 +257,12 @@ pub fn run() {
                     }
                     "show" => {
                         let webview_window = handle.get_webview_window("main").unwrap();
+                        webview_window
+                            .set_size(LogicalSize::new(WINDOW_WIDTH, WINDOW_HEIGHT))
+                            .unwrap();
+                        webview_window
+                            .set_position(LogicalPosition::new(WINDOW_X, WINDOW_Y))
+                            .unwrap();
                         webview_window.show().unwrap();
                         webview_window.set_focus().unwrap();
                     }
@@ -267,10 +271,13 @@ pub fn run() {
                             win.set_focus().unwrap();
                         } else {
                             tauri::WebviewWindowBuilder::new(
-                                &handle, "settings", tauri::WebviewUrl::App("/settings".into())
+                                &handle,
+                                "settings",
+                                tauri::WebviewUrl::App("/settings".into()),
                             )
-                            .title("Daylit Settings")
-                            .inner_size(400.0, 300.0)
+                            .title("Daylit Tray Settings")
+                            .inner_size(WINDOW_WIDTH, WINDOW_HEIGHT)
+                            .position(WINDOW_X, WINDOW_Y)
                             .resizable(false)
                             .build()
                             .unwrap();
@@ -283,6 +290,12 @@ pub fn run() {
 
             // --- App finalization ---
             let main_window = app.get_webview_window("main").unwrap();
+            main_window
+                .set_size(LogicalSize::new(WINDOW_WIDTH, WINDOW_HEIGHT))
+                .unwrap();
+            main_window
+                .set_position(LogicalPosition::new(WINDOW_X, WINDOW_Y))
+                .unwrap();
             main_window.hide().unwrap();
             start_webhook_server(app.handle().clone());
 
