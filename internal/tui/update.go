@@ -162,6 +162,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if err == nil {
 					m.taskList.SetTasks(tasks)
 				}
+				m.updateValidationStatus()
 			}
 			m.state = StateTasks
 		case huh.StateAborted:
@@ -244,6 +245,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.planModel.SetPlan(plan, tasks)
 				m.nowModel.SetPlan(plan, tasks)
 				m.taskList.SetTasks(tasks)
+				m.updateValidationStatus()
 			}
 
 			m.state = m.previousState
@@ -268,6 +270,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if err == nil {
 					m.taskList.SetTasks(tasks)
 				}
+				m.updateValidationStatus()
 				m.state = StateTasks
 				m.taskToDeleteID = ""
 			case "n", "N", "esc", "q":
@@ -411,6 +414,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.store.SavePlan(plan)
 				m.planModel.SetPlan(plan, tasks)
 				m.nowModel.SetPlan(plan, tasks)
+				m.updateValidationStatus()
 			}
 		}
 		m.planModel, cmd = m.planModel.Update(msg)

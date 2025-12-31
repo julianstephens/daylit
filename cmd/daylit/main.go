@@ -8,7 +8,7 @@ import (
 	"github.com/alecthomas/kong"
 
 	"github.com/julianstephens/daylit/internal/cli"
-	_ "github.com/julianstephens/daylit/internal/constants" // import for init validation
+	_ "github.com/julianstephens/daylit/internal/constants"
 	"github.com/julianstephens/daylit/internal/scheduler"
 	"github.com/julianstephens/daylit/internal/storage"
 )
@@ -26,6 +26,7 @@ var CLI struct {
 	Feedback cli.FeedbackCmd `cmd:"" help:"Provide feedback on a slot."`
 	Day      cli.DayCmd      `cmd:"" help:"Show plan for a day."`
 	Debug    cli.DebugCmd    `cmd:"" help:"Debug commands for troubleshooting."`
+	Validate cli.ValidateCmd `cmd:"" help:"Validate tasks and plans for conflicts."`
 	Backup   struct {
 		Create  cli.BackupCreateCmd  `cmd:"" help:"Create a manual backup." default:"1"`
 		List    cli.BackupListCmd    `cmd:"" help:"List available backups."`

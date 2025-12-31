@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/julianstephens/daylit/internal/models"
+	"github.com/julianstephens/daylit/internal/validation"
 )
 
 type PlanCmd struct {
@@ -88,6 +89,15 @@ func (c *PlanCmd) Run(ctx *Context) error {
 	// Set revision to 0 so SavePlan will auto-assign it and perform immutability checks
 	plan.Revision = 0
 
+	// Validate both tasks and the generated plan
+	validator := validation.New()
+	taskValidationResult := validator.ValidateTasks(tasks)
+	planValidationResult := validator.ValidatePlan(plan, tasks, settings.DayStart, settings.DayEnd)
+
+	// Combine validation results
+	allConflicts := append(taskValidationResult.Conflicts, planValidationResult.Conflicts...)
+	validationResult := validation.ValidationResult{Conflicts: allConflicts}
+
 	// Display plan
 	fmt.Printf("Proposed plan for %s:\n\n", dateStr)
 
@@ -103,6 +113,15 @@ func (c *PlanCmd) Run(ctx *Context) error {
 			}
 			fmt.Printf("%s–%s  %s\n", slot.Start, slot.End, task.Name)
 		}
+
+		// Show validation warnings if any
+		if validationResult.HasConflicts() {
+			fmt.Println("\n⚠️  Validation warnings:")
+			for _, conflict := range validationResult.Conflicts {
+				fmt.Printf("  - %s\n", conflict.Description)
+			}
+		}
+
 		fmt.Println("\nAccept this plan? [y/N]: ")
 	}
 
