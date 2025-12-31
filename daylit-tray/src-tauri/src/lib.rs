@@ -27,7 +27,7 @@ const WINDOW_Y: f64 = 400.0;
 pub struct Settings {
     font_size: String,
     launch_at_login: bool,
-    daylit_dir: Option<String>,
+    lockfile_dir: Option<String>,
 }
 
 impl Default for Settings {
@@ -35,7 +35,7 @@ impl Default for Settings {
         Self {
             font_size: "medium".into(),
             launch_at_login: false,
-            daylit_dir: None,
+            lockfile_dir: None,
         }
     }
 }
@@ -91,7 +91,7 @@ async fn save_settings(settings: Settings, app: AppHandle) -> Result<(), String>
     // Handle lockfile location change
     {
         let mut lockfile_guard = state.lockfile_path.lock().unwrap();
-        let new_config_dir = if let Some(dir) = &settings.daylit_dir {
+        let new_config_dir = if let Some(dir) = &settings.lockfile_dir {
             std::path::PathBuf::from(dir)
         } else {
             app.path().app_config_dir().unwrap()
@@ -147,7 +147,7 @@ fn start_webhook_server(app_handle: AppHandle) {
         let state: State<AppState> = app_handle.state();
         let settings = Settings::load(&state.settings);
 
-        let config_dir = if let Some(dir) = settings.daylit_dir {
+        let config_dir = if let Some(dir) = settings.lockfile_dir {
             std::path::PathBuf::from(dir)
         } else {
             app_handle.path().app_config_dir().unwrap()

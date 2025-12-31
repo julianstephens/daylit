@@ -2,7 +2,7 @@
 name = "daylit-tray"
 version = "0.1.0"
 description = "A Tauri App"
-authors = ["you"]
+authors = ["Julian Stephens <julian@julianstephens.net>"]
 edition = "2024"
 
 [lib]

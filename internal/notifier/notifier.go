@@ -1,0 +1,141 @@
+package notifier
+
+import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+
+	"github.com/mitchellh/go-ps"
+)
+
+var (
+	userConfigDirFunc = os.UserConfigDir
+	findProcessFunc   = ps.FindProcess
+)
+
+type Notifier struct{}
+
+type WebhookPayload struct {
+	Text       string `json:"text"`
+	DurationMs uint32 `json:"duration_ms"`
+}
+
+const (
+	NotifierLockfileName   = "daylit-tray.lock"
+	NotificationDurationMs = 5000
+	TrayAppIdentifier      = "com.julianstephens.daylit-tray"
+)
+
+func New() *Notifier {
+	return &Notifier{}
+}
+
+func (n *Notifier) Notify(text string) error {
+	trayAppConfigPath, err := getTrayAppConfigDir()
+	if err != nil {
+		return err
+	}
+
+	port, err := findAndValidateTrayProcess(filepath.Join(trayAppConfigPath, NotifierLockfileName))
+	if err != nil {
+		return err
+	}
+
+	payload := WebhookPayload{
+		Text:       text,
+		DurationMs: NotificationDurationMs,
+	}
+
+	if err := sendNotification(port, payload); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func getTrayAppConfigDir() (string, error) {
+	configDir, err := userConfigDirFunc()
+	if err != nil {
+		return "", fmt.Errorf("failed to get user config dir: %w", err)
+	}
+
+	trayConfigDir := filepath.Join(configDir, TrayAppIdentifier)
+
+	// Check for settings.json to see if a custom lockfile dir is set
+	settingsPath := filepath.Join(trayConfigDir, "settings.json")
+	if _, err := os.Stat(settingsPath); err == nil {
+		data, err := os.ReadFile(settingsPath)
+		if err == nil {
+			var store struct {
+				Settings struct {
+					LockfileDir *string `json:"lockfile_dir"`
+				} `json:"settings"`
+			}
+			if err := json.Unmarshal(data, &store); err == nil {
+				if store.Settings.LockfileDir != nil && *store.Settings.LockfileDir != "" {
+					return *store.Settings.LockfileDir, nil
+				}
+			}
+		}
+	}
+
+	return trayConfigDir, nil
+}
+
+func findAndValidateTrayProcess(lockfilePath string) (string, error) {
+	content, err := os.ReadFile(lockfilePath)
+	if err != nil {
+		return "", errors.New("daylit-tray is not running")
+	}
+
+	parts := strings.Split(strings.TrimSpace(string(content)), "|")
+	if len(parts) != 2 {
+		return "", errors.New("lockfile is malformed")
+	}
+
+	port := parts[0]
+	pid, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return "", errors.New("invalid process ID in lockfile")
+	}
+
+	process, err := findProcessFunc(pid)
+	if err != nil || process == nil {
+		return "", errors.New("daylit-tray process not running")
+	}
+
+	if !strings.HasPrefix(process.Executable(), "daylit-tray") {
+		return "", fmt.Errorf("process with PID %d is not daylit-tray (is %s)", pid, process.Executable())
+	}
+
+	return port, nil
+}
+
+func sendNotification(port string, payload WebhookPayload) error {
+	url := fmt.Sprintf("http://127.0.0.1:%s", port)
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	res, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode == http.StatusOK {
+		return nil
+	}
+
+	body, _ := io.ReadAll(res.Body)
+	return fmt.Errorf("notification failed with status %d: %s", res.StatusCode, string(body))
+}

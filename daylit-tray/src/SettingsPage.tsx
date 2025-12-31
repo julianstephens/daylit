@@ -6,19 +6,19 @@ import './SettingsPage.css';
 interface Settings {
     font_size: string;
     launch_at_login: boolean;
-    daylit_dir: string | null;
+    lockfile_dir: string | null;
 }
 
 const SettingsPage = () => {
     const [settings, setSettings] = useState<Settings>({
         font_size: 'medium',
         launch_at_login: false,
-        daylit_dir: null,
+        lockfile_dir: null,
     });
     const [initialSettings, setInitialSettings] = useState<Settings>({
         font_size: 'medium',
         launch_at_login: false,
-        daylit_dir: null,
+        lockfile_dir: null,
     });
     const [status, setStatus] = useState<{ type: 'success' | 'error', message: string; } | null>(null);
 
@@ -49,7 +49,7 @@ const SettingsPage = () => {
 
     const handleDaylitDirChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
-        setSettings(prev => ({ ...prev, daylit_dir: value === '' ? null : value }));
+        setSettings(prev => ({ ...prev, lockfile_dir: value === '' ? null : value }));
     };
 
     const handleSave = async () => {
@@ -100,7 +100,7 @@ const SettingsPage = () => {
                     <input
                         type="text"
                         id="daylit-dir"
-                        value={settings.daylit_dir || ''}
+                        value={settings.lockfile_dir || ''}
                         onChange={handleDaylitDirChange}
                         placeholder="Leave empty for default"
                         className="setting-control"
