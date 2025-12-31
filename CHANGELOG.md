@@ -4,6 +4,7 @@
 - Adds `daylit migrate` for schema version tracking and migrations
 - Adds `daylit doctor` and `daylit debug` for diagnostics
 - Adds `daylit validate` for conflict detection
+- Adds `--force` flag to `daylit init` for storage reset
 - Adds soft delete and restore functionality for tasks and plans
 - Adds plan revisioning and immutability
 - Updates TUI to surface new safety features

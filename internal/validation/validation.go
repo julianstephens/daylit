@@ -28,11 +28,18 @@ type Conflict struct {
 	Date        string   // YYYY-MM-DD format (if applicable)
 	Items       []string // Task/slot names involved
 	TimeRange   string   // Human-readable time range (if applicable)
+	TaskIDs     []string // IDs of tasks involved (for auto-fixing)
 }
 
 // ValidationResult contains all detected conflicts
 type ValidationResult struct {
 	Conflicts []Conflict
+}
+
+// FixAction represents an action taken during auto-fix
+type FixAction struct {
+	Action         string   // Human-readable description of the action
+	SourceConflict Conflict // The conflict that triggered this fix action
 }
 
 // HasConflicts returns true if there are any conflicts
@@ -84,6 +91,7 @@ func (v *Validator) ValidateTasks(tasks []models.Task) ValidationResult {
 				Type:        ConflictDuplicateTaskName,
 				Description: fmt.Sprintf("Duplicate task name: \"%s\" (IDs: %v)", name, ids),
 				Items:       []string{name},
+				TaskIDs:     ids,
 			})
 		}
 	}
@@ -180,13 +188,16 @@ func (v *Validator) ValidateTasks(tasks []models.Task) ValidationResult {
 
 			// Check if times overlap (ignoring dates since these are time-of-day based)
 			if timesOverlap(t1.FixedStart, t1.FixedEnd, t2.FixedStart, t2.FixedEnd) {
-				result.Conflicts = append(result.Conflicts, Conflict{
-					Type: ConflictOverlappingFixedTasks,
-					Description: fmt.Sprintf("Fixed appointments overlap: \"%s\" (%s-%s) and \"%s\" (%s-%s)",
-						t1.Name, t1.FixedStart, t1.FixedEnd, t2.Name, t2.FixedStart, t2.FixedEnd),
-					Items:     []string{t1.Name, t2.Name},
-					TimeRange: fmt.Sprintf("%s-%s", t1.FixedStart, t1.FixedEnd),
-				})
+				// Check if recurrence patterns overlap
+				if recurrenceOverlaps(t1.Recurrence, t2.Recurrence) {
+					result.Conflicts = append(result.Conflicts, Conflict{
+						Type: ConflictOverlappingFixedTasks,
+						Description: fmt.Sprintf("Appointments overlap: \"%s\" (%s-%s) and \"%s\" (%s-%s)",
+							t1.Name, t1.FixedStart, t1.FixedEnd, t2.Name, t2.FixedStart, t2.FixedEnd),
+						Items:     []string{t1.Name, t2.Name},
+						TimeRange: fmt.Sprintf("%s-%s", t1.FixedStart, t1.FixedEnd),
+					})
+				}
 			}
 		}
 	}
@@ -410,4 +421,112 @@ func timesOverlap(start1, end1, start2, end2 string) bool {
 func formatDate(t time.Time) string {
 	// Format as "Mon" for day of week abbreviation
 	return t.Format("Mon")
+}
+
+// AutoFixDuplicateTasks fixes duplicate task conflicts by keeping a single task and soft-deleting the others
+// Returns a slice of FixActions describing what was fixed
+func AutoFixDuplicateTasks(conflicts []Conflict, tasks []models.Task, deleteFunc func(id string) error) []FixAction {
+	actions := []FixAction{}
+
+	// Build a map of tasks by ID for quick lookup
+	taskMap := make(map[string]models.Task)
+	for _, task := range tasks {
+		taskMap[task.ID] = task
+	}
+
+	// Process each duplicate conflict
+	for _, conflict := range conflicts {
+		if conflict.Type != ConflictDuplicateTaskName {
+			continue
+		}
+
+		if len(conflict.TaskIDs) <= 1 {
+			continue // No duplicates to fix
+		}
+
+		// Identify a task to keep and mark others for deletion
+		// Note: Since tasks don't have creation timestamps, we use ID ordering
+		// as a heuristic. This keeps behavior consistent and deterministic.
+		// In practice, any duplicate could be kept with similar results.
+		var tasksToCheck []models.Task
+		for _, id := range conflict.TaskIDs {
+			if task, ok := taskMap[id]; ok && task.DeletedAt == nil {
+				tasksToCheck = append(tasksToCheck, task)
+			}
+		}
+
+		if len(tasksToCheck) <= 1 {
+			continue // Nothing to fix
+		}
+
+		// Sort by ID for deterministic behavior
+		// Note: This uses lexicographic ordering of ID strings (e.g., UUIDs).
+		// While this doesn't reflect creation order, it ensures consistent behavior
+		// across runs for the same set of duplicates.
+		sort.Slice(tasksToCheck, func(i, j int) bool {
+			return tasksToCheck[i].ID < tasksToCheck[j].ID
+		})
+
+		// Keep the first task (by ID ordering), delete the rest
+		keepTask := tasksToCheck[0]
+		var deletedIDs []string
+		var failedIDs []string
+
+		for i := 1; i < len(tasksToCheck); i++ {
+			taskToDelete := tasksToCheck[i]
+			if err := deleteFunc(taskToDelete.ID); err == nil {
+				deletedIDs = append(deletedIDs, taskToDelete.ID)
+			} else {
+				// Track failed deletions but continue processing
+				failedIDs = append(failedIDs, taskToDelete.ID)
+			}
+		}
+
+		if len(deletedIDs) > 0 {
+			actionMsg := fmt.Sprintf("Removed %d duplicate task(s) with name \"%s\" (kept ID: %s, removed: %v)", len(deletedIDs), keepTask.Name, keepTask.ID, deletedIDs)
+			if len(failedIDs) > 0 {
+				actionMsg += fmt.Sprintf(" (failed to remove: %v)", failedIDs)
+			}
+			actions = append(actions, FixAction{
+				Action:         actionMsg,
+				SourceConflict: conflict,
+			})
+		} else if len(failedIDs) > 0 {
+			// All deletions failed
+			actions = append(actions, FixAction{
+				Action:         fmt.Sprintf("Failed to remove duplicates for \"%s\": %v", keepTask.Name, failedIDs),
+				SourceConflict: conflict,
+			})
+		}
+	}
+
+	return actions
+}
+
+// recurrenceOverlaps checks if two recurrence patterns can occur on the same day
+func recurrenceOverlaps(r1, r2 models.Recurrence) bool {
+	// If either is daily, they overlap (unless the other is weekly with empty mask, which shouldn't happen)
+	if r1.Type == models.RecurrenceDaily || r2.Type == models.RecurrenceDaily {
+		return true
+	}
+
+	// If both are weekly, check for common weekdays
+	if r1.Type == models.RecurrenceWeekly && r2.Type == models.RecurrenceWeekly {
+		// If either mask is empty, assume overlap (conservative)
+		if len(r1.WeekdayMask) == 0 || len(r2.WeekdayMask) == 0 {
+			return true
+		}
+
+		for _, d1 := range r1.WeekdayMask {
+			for _, d2 := range r2.WeekdayMask {
+				if d1 == d2 {
+					return true
+				}
+			}
+		}
+		return false
+	}
+
+	// For other combinations (e.g. NDays, AdHoc), assume overlap to be safe
+	return true
 }
