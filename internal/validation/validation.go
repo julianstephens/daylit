@@ -28,11 +28,18 @@ type Conflict struct {
 	Date        string   // YYYY-MM-DD format (if applicable)
 	Items       []string // Task/slot names involved
 	TimeRange   string   // Human-readable time range (if applicable)
+	TaskIDs     []string // IDs of tasks involved (for auto-fixing)
 }
 
 // ValidationResult contains all detected conflicts
 type ValidationResult struct {
 	Conflicts []Conflict
+}
+
+// FixAction represents an action taken during auto-fix
+type FixAction struct {
+	Action      string // Human-readable description of the action
+	ConflictRaw Conflict
 }
 
 // HasConflicts returns true if there are any conflicts
@@ -84,6 +91,7 @@ func (v *Validator) ValidateTasks(tasks []models.Task) ValidationResult {
 				Type:        ConflictDuplicateTaskName,
 				Description: fmt.Sprintf("Duplicate task name: \"%s\" (IDs: %v)", name, ids),
 				Items:       []string{name},
+				TaskIDs:     ids,
 			})
 		}
 	}
@@ -410,4 +418,65 @@ func timesOverlap(start1, end1, start2, end2 string) bool {
 func formatDate(t time.Time) string {
 	// Format as "Mon" for day of week abbreviation
 	return t.Format("Mon")
+}
+
+// AutoFixDuplicateTasks fixes duplicate task conflicts by keeping the oldest task and soft-deleting others
+// Returns a slice of FixActions describing what was fixed
+func AutoFixDuplicateTasks(conflicts []Conflict, tasks []models.Task, deleteFunc func(id string) error) []FixAction {
+	actions := []FixAction{}
+
+	// Build a map of tasks by ID for quick lookup
+	taskMap := make(map[string]models.Task)
+	for _, task := range tasks {
+		taskMap[task.ID] = task
+	}
+
+	// Process each duplicate conflict
+	for _, conflict := range conflicts {
+		if conflict.Type != ConflictDuplicateTaskName {
+			continue
+		}
+
+		if len(conflict.TaskIDs) <= 1 {
+			continue // No duplicates to fix
+		}
+
+		// Identify the oldest task (keep it) and mark others for deletion
+		// We'll use ID as a proxy for creation order (assuming IDs are generated chronologically)
+		var tasksToCheck []models.Task
+		for _, id := range conflict.TaskIDs {
+			if task, ok := taskMap[id]; ok && task.DeletedAt == nil {
+				tasksToCheck = append(tasksToCheck, task)
+			}
+		}
+
+		if len(tasksToCheck) <= 1 {
+			continue // Nothing to fix
+		}
+
+		// Sort by ID (assuming IDs are time-based or sequential)
+		sort.Slice(tasksToCheck, func(i, j int) bool {
+			return tasksToCheck[i].ID < tasksToCheck[j].ID
+		})
+
+		// Keep the first (oldest) task, delete the rest
+		keepTask := tasksToCheck[0]
+		var deletedIDs []string
+
+		for i := 1; i < len(tasksToCheck); i++ {
+			taskToDelete := tasksToCheck[i]
+			if err := deleteFunc(taskToDelete.ID); err == nil {
+				deletedIDs = append(deletedIDs, taskToDelete.ID)
+			}
+		}
+
+		if len(deletedIDs) > 0 {
+			actions = append(actions, FixAction{
+				Action:      fmt.Sprintf("Removed %d duplicate task(s) with name \"%s\" (kept ID: %s, removed: %v)", len(deletedIDs), keepTask.Name, keepTask.ID, deletedIDs),
+				ConflictRaw: conflict,
+			})
+		}
+	}
+
+	return actions
 }

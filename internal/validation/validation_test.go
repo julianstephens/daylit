@@ -559,3 +559,142 @@ func TestValidatePlan_NegativeSlotDuration(t *testing.T) {
 		t.Error("Expected ConflictInvalidDateTime conflict type for negative slot duration")
 	}
 }
+
+func TestAutoFixDuplicateTasks(t *testing.T) {
+	tasks := []models.Task{
+		{ID: "1", Name: "Task A", Active: true, Kind: models.TaskKindFlexible},
+		{ID: "2", Name: "Task B", Active: true, Kind: models.TaskKindFlexible},
+		{ID: "3", Name: "Task A", Active: true, Kind: models.TaskKindFlexible}, // Duplicate
+		{ID: "4", Name: "Task A", Active: true, Kind: models.TaskKindFlexible}, // Another duplicate
+	}
+
+	// Create conflicts
+	conflicts := []Conflict{
+		{
+			Type:        ConflictDuplicateTaskName,
+			Description: "Duplicate task name: \"Task A\" (IDs: [1 3 4])",
+			Items:       []string{"Task A"},
+			TaskIDs:     []string{"1", "3", "4"},
+		},
+	}
+
+	// Track which IDs were deleted
+	deletedIDs := make(map[string]bool)
+	deleteFunc := func(id string) error {
+		deletedIDs[id] = true
+		return nil
+	}
+
+	// Apply auto-fix
+	actions := AutoFixDuplicateTasks(conflicts, tasks, deleteFunc)
+
+	// Verify actions were taken
+	if len(actions) != 1 {
+		t.Errorf("Expected 1 action, got %d", len(actions))
+	}
+
+	// Verify that only duplicates were deleted, not the original
+	if deletedIDs["1"] {
+		t.Error("Should not delete the oldest task (ID: 1)")
+	}
+	if !deletedIDs["3"] {
+		t.Error("Should delete duplicate task (ID: 3)")
+	}
+	if !deletedIDs["4"] {
+		t.Error("Should delete duplicate task (ID: 4)")
+	}
+
+	// Verify action description
+	if len(actions) > 0 {
+		action := actions[0].Action
+		if action == "" {
+			t.Error("Action description should not be empty")
+		}
+	}
+}
+
+func TestAutoFixDuplicateTasks_NoConflicts(t *testing.T) {
+	tasks := []models.Task{
+		{ID: "1", Name: "Task A", Active: true, Kind: models.TaskKindFlexible},
+		{ID: "2", Name: "Task B", Active: true, Kind: models.TaskKindFlexible},
+	}
+
+	conflicts := []Conflict{} // No conflicts
+
+	deleteFunc := func(id string) error {
+		t.Error("Should not call delete function when there are no conflicts")
+		return nil
+	}
+
+	actions := AutoFixDuplicateTasks(conflicts, tasks, deleteFunc)
+
+	if len(actions) != 0 {
+		t.Errorf("Expected 0 actions, got %d", len(actions))
+	}
+}
+
+func TestAutoFixDuplicateTasks_OnlyNonDuplicateConflicts(t *testing.T) {
+	tasks := []models.Task{
+		{ID: "1", Name: "Task A", Active: true, Kind: models.TaskKindFlexible},
+	}
+
+	conflicts := []Conflict{
+		{
+			Type:        ConflictInvalidDateTime,
+			Description: "Invalid time",
+			Items:       []string{"Task A"},
+		},
+	}
+
+	deleteFunc := func(id string) error {
+		t.Error("Should not call delete function for non-duplicate conflicts")
+		return nil
+	}
+
+	actions := AutoFixDuplicateTasks(conflicts, tasks, deleteFunc)
+
+	if len(actions) != 0 {
+		t.Errorf("Expected 0 actions for non-duplicate conflicts, got %d", len(actions))
+	}
+}
+
+func TestAutoFixDuplicateTasks_SkipsAlreadyDeleted(t *testing.T) {
+	deleted := "2025-01-15T10:00:00Z"
+	tasks := []models.Task{
+		{ID: "1", Name: "Task A", Active: true, Kind: models.TaskKindFlexible},
+		{ID: "2", Name: "Task A", Active: true, Kind: models.TaskKindFlexible, DeletedAt: &deleted}, // Already deleted
+		{ID: "3", Name: "Task A", Active: true, Kind: models.TaskKindFlexible},
+	}
+
+	conflicts := []Conflict{
+		{
+			Type:        ConflictDuplicateTaskName,
+			Description: "Duplicate task name: \"Task A\" (IDs: [1 2 3])",
+			Items:       []string{"Task A"},
+			TaskIDs:     []string{"1", "2", "3"},
+		},
+	}
+
+	deletedIDs := make(map[string]bool)
+	deleteFunc := func(id string) error {
+		deletedIDs[id] = true
+		return nil
+	}
+
+	actions := AutoFixDuplicateTasks(conflicts, tasks, deleteFunc)
+
+	// Should only delete ID 3, not ID 2 (already deleted) or ID 1 (kept)
+	if len(actions) != 1 {
+		t.Errorf("Expected 1 action, got %d", len(actions))
+	}
+
+	if deletedIDs["1"] {
+		t.Error("Should not delete the oldest task (ID: 1)")
+	}
+	if deletedIDs["2"] {
+		t.Error("Should not try to delete already-deleted task (ID: 2)")
+	}
+	if !deletedIDs["3"] {
+		t.Error("Should delete duplicate task (ID: 3)")
+	}
+}
