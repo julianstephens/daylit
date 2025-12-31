@@ -1,0 +1,36 @@
+body, html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.notification-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  box-sizing: border-box;
+  background: #833AB4;
+  background: linear-gradient(90deg,rgba(131, 58, 180, 1) 0%, rgba(213, 51, 105, 1) 80%, rgba(218, 174, 81, 1) 100%);
+  color: #E2E8F0;
+  cursor: pointer;
+}
+
+.notification-text {
+  margin: 0;
+  padding: 0 20px;
+  font-size: 1.5rem;
+  line-height: 1.4;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
