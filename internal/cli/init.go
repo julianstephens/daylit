@@ -15,7 +15,9 @@ func (c *InitCmd) Run(ctx *Context) error {
 		dbPath := ctx.Store.GetConfigPath()
 		if _, err := os.Stat(dbPath); err == nil {
 			// Database exists, close it first to prevent file locking issues
-			ctx.Store.Close()
+			if err := ctx.Store.Close(); err != nil {
+				return fmt.Errorf("failed to close existing database: %w", err)
+			}
 			// Then delete it
 			if err := os.Remove(dbPath); err != nil {
 				return fmt.Errorf("failed to delete existing database: %w", err)
