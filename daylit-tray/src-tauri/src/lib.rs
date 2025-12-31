@@ -27,6 +27,7 @@ const WINDOW_Y: f64 = 400.0;
 pub struct Settings {
     font_size: String,
     launch_at_login: bool,
+    daylit_dir: Option<String>,
 }
 
 impl Default for Settings {
@@ -34,6 +35,7 @@ impl Default for Settings {
         Self {
             font_size: "medium".into(),
             launch_at_login: false,
+            daylit_dir: None,
         }
     }
 }
@@ -64,6 +66,7 @@ struct UpdatePayload {
 pub struct AppState {
     pub settings: Arc<Store<Wry>>,
     pub payload: Mutex<Option<WebhookPayload>>,
+    pub lockfile_path: Mutex<Option<std::path::PathBuf>>,
 }
 
 // --- Tauri Commands ---
@@ -114,12 +117,23 @@ fn start_webhook_server(app_handle: AppHandle) {
         let port = server.server_addr().to_ip().unwrap().port();
 
         // --- Create Lock File ---
-        let config_dir = app_handle.path().app_config_dir().unwrap();
+        let state: State<AppState> = app_handle.state();
+        let settings = Settings::load(&state.settings);
+
+        let config_dir = if let Some(dir) = settings.daylit_dir {
+            std::path::PathBuf::from(dir)
+        } else {
+            app_handle.path().app_config_dir().unwrap()
+        };
+
         fs::create_dir_all(&config_dir).unwrap();
         let lock_file_path = config_dir.join("daylit.lock");
         let pid = std::process::id();
         let lock_content = format!("{}|{}", port, pid);
-        fs::write(lock_file_path, lock_content).expect("Failed to write lock file");
+        fs::write(&lock_file_path, lock_content).expect("Failed to write lock file");
+
+        // Store the path so we can delete it later
+        *state.lockfile_path.lock().unwrap() = Some(lock_file_path);
 
         info!("Webhook server started on port: {}", port);
 
@@ -221,7 +235,7 @@ pub fn run() {
                     return;
                 }
                 api.prevent_close();
-                info!("Main window close requested, hiding instead. Updated");
+                info!("Main window close requested, hiding instead");
                 window.hide().unwrap();
             }
             _ => {}
@@ -239,6 +253,7 @@ pub fn run() {
             let app_state = AppState {
                 settings: store,
                 payload: Default::default(),
+                lockfile_path: Mutex::new(None),
             };
             app.manage(app_state);
 
@@ -302,10 +317,11 @@ pub fn run() {
             // --- Lock File Cleanup on Exit ---
             let app_handle = app.handle().clone();
             app.listen("tauri://destroyed", move |_| {
-                let config_dir = app_handle.path().app_config_dir().unwrap();
-                let lock_file_path = config_dir.join("daylit.lock");
-                if lock_file_path.exists() {
-                    fs::remove_file(lock_file_path).unwrap();
+                let state: State<AppState> = app_handle.state();
+                if let Some(path) = state.lockfile_path.lock().unwrap().as_ref() {
+                    if path.exists() {
+                        fs::remove_file(path).unwrap();
+                    }
                 }
             });
 
