@@ -27,6 +27,8 @@ const (
 	StateFeedback
 	StateEditing
 	StateConfirmDelete
+	StateConfirmRestore
+	StateConfirmOverwrite
 )
 
 type TaskFormModel struct {
@@ -39,24 +41,29 @@ type TaskFormModel struct {
 }
 
 type Model struct {
-	store             storage.Provider
-	scheduler         *scheduler.Scheduler
-	state             SessionState
-	previousState     SessionState
-	keys              KeyMap
-	help              help.Model
-	taskList          tasklist.Model
-	planModel         plan.Model
-	nowModel          now.Model
-	form              *huh.Form
-	taskForm          *TaskFormModel
-	editingTask       *models.Task
-	quitting          bool
-	width             int
-	height            int
-	feedbackSlotID    int // Index of the slot being rated
-	taskToDeleteID    string
-	validationWarning string // Validation warning message to display
+	store                storage.Provider
+	scheduler            *scheduler.Scheduler
+	state                SessionState
+	previousState        SessionState
+	keys                 KeyMap
+	help                 help.Model
+	taskList             tasklist.Model
+	planModel            plan.Model
+	nowModel             now.Model
+	form                 *huh.Form
+	taskForm             *TaskFormModel
+	editingTask          *models.Task
+	quitting             bool
+	width                int
+	height               int
+	feedbackSlotID       int // Index of the slot being rated
+	taskToDeleteID       string
+	taskToRestoreID      string
+	validationWarning    string                   // Validation warning message to display
+	validationConflicts  []validation.Conflict    // Detailed conflict information
+	planToDeleteDate     string
+	planToRestoreDate    string
+	planToOverwriteDate  string
 }
 
 func NewModel(store storage.Provider, sched *scheduler.Scheduler) Model {
@@ -64,7 +71,7 @@ func NewModel(store storage.Provider, sched *scheduler.Scheduler) Model {
 	planData, planErr := store.GetPlan(today)
 	pm := plan.New(0, 0)
 	nm := now.New()
-	tasks, taskErr := store.GetAllTasks()
+	tasks, taskErr := store.GetAllTasksIncludingDeleted()
 	if taskErr != nil {
 		// Initialize with empty task list on error
 		tasks = []models.Task{}
@@ -129,6 +136,7 @@ func (m *Model) updateValidationStatus() {
 	if err != nil {
 		// Store errors prevent validation - show generic message
 		m.validationWarning = "⚠ Validation unavailable"
+		m.validationConflicts = nil
 		return
 	}
 
@@ -137,6 +145,7 @@ func (m *Model) updateValidationStatus() {
 	if err != nil {
 		// Store errors prevent validation - show generic message
 		m.validationWarning = "⚠ Validation unavailable"
+		m.validationConflicts = nil
 		return
 	}
 
@@ -157,6 +166,7 @@ func (m *Model) updateValidationStatus() {
 
 	// Combine conflicts
 	allConflicts := append(taskResult.Conflicts, planResult.Conflicts...)
+	m.validationConflicts = allConflicts
 
 	if len(allConflicts) > 0 {
 		// Show count of conflicts

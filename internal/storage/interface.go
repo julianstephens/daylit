@@ -16,6 +16,7 @@ type Provider interface {
 	AddTask(models.Task) error
 	GetTask(id string) (models.Task, error)
 	GetAllTasks() ([]models.Task, error)
+	GetAllTasksIncludingDeleted() ([]models.Task, error)
 	UpdateTask(models.Task) error
 	DeleteTask(id string) error
 	RestoreTask(id string) error

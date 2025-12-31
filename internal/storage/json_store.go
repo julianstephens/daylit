@@ -149,6 +149,19 @@ func (s *JSONStore) GetAllTasks() ([]models.Task, error) {
 	return tasks, nil
 }
 
+func (s *JSONStore) GetAllTasksIncludingDeleted() ([]models.Task, error) {
+	if s.store == nil {
+		return nil, fmt.Errorf("storage not loaded")
+	}
+
+	tasks := make([]models.Task, 0, len(s.store.Tasks))
+	for _, task := range s.store.Tasks {
+		tasks = append(tasks, task)
+	}
+
+	return tasks, nil
+}
+
 func (s *JSONStore) UpdateTask(task models.Task) error {
 	if s.store == nil {
 		return fmt.Errorf("storage not loaded")
