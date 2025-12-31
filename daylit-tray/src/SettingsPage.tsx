@@ -6,16 +6,19 @@ import './SettingsPage.css';
 interface Settings {
     font_size: string;
     launch_at_login: boolean;
+    daylit_dir: string | null;
 }
 
 const SettingsPage = () => {
     const [settings, setSettings] = useState<Settings>({
         font_size: 'medium',
         launch_at_login: false,
+        daylit_dir: null,
     });
     const [initialSettings, setInitialSettings] = useState<Settings>({
         font_size: 'medium',
         launch_at_login: false,
+        daylit_dir: null,
     });
     const [status, setStatus] = useState<{ type: 'success' | 'error', message: string; } | null>(null);
 
@@ -42,6 +45,11 @@ const SettingsPage = () => {
     const handleLaunchAtLoginChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const enabled = e.target.checked;
         setSettings(prev => ({ ...prev, launch_at_login: enabled }));
+    };
+
+    const handleDaylitDirChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setSettings(prev => ({ ...prev, daylit_dir: value === '' ? null : value }));
     };
 
     const handleSave = async () => {
@@ -88,6 +96,20 @@ const SettingsPage = () => {
             <section className="settings-section">
                 <h3 className="settings-section-title">Configuration</h3>
                 <div className="setting-item">
+                    <label htmlFor="daylit-dir" className="setting-label">Daylit Directory</label>
+                    <input
+                        type="text"
+                        id="daylit-dir"
+                        value={settings.daylit_dir || ''}
+                        onChange={handleDaylitDirChange}
+                        placeholder="Leave empty for default"
+                        className="setting-control"
+                    />
+                    <p className="setting-hint">
+                        Default: %APPDATA%\com.leahs.daylit-tray
+                    </p>
+                </div>
+                <div className="setting-item">
                     <label className="setting-checkbox-label">
                         <input
                             type="checkbox"
@@ -100,6 +122,12 @@ const SettingsPage = () => {
                 </div>
             </section>
 
+            {status && (
+                <div className={`status-message ${status.type === 'success' ? 'status-success' : 'status-error'}`}>
+                    {status.message}
+                </div>
+            )}
+
             <button
                 onClick={handleSave}
                 className="save-button"
@@ -107,12 +135,6 @@ const SettingsPage = () => {
             >
                 Save
             </button>
-
-            {status && (
-                <div className={`status-message ${status.type === 'success' ? 'status-success' : 'status-error'}`}>
-                    {status.message}
-                </div>
-            )}
         </div>
     );
 };

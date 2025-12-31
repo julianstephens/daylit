@@ -7,14 +7,14 @@
 - **System Tray Integration**: Runs unobtrusively in your system tray.
 - **Webhook Server**: Listens on a local port for notification requests.
 - **Desktop Notifications**: Displays custom notification windows when triggered.
-- **Auto-Discovery**: Writes its listening port to a lock file (`daylit.lock`) for the CLI to find.
+- **Auto-Discovery**: Writes its listening port to a lock file (`daylit-tray.lock`) for the CLI to find.
 
 ## How it Works
 
-1.  **Startup**: When launched, the application starts a local HTTP server on an available port.
-2.  **Registration**: The port number is written to `daylit.lock` in the application's configuration directory.
-3.  **Listening**: The app waits for incoming HTTP POST requests containing a JSON payload with `text` and `duration_ms`.
-4.  **Notification**: Upon receiving a valid request, it opens a notification window displaying the message.
+1. **Startup**: When launched, the application starts a local HTTP server on an available port.
+2. **Registration**: The port number is written to `daylit-tray.lock` in the application's configuration directory.
+3. **Listening**: The app waits for incoming HTTP POST requests containing a JSON payload with `text` and `duration_ms`.
+4. **Notification**: Upon receiving a valid request, it opens a notification window displaying the message.
 
 ## Development
 
@@ -26,12 +26,14 @@
 
 ### Setup
 
-1.  Install dependencies:
+1. Install dependencies:
+
     ```bash
     npm install
     ```
 
-2.  Run in development mode:
+2. Run in development mode:
+
     ```bash
     npm run tauri dev
     ```
@@ -48,4 +50,3 @@ npm run tauri build
 
 - **Frontend**: React, TypeScript, Vite
 - **Backend**: Rust (Tauri)
-

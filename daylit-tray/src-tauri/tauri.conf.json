@@ -20,7 +20,7 @@
   "productName": "daylit-tray",
   "mainBinaryName": "daylit-tray",
   "version": "0.1.0",
-  "identifier": "com.leahs.daylit-tray",
+  "identifier": "com.daylit.daylit-tray",
   "plugins": {},
   "app": {
     "windows": [
