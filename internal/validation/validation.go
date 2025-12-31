@@ -441,8 +441,10 @@ func AutoFixDuplicateTasks(conflicts []Conflict, tasks []models.Task, deleteFunc
 			continue // No duplicates to fix
 		}
 
-		// Identify the oldest task (keep it) and mark others for deletion
-		// We'll use ID as a proxy for creation order (assuming IDs are generated chronologically)
+		// Identify a task to keep and mark others for deletion
+		// Note: Since tasks don't have creation timestamps, we use ID ordering
+		// as a heuristic. This keeps behavior consistent and deterministic.
+		// In practice, any duplicate could be kept with similar results.
 		var tasksToCheck []models.Task
 		for _, id := range conflict.TaskIDs {
 			if task, ok := taskMap[id]; ok && task.DeletedAt == nil {
@@ -454,25 +456,39 @@ func AutoFixDuplicateTasks(conflicts []Conflict, tasks []models.Task, deleteFunc
 			continue // Nothing to fix
 		}
 
-		// Sort by ID (assuming IDs are time-based or sequential)
+		// Sort by ID for deterministic behavior
 		sort.Slice(tasksToCheck, func(i, j int) bool {
 			return tasksToCheck[i].ID < tasksToCheck[j].ID
 		})
 
-		// Keep the first (oldest) task, delete the rest
+		// Keep the first task (by ID ordering), delete the rest
 		keepTask := tasksToCheck[0]
 		var deletedIDs []string
+		var failedIDs []string
 
 		for i := 1; i < len(tasksToCheck); i++ {
 			taskToDelete := tasksToCheck[i]
 			if err := deleteFunc(taskToDelete.ID); err == nil {
 				deletedIDs = append(deletedIDs, taskToDelete.ID)
+			} else {
+				// Track failed deletions but continue processing
+				failedIDs = append(failedIDs, taskToDelete.ID)
 			}
 		}
 
 		if len(deletedIDs) > 0 {
+			actionMsg := fmt.Sprintf("Removed %d duplicate task(s) with name \"%s\" (kept ID: %s, removed: %v)", len(deletedIDs), keepTask.Name, keepTask.ID, deletedIDs)
+			if len(failedIDs) > 0 {
+				actionMsg += fmt.Sprintf(" (failed to remove: %v)", failedIDs)
+			}
 			actions = append(actions, FixAction{
-				Action:      fmt.Sprintf("Removed %d duplicate task(s) with name \"%s\" (kept ID: %s, removed: %v)", len(deletedIDs), keepTask.Name, keepTask.ID, deletedIDs),
+				Action:      actionMsg,
+				ConflictRaw: conflict,
+			})
+		} else if len(failedIDs) > 0 {
+			// All deletions failed
+			actions = append(actions, FixAction{
+				Action:      fmt.Sprintf("Failed to remove duplicates for \"%s\": %v", keepTask.Name, failedIDs),
 				ConflictRaw: conflict,
 			})
 		}

@@ -1,7 +1,10 @@
 package validation
 
 import (
+	"fmt"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/julianstephens/daylit/internal/models"
 )
@@ -659,7 +662,7 @@ func TestAutoFixDuplicateTasks_OnlyNonDuplicateConflicts(t *testing.T) {
 }
 
 func TestAutoFixDuplicateTasks_SkipsAlreadyDeleted(t *testing.T) {
-	deleted := "2025-01-15T10:00:00Z"
+	deleted := time.Now().UTC().Format(time.RFC3339)
 	tasks := []models.Task{
 		{ID: "1", Name: "Task A", Active: true, Kind: models.TaskKindFlexible},
 		{ID: "2", Name: "Task A", Active: true, Kind: models.TaskKindFlexible, DeletedAt: &deleted}, // Already deleted
@@ -696,5 +699,48 @@ func TestAutoFixDuplicateTasks_SkipsAlreadyDeleted(t *testing.T) {
 	}
 	if !deletedIDs["3"] {
 		t.Error("Should delete duplicate task (ID: 3)")
+	}
+}
+
+func TestAutoFixDuplicateTasks_HandlesDeleteErrors(t *testing.T) {
+	tasks := []models.Task{
+		{ID: "1", Name: "Task A", Active: true, Kind: models.TaskKindFlexible},
+		{ID: "2", Name: "Task A", Active: true, Kind: models.TaskKindFlexible},
+		{ID: "3", Name: "Task A", Active: true, Kind: models.TaskKindFlexible},
+	}
+
+	conflicts := []Conflict{
+		{
+			Type:        ConflictDuplicateTaskName,
+			Description: "Duplicate task name: \"Task A\" (IDs: [1 2 3])",
+			Items:       []string{"Task A"},
+			TaskIDs:     []string{"1", "2", "3"},
+		},
+	}
+
+	// Simulate delete function that fails for specific IDs
+	deleteFunc := func(id string) error {
+		if id == "2" {
+			return fmt.Errorf("simulated error")
+		}
+		return nil
+	}
+
+	actions := AutoFixDuplicateTasks(conflicts, tasks, deleteFunc)
+
+	// Should still report partial success
+	if len(actions) != 1 {
+		t.Errorf("Expected 1 action, got %d", len(actions))
+	}
+
+	if len(actions) > 0 {
+		action := actions[0].Action
+		// Should mention both successful and failed deletions
+		if !strings.Contains(action, "removed: [3]") {
+			t.Error("Should report successful deletion of ID 3")
+		}
+		if !strings.Contains(action, "failed to remove: [2]") {
+			t.Error("Should report failed deletion of ID 2")
+		}
 	}
 }
