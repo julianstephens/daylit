@@ -21,7 +21,9 @@ func setupTestInitDB(t *testing.T) (*Context, string, func()) {
 	}
 
 	cleanup := func() {
-		store.Close()
+		if err := store.Close(); err != nil {
+			t.Errorf("failed to close store: %v", err)
+		}
 	}
 
 	return ctx, dbPath, cleanup
