@@ -38,8 +38,8 @@ type ValidationResult struct {
 
 // FixAction represents an action taken during auto-fix
 type FixAction struct {
-	Action      string // Human-readable description of the action
-	ConflictRaw Conflict
+	Action         string  // Human-readable description of the action
+	SourceConflict Conflict // The conflict that triggered this fix action
 }
 
 // HasConflicts returns true if there are any conflicts
