@@ -311,7 +311,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			settings, _ := m.store.GetSettings()
 			settings.DayStart = m.settingsForm.DayStart
 			settings.DayEnd = m.settingsForm.DayEnd
-			
+
 			// Parse and validate DefaultBlockMin
 			blockMin, err := strconv.Atoi(m.settingsForm.DefaultBlockMin)
 			if err != nil {
@@ -325,7 +325,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			otSettings, _ := m.store.GetOTSettings()
 			otSettings.PromptOnEmpty = m.settingsForm.PromptOnEmpty
 			otSettings.StrictMode = m.settingsForm.StrictMode
-			
+
 			// Parse and validate DefaultLogDays
 			logDays, err := strconv.Atoi(m.settingsForm.DefaultLogDays)
 			if err != nil {
