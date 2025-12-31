@@ -20,11 +20,13 @@ daylit tui
 daylit
 ```
 
-The TUI provides a dashboard with three main views:
+The TUI provides a dashboard with five main views:
 
 1.  **Now**: Shows the current task and time.
 2.  **Plan**: Displays today's schedule. Press `g` to generate a plan if one doesn't exist.
 3.  **Tasks**: Lists all your tasks.
+4.  **Habits**: View and manage your daily habits.
+5.  **Settings**: View and edit application settings.
 
 **Key Bindings:**
 
@@ -32,9 +34,13 @@ The TUI provides a dashboard with three main views:
 -   `h` / `l`: Switch between tabs (Vim style).
 -   `j` / `k`: Navigate up/down in lists.
 -   `g`: Generate plan (in Plan tab).
--   `a`: Add task (in Tasks tab).
--   `e`: Edit task (in Tasks tab).
--   `d`: Delete task (in Tasks tab).
+-   `a`: Add task (in Tasks tab) or habit (in Habits tab).
+-   `e`: Edit task (in Tasks tab) or settings (in Settings tab).
+-   `d`: Delete task (in Tasks tab) or habit (in Habits tab).
+-   `m`: Mark habit as done (in Habits tab).
+-   `u`: Unmark habit (in Habits tab).
+-   `x`: Archive habit (in Habits tab).
+-   `r`: Restore deleted task/habit.
 -   `f`: Give feedback on last task.
 -   `?`: Toggle help.
 -   `q` / `Ctrl+C`: Quit.
