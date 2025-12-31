@@ -642,13 +642,13 @@ func TestRestorePlanTimestampMatching(t *testing.T) {
 
 	// Manually soft-delete one slot individually (simulating a slot being deleted before the plan)
 	// This requires direct database access since there's no API for individual slot deletion yet
-	db, err := store.GetDB()
-	if err != nil {
-		t.Fatalf("failed to get database: %v", err)
+	db := store.GetDB()
+	if db == nil {
+		t.Fatal("database connection is nil")
 	}
 
 	earlyDeleteTime := "2024-02-03T08:00:00Z"
-	_, err = db.Exec("UPDATE slots SET deleted_at = ? WHERE plan_date = ? AND start_time = ?",
+	_, err := db.Exec("UPDATE slots SET deleted_at = ? WHERE plan_date = ? AND start_time = ?",
 		earlyDeleteTime, plan.Date, "09:00")
 	if err != nil {
 		t.Fatalf("failed to manually delete slot: %v", err)

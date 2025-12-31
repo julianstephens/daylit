@@ -26,9 +26,9 @@ func (c *MigrateCmd) Run(ctx *Context) error {
 	migrationsPath := sqliteStore.GetMigrationsPath()
 
 	// Get database connection
-	db, err := sqliteStore.GetDB()
-	if err != nil {
-		return fmt.Errorf("failed to get database connection: %w", err)
+	db := sqliteStore.GetDB()
+	if db == nil {
+		return fmt.Errorf("database connection is nil")
 	}
 
 	// Create migration runner

@@ -408,6 +408,156 @@ export DAYLIT_MIGRATIONS_PATH=/path/to/migrations
 daylit migrate
 ```
 
+### `daylit doctor`
+
+Run health checks and diagnostics on the daylit installation. This command verifies that all systems are functioning correctly.
+
+```bash
+daylit doctor
+```
+
+**Checks performed:**
+
+1. **Database reachable**: Verifies the database file exists and can be opened
+2. **Schema version valid**: Ensures the database schema version matches the application
+3. **Migrations complete**: Confirms all pending migrations have been applied
+4. **Backups present**: Checks if backups exist (warning only, not an error)
+5. **Data validation**: Validates database integrity and checks for data corruption
+6. **Clock/timezone sanity**: Verifies system time is reasonable
+
+**Exit codes:**
+- `0`: All checks passed (warnings are acceptable)
+- `1`: One or more critical checks failed
+
+**Example output:**
+
+```bash
+$ daylit doctor
+Running diagnostics...
+
+✓ Database reachable: OK
+✓ Schema version: OK
+✓ Migrations complete: OK
+⚠ Backups present: WARNING
+   no backups found - consider creating one with 'daylit backup create'
+✓ Data validation: OK
+✓ Clock/timezone: OK
+
+All diagnostics passed!
+```
+
+**When to use:**
+- After upgrading daylit to verify compatibility
+- When experiencing unexpected behavior
+- Before submitting bug reports
+- To verify installation health
+
+### `daylit debug`
+
+Debug commands for troubleshooting and inspecting internals. These commands output machine-readable JSON for scripting and analysis.
+
+#### `daylit debug db-path`
+
+Show the database file path.
+
+```bash
+daylit debug db-path
+```
+
+**Output:**
+```json
+{
+  "path": "/home/user/.config/daylit/daylit.db"
+}
+```
+
+#### `daylit debug dump-plan`
+
+Dump plan data as JSON for a specific date.
+
+```bash
+daylit debug dump-plan <date>
+```
+
+**Arguments:**
+- `date`: Date in `YYYY-MM-DD` format, or `today`
+
+**Example:**
+```bash
+# Dump today's plan
+daylit debug dump-plan today
+
+# Dump a specific date's plan
+daylit debug dump-plan 2025-01-15
+```
+
+**Output:**
+```json
+{
+  "date": "2025-01-15",
+  "revision": 1,
+  "accepted_at": "2025-01-15T08:30:00Z",
+  "slots": [
+    {
+      "start": "07:00",
+      "end": "07:45",
+      "task_id": "abc-123",
+      "status": "accepted"
+    }
+  ]
+}
+```
+
+**Error handling:**
+- Returns non-zero exit code if plan doesn't exist
+- Validates date format before querying
+
+#### `daylit debug dump-task`
+
+Dump task data as JSON for a specific task ID.
+
+```bash
+daylit debug dump-task <id>
+```
+
+**Arguments:**
+- `id`: Task UUID
+
+**Example:**
+```bash
+daylit debug dump-task abc-123-def-456
+```
+
+**Output:**
+```json
+{
+  "id": "abc-123-def-456",
+  "name": "Morning Exercise",
+  "kind": "flexible",
+  "duration_min": 45,
+  "earliest_start": "06:00",
+  "latest_end": "08:00",
+  "recurrence": {
+    "type": "daily",
+    "interval_days": 1
+  },
+  "priority": 1,
+  "active": true,
+  "success_streak": 5,
+  "avg_actual_duration_min": 42
+}
+```
+
+**Error handling:**
+- Returns non-zero exit code if task doesn't exist
+- Provides clear error messages for invalid IDs
+
+**Use cases for debug commands:**
+- Inspecting plan structure for debugging
+- Exporting data for analysis or backup
+- Scripting and automation
+- Troubleshooting scheduling issues
+
 ## Configuration
 
 The default configuration file is located at `~/.config/daylit/daylit.db`.
