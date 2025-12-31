@@ -560,3 +560,431 @@ daylit debug dump-task abc-123-def-456
 - Exporting data for analysis or backup
 - Scripting and automation
 - Troubleshooting scheduling issues
+
+## `daylit habit`
+
+Manage habits and track daily practices. Habits represent recurring practices like meditation, exercise, or reading - activities you want to show up for each day, without gamification or streak tracking.
+
+### `daylit habit add`
+
+Add a new habit to track.
+
+```bash
+daylit habit add <name>
+```
+
+**Arguments:**
+- `name`: Name of the habit (e.g., "Morning meditation", "Evening reading")
+
+**Example:**
+
+```bash
+daylit habit add "Morning meditation"
+daylit habit add "Daily exercise"
+daylit habit add "Reading before bed"
+```
+
+### `daylit habit list`
+
+List all habits.
+
+```bash
+daylit habit list [flags]
+```
+
+**Flags:**
+- `--archived`: Include archived habits in the list
+- `--deleted`: Include soft-deleted habits in the list
+
+By default, only shows active (non-archived, non-deleted) habits.
+
+**Example:**
+
+```bash
+# List active habits
+daylit habit list
+
+# List all habits including archived
+daylit habit list --archived
+
+# List all habits including deleted
+daylit habit list --deleted
+```
+
+### `daylit habit mark`
+
+Mark a habit as completed for a specific day. Uses toggle semantics - marking twice will unmark (soft-delete the entry).
+
+```bash
+daylit habit mark <name> [flags]
+```
+
+**Arguments:**
+- `name`: Name of the habit to mark
+
+**Flags:**
+- `--date DATE`: Date in YYYY-MM-DD format (default: today)
+- `--note TEXT`: Optional note about this completion
+
+**Example:**
+
+```bash
+# Mark habit for today
+daylit habit mark "Morning meditation"
+
+# Mark habit for a specific date
+daylit habit mark "Morning meditation" --date 2025-12-30
+
+# Mark with a note
+daylit habit mark "Morning meditation" --note "Felt very centered today"
+
+# Mark again to unmark (toggle off)
+daylit habit mark "Morning meditation"
+```
+
+### `daylit habit today`
+
+Show today's habit status - which habits have been completed and which haven't.
+
+```bash
+daylit habit today
+```
+
+Shows:
+- `[x]` for habits marked today
+- `[ ]` for habits not yet marked today
+- Summary of recorded habits (e.g., "Recorded: 2/3")
+
+**Example:**
+
+```bash
+$ daylit habit today
+Habits for 2025-12-31:
+
+[x] Morning meditation
+[ ] Daily exercise
+[x] Reading before bed
+
+Recorded: 2/3
+```
+
+### `daylit habit log`
+
+Display an ASCII log showing habit completion history over time.
+
+```bash
+daylit habit log [flags]
+```
+
+**Flags:**
+- `--days N`: Number of days to show (default: 14)
+- `--habit NAME`: Show log for specific habit only
+
+Shows a visual grid where:
+- `x` indicates the habit was completed that day
+- `.` indicates the habit was not completed that day
+
+**Example:**
+
+```bash
+# Show last 14 days for all habits
+daylit habit log
+
+# Show last 7 days
+daylit habit log --days 7
+
+# Show log for specific habit
+daylit habit log --habit "Morning meditation" --days 30
+```
+
+**Output example:**
+
+```
+Habit log (last 7 days):
+
+Habit                12/25 12/26 12/27 12/28 12/29 12/30 12/31
+--------------------------------------------------------------
+Morning meditation    x     x     .     x     x     .     x   
+Daily exercise        .     x     x     .     .     x     x   
+Reading before bed    x     .     x     x     x     x     .
+```
+
+### `daylit habit archive`
+
+Archive a habit. Archived habits are hidden from default views but their entries are preserved. This is useful for habits you've stopped doing but want to keep the history.
+
+```bash
+daylit habit archive <name> [flags]
+```
+
+**Arguments:**
+- `name`: Name of the habit to archive
+
+**Flags:**
+- `--unarchive`: Unarchive the habit instead
+
+**Example:**
+
+```bash
+# Archive a habit
+daylit habit archive "Old habit"
+
+# Unarchive a habit
+daylit habit archive "Old habit" --unarchive
+```
+
+### `daylit habit delete`
+
+Soft-delete a habit. The habit and its entries are hidden but not permanently removed, allowing restoration later.
+
+```bash
+daylit habit delete <name>
+```
+
+**Arguments:**
+- `name`: Name of the habit to delete
+
+**Example:**
+
+```bash
+daylit habit delete "Obsolete habit"
+```
+
+### `daylit habit restore`
+
+Restore a soft-deleted habit.
+
+```bash
+daylit habit restore <name>
+```
+
+**Arguments:**
+- `name`: Name of the deleted habit to restore
+
+**Example:**
+
+```bash
+daylit habit restore "Obsolete habit"
+```
+
+## `daylit ot`
+
+Manage Once-Today (OT) intentions. OT defines the single guiding intention that gives each day its shape - the one non-negotiable focus or orientation for the day.
+
+### `daylit ot init`
+
+Initialize OT settings with default values.
+
+```bash
+daylit ot init
+```
+
+Creates the OT settings with defaults:
+- `prompt_on_empty`: true (prompts when no OT set)
+- `strict_mode`: true (requires title when setting OT)
+- `default_log_days`: 14 (days to show in log view)
+
+**Example:**
+
+```bash
+daylit ot init
+```
+
+### `daylit ot settings`
+
+View or update OT settings.
+
+```bash
+daylit ot settings [flags]
+```
+
+**Flags:**
+- `--prompt-on-empty BOOL`: Enable/disable prompt when OT is empty
+- `--strict-mode BOOL`: Enable/disable strict mode (require title)
+- `--default-log-days N`: Set default number of days for log view
+
+When called without flags, displays current settings.
+
+**Example:**
+
+```bash
+# View current settings
+daylit ot settings
+
+# Update settings
+daylit ot settings --prompt-on-empty=false
+daylit ot settings --default-log-days=30
+daylit ot settings --strict-mode=true
+```
+
+**Output:**
+
+```
+Current OT settings:
+  prompt_on_empty: true
+  strict_mode: true
+  default_log_days: 14
+```
+
+### `daylit ot set`
+
+Set or update the OT intention for a day.
+
+```bash
+daylit ot set --title TEXT [flags]
+```
+
+**Flags:**
+- `--title TEXT` (required): The day's intention or focus
+- `--day DATE`: Date in YYYY-MM-DD format (default: today)
+- `--note TEXT`: Optional additional note
+
+The intention is fully editable - setting it again on the same day will update it.
+
+**Example:**
+
+```bash
+# Set today's OT
+daylit ot set --title "Complete the daylit feature"
+
+# Set with a note
+daylit ot set --title "Complete the daylit feature" --note "Focus on testing and documentation"
+
+# Set for a specific date
+daylit ot set --day 2025-12-30 --title "Prepare for presentation"
+
+# Update today's OT (overwrites previous)
+daylit ot set --title "Updated intention for today"
+```
+
+### `daylit ot show`
+
+Show OT intention for one or more days.
+
+```bash
+daylit ot show [flags]
+```
+
+**Flags:**
+- `--day DATE`: Specific date in YYYY-MM-DD format (default: today)
+- `--days N`: Show last N days instead of single day
+- `--deleted`: Include deleted entries in date range
+
+**Example:**
+
+```bash
+# Show today's OT
+daylit ot show
+
+# Show specific day
+daylit ot show --day 2025-12-30
+
+# Show last 7 days
+daylit ot show --days 7
+
+# Show last 14 days including deleted
+daylit ot show --days 14 --deleted
+```
+
+**Output:**
+
+```
+OT for 2025-12-31:
+  Complete the daylit feature
+  Note: Focus on testing and documentation
+```
+
+### `daylit ot nudge`
+
+Quick check for today's OT. Shows today's intention if set, or prompts to create one if missing (when `prompt_on_empty` is enabled).
+
+```bash
+daylit ot nudge
+```
+
+This is designed for quick morning checks or reminders throughout the day.
+
+**Example:**
+
+```bash
+# When OT is set
+$ daylit ot nudge
+Today's OT:
+  Complete the daylit feature
+  Note: Focus on testing and documentation
+
+# When OT is not set
+$ daylit ot nudge
+No OT set for today.
+Set your Once-Today intention with: daylit ot set --title "..."
+```
+
+### `daylit ot doctor`
+
+Run diagnostics on OT data integrity.
+
+```bash
+daylit ot doctor
+```
+
+**Checks performed:**
+- OT settings exist
+- Date formats are valid (YYYY-MM-DD)
+- No duplicate days (only one active entry per day)
+- Timestamps are not corrupted
+
+**Example:**
+
+```bash
+$ daylit ot doctor
+Running OT diagnostics...
+
+✓ OT settings: OK
+✓ Date validation: OK
+✓ Duplicate days: OK
+✓ Timestamp validation: OK
+
+All OT diagnostics passed!
+```
+
+### `daylit ot delete`
+
+Soft-delete an OT entry for a specific day.
+
+```bash
+daylit ot delete [flags]
+```
+
+**Flags:**
+- `--day DATE`: Date in YYYY-MM-DD format (default: today)
+
+**Example:**
+
+```bash
+# Delete today's OT
+daylit ot delete
+
+# Delete specific day
+daylit ot delete --day 2025-12-30
+```
+
+### `daylit ot restore`
+
+Restore a soft-deleted OT entry.
+
+```bash
+daylit ot restore [flags]
+```
+
+**Flags:**
+- `--day DATE`: Date in YYYY-MM-DD format (default: today)
+
+**Example:**
+
+```bash
+# Restore today's OT
+daylit ot restore
+
+# Restore specific day
+daylit ot restore --day 2025-12-30
+```

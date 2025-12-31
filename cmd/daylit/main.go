@@ -45,6 +45,8 @@ var CLI struct {
 		Task cli.TaskRestoreCmd `cmd:"" help:"Restore a deleted task."`
 		Plan cli.PlanRestoreCmd `cmd:"" help:"Restore a deleted plan."`
 	} `cmd:"" help:"Restore deleted items."`
+	Habit cli.HabitCmd `cmd:"" help:"Manage habits and habit tracking."`
+	OT    cli.OTCmd    `cmd:"" help:"Manage Once-Today (OT) intentions."`
 }
 
 func main() {
