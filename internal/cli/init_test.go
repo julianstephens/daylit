@@ -82,12 +82,6 @@ func TestInitCmd_ForceDeletesExisting(t *testing.T) {
 	}
 
 	// Add some data to verify it gets wiped
-	// Get the underlying store
-	err = ctx.Store.Load()
-	if err != nil {
-		t.Fatalf("failed to load store: %v", err)
-	}
-
 	// Get initial settings (created by Init)
 	initialSettings, err := ctx.Store.GetSettings()
 	if err != nil {
@@ -102,7 +96,9 @@ func TestInitCmd_ForceDeletesExisting(t *testing.T) {
 	}
 
 	// Close the store before forcing reset
-	ctx.Store.Close()
+	if err := ctx.Store.Close(); err != nil {
+		t.Fatalf("failed to close store before force reset: %v", err)
+	}
 
 	// Now run init with force flag
 	forceCmd := &InitCmd{Force: true}
