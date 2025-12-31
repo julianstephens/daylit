@@ -849,8 +849,12 @@ func (s *SQLiteStore) UpdateHabit(habit models.Habit) error {
 	}
 
 	_, err := s.db.Exec(`
-		INSERT OR REPLACE INTO habits (id, name, created_at, archived_at, deleted_at)
-		VALUES (?, ?, ?, ?, ?)`,
+		INSERT INTO habits (id, name, created_at, archived_at, deleted_at)
+		VALUES (?, ?, ?, ?, ?)
+		ON CONFLICT(id) DO UPDATE SET
+			name = excluded.name,
+			archived_at = excluded.archived_at,
+			deleted_at = excluded.deleted_at`,
 		habit.ID, habit.Name, habit.CreatedAt.Format(time.RFC3339), archivedAt, deletedAt)
 
 	return err
