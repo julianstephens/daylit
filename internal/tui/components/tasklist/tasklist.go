@@ -30,7 +30,7 @@ type Item struct {
 
 func (i Item) Title() string {
 	if i.Task.DeletedAt != nil {
-		return "👻 " + i.Task.Name + " (deleted)"
+		return "[DELETED] " + i.Task.Name
 	}
 	return i.Task.Name
 }

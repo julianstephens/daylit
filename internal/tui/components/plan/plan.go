@@ -115,10 +115,10 @@ func (m *Model) Render() {
 
 		timeStr := fmt.Sprintf("%s - %s", slot.Start, slot.End)
 
-		// Add ghost indicator for deleted tasks
+		// Add indicator for deleted tasks
 		displayName := taskName
 		if taskDeleted {
-			displayName = "👻 " + taskName + " (deleted)"
+			displayName = "[DELETED] " + taskName
 		}
 
 		line := fmt.Sprintf("%s %s %s\n",
