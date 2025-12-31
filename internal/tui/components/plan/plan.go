@@ -105,15 +105,25 @@ func (m *Model) Render() {
 
 	for _, slot := range m.Plan.Slots {
 		taskName := "Unknown Task"
+		taskDeleted := false
 		if t, ok := m.Tasks[slot.TaskID]; ok {
 			taskName = t.Name
+			if t.DeletedAt != nil {
+				taskDeleted = true
+			}
 		}
 
 		timeStr := fmt.Sprintf("%s - %s", slot.Start, slot.End)
 
+		// Add indicator for deleted tasks
+		displayName := taskName
+		if taskDeleted {
+			displayName = "[DELETED] " + taskName
+		}
+
 		line := fmt.Sprintf("%s %s %s\n",
 			timeStyle.Render(timeStr),
-			taskStyle.Render(taskName),
+			taskStyle.Render(displayName),
 			statusStyle.Render(string(slot.Status)),
 		)
 		b.WriteString(line)

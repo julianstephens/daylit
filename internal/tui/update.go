@@ -158,7 +158,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			// Only update task list if save was successful
 			if saveErr == nil {
-				tasks, err := m.store.GetAllTasks()
+				tasks, err := m.store.GetAllTasksIncludingDeleted()
 				if err == nil {
 					m.taskList.SetTasks(tasks)
 				}
@@ -242,9 +242,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.state = m.previousState
 					return m, nil
 				}
+				tasksIncludingDeleted, _ := m.store.GetAllTasksIncludingDeleted()
 				m.planModel.SetPlan(plan, tasks)
 				m.nowModel.SetPlan(plan, tasks)
-				m.taskList.SetTasks(tasks)
+				m.taskList.SetTasks(tasksIncludingDeleted)
 				m.updateValidationStatus()
 			}
 
@@ -266,7 +267,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, nil
 				}
 				// Deletion succeeded - always refresh and clear state
-				tasks, err := m.store.GetAllTasks()
+				tasks, err := m.store.GetAllTasksIncludingDeleted()
 				if err == nil {
 					m.taskList.SetTasks(tasks)
 				}
@@ -276,6 +277,96 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "n", "N", "esc", "q":
 				m.state = StateTasks
 				m.taskToDeleteID = ""
+			}
+		}
+		return m, nil
+	}
+
+	// Handle Confirm Restore State
+	if m.state == StateConfirmRestore {
+		if msg, ok := msg.(tea.KeyMsg); ok {
+			switch msg.String() {
+			case "y", "Y":
+				if m.taskToRestoreID != "" {
+					if err := m.store.RestoreTask(m.taskToRestoreID); err != nil {
+						// On error, silently return to tasks view
+						m.state = StateTasks
+						m.taskToRestoreID = ""
+						return m, nil
+					}
+					// Restore succeeded - refresh and clear state
+					tasks, err := m.store.GetAllTasksIncludingDeleted()
+					if err == nil {
+						m.taskList.SetTasks(tasks)
+					}
+					m.updateValidationStatus()
+					m.state = StateTasks
+					m.taskToRestoreID = ""
+				} else if m.planToRestoreDate != "" {
+					if err := m.store.RestorePlan(m.planToRestoreDate); err != nil {
+						// On error, silently return to plan view
+						m.state = StatePlan
+						m.planToRestoreDate = ""
+						return m, nil
+					}
+					// Restore succeeded - refresh plan
+					today := time.Now().Format("2006-01-02")
+					plan, err := m.store.GetPlan(today)
+					tasks, _ := m.store.GetAllTasksIncludingDeleted()
+					if err == nil {
+						m.planModel.SetPlan(plan, tasks)
+						m.nowModel.SetPlan(plan, tasks)
+					}
+					m.updateValidationStatus()
+					m.state = StatePlan
+					m.planToRestoreDate = ""
+				}
+			case "n", "N", "esc", "q":
+				if m.planToRestoreDate != "" {
+					m.state = StatePlan
+				} else {
+					m.state = StateTasks
+				}
+				m.taskToRestoreID = ""
+				m.planToRestoreDate = ""
+			}
+		}
+		return m, nil
+	}
+
+	// Handle Confirm Overwrite State
+	if m.state == StateConfirmOverwrite {
+		if msg, ok := msg.(tea.KeyMsg); ok {
+			switch msg.String() {
+			case "y", "Y":
+				// Generate new plan (creates new revision)
+				if m.planToOverwriteDate != "" {
+					settings, _ := m.store.GetSettings()
+					dayStart := settings.DayStart
+					if dayStart == "" {
+						dayStart = "08:00"
+					}
+					dayEnd := settings.DayEnd
+					if dayEnd == "" {
+						dayEnd = "18:00"
+					}
+
+					tasks, _ := m.store.GetAllTasks()
+					plan, err := m.scheduler.GeneratePlan(m.planToOverwriteDate, tasks, dayStart, dayEnd)
+					if err == nil {
+						m.store.SavePlan(plan)
+						allTasks, _ := m.store.GetAllTasksIncludingDeleted()
+						m.planModel.SetPlan(plan, allTasks)
+						m.nowModel.SetPlan(plan, allTasks)
+						m.taskList.SetTasks(allTasks)
+						m.updateValidationStatus()
+					}
+				}
+				m.state = StatePlan
+				m.planToOverwriteDate = ""
+			case "n", "N", "esc", "q":
+				m.state = StatePlan
+				m.planToOverwriteDate = ""
 			}
 		}
 		return m, nil
@@ -297,6 +388,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tasklist.DeleteTaskMsg:
 		m.taskToDeleteID = msg.ID
 		m.state = StateConfirmDelete
+		return m, nil
+
+	case tasklist.RestoreTaskMsg:
+		m.taskToRestoreID = msg.ID
+		m.state = StateConfirmRestore
 		return m, nil
 
 	case tasklist.AddTaskMsg:
@@ -396,6 +492,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg, ok := msg.(tea.KeyMsg); ok && key.Matches(msg, m.keys.Generate) {
 			// Generate plan
 			today := time.Now().Format("2006-01-02")
+
+			// Check if plan already exists
+			_, err := m.store.GetPlan(today)
+			if err == nil {
+				// Plan exists, ask for confirmation
+				m.planToOverwriteDate = today
+				m.state = StateConfirmOverwrite
+				return m, nil
+			}
+
 			settings, _ := m.store.GetSettings()
 
 			// Default settings if not set

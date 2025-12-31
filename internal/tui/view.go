@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"fmt"
+
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -24,18 +26,22 @@ func (m Model) View() string {
 		content = m.form.View()
 	case StateConfirmDelete:
 		content = m.viewConfirmDelete()
+	case StateConfirmRestore:
+		content = m.viewConfirmRestore()
+	case StateConfirmOverwrite:
+		content = m.viewConfirmOverwrite()
 	}
 
-	var statusBar string
-	if m.validationWarning != "" {
-		statusBar = warningStyle.Render(m.validationWarning)
+	var banner string
+	if len(m.validationConflicts) > 0 {
+		banner = m.viewConflictBanner()
 	}
 
 	ui := lipgloss.JoinVertical(
 		lipgloss.Left,
 		m.viewTabs(),
+		banner,
 		content,
-		statusBar,
 		m.help.View(m),
 	)
 
@@ -95,4 +101,50 @@ func (m Model) viewConfirmDelete() string {
 			"[n] No",
 		),
 	)
+}
+
+func (m Model) viewConfirmRestore() string {
+	itemType := "task"
+	itemID := m.taskToRestoreID
+	if m.planToRestoreDate != "" {
+		itemType = "plan"
+		itemID = m.planToRestoreDate
+	}
+	return lipgloss.Place(m.width, m.height-4,
+		lipgloss.Center, lipgloss.Center,
+		lipgloss.JoinVertical(lipgloss.Center,
+			warningStyle.Render(fmt.Sprintf("Restore deleted %s: %s?", itemType, itemID)),
+			"",
+			"[y] Yes",
+			"[n] No",
+		),
+	)
+}
+
+func (m Model) viewConfirmOverwrite() string {
+	return lipgloss.Place(m.width, m.height-4,
+		lipgloss.Center, lipgloss.Center,
+		lipgloss.JoinVertical(lipgloss.Center,
+			dangerStyle.Render(fmt.Sprintf("Overwrite existing plan for %s?", m.planToOverwriteDate)),
+			"This will create a new revision.",
+			"",
+			"[y] Yes",
+			"[n] No",
+		),
+	)
+}
+
+func (m Model) viewConflictBanner() string {
+	if len(m.validationConflicts) == 0 {
+		return ""
+	}
+
+	var bannerStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("0")).
+		Background(lipgloss.Color("214")).
+		Bold(true).
+		Padding(0, 1)
+
+	bannerText := fmt.Sprintf("⚠ %d CONFLICT(S) DETECTED", len(m.validationConflicts))
+	return bannerStyle.Render(bannerText)
 }

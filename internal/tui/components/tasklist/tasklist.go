@@ -20,20 +20,34 @@ type EditTaskMsg struct {
 	Task models.Task
 }
 
+type RestoreTaskMsg struct {
+	ID string
+}
+
 type Item struct {
 	Task models.Task
 }
 
-func (i Item) Title() string { return i.Task.Name }
+func (i Item) Title() string {
+	if i.Task.DeletedAt != nil {
+		return "[DELETED] " + i.Task.Name
+	}
+	return i.Task.Name
+}
 func (i Item) Description() string {
-	return fmt.Sprintf("%d min | %s", i.Task.DurationMin, i.Task.Recurrence.Type)
+	desc := fmt.Sprintf("%d min | %s", i.Task.DurationMin, i.Task.Recurrence.Type)
+	if i.Task.DeletedAt != nil {
+		desc += " | can restore with 'r'"
+	}
+	return desc
 }
 func (i Item) FilterValue() string { return i.Task.Name }
 
 type KeyMap struct {
-	Add    key.Binding
-	Edit   key.Binding
-	Delete key.Binding
+	Add     key.Binding
+	Edit    key.Binding
+	Delete  key.Binding
+	Restore key.Binding
 }
 
 func DefaultKeyMap() KeyMap {
@@ -49,6 +63,10 @@ func DefaultKeyMap() KeyMap {
 		Delete: key.NewBinding(
 			key.WithKeys("d"),
 			key.WithHelp("d", "delete"),
+		),
+		Restore: key.NewBinding(
+			key.WithKeys("r"),
+			key.WithHelp("r", "restore"),
 		),
 	}
 }
@@ -72,10 +90,10 @@ func New(tasks []models.Task, width, height int) Model {
 	// Add custom keys to list additional short help
 	keys := DefaultKeyMap()
 	l.AdditionalShortHelpKeys = func() []key.Binding {
-		return []key.Binding{keys.Add, keys.Edit, keys.Delete}
+		return []key.Binding{keys.Add, keys.Edit, keys.Delete, keys.Restore}
 	}
 	l.AdditionalFullHelpKeys = func() []key.Binding {
-		return []key.Binding{keys.Add, keys.Edit, keys.Delete}
+		return []key.Binding{keys.Add, keys.Edit, keys.Delete, keys.Restore}
 	}
 
 	return Model{list: l, keys: keys}
@@ -111,6 +129,12 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		case key.Matches(msg, m.keys.Delete):
 			if i, ok := m.list.SelectedItem().(Item); ok {
 				return m, func() tea.Msg { return DeleteTaskMsg{ID: i.Task.ID} }
+			}
+		case key.Matches(msg, m.keys.Restore):
+			if i, ok := m.list.SelectedItem().(Item); ok {
+				if i.Task.DeletedAt != nil {
+					return m, func() tea.Msg { return RestoreTaskMsg{ID: i.Task.ID} }
+				}
 			}
 		}
 	}

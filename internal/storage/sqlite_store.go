@@ -313,6 +313,55 @@ func (s *SQLiteStore) GetAllTasks() ([]models.Task, error) {
 	return tasks, nil
 }
 
+func (s *SQLiteStore) GetAllTasksIncludingDeleted() ([]models.Task, error) {
+	rows, err := s.db.Query(`
+		SELECT id, name, kind, duration_min, earliest_start, latest_end, fixed_start, fixed_end,
+		       recurrence_type, recurrence_interval, recurrence_weekdays, priority, energy_band,
+		       active, last_done, success_streak, avg_actual_duration, deleted_at
+		FROM tasks`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tasks []models.Task
+	for rows.Next() {
+		var t models.Task
+		var recType, recWeekdays, energyBand string
+		var active bool
+		var deletedAt sql.NullString
+
+		err := rows.Scan(
+			&t.ID, &t.Name, &t.Kind, &t.DurationMin, &t.EarliestStart, &t.LatestEnd, &t.FixedStart, &t.FixedEnd,
+			&recType, &t.Recurrence.IntervalDays, &recWeekdays, &t.Priority, &energyBand,
+			&active, &t.LastDone, &t.SuccessStreak, &t.AvgActualDurationMin, &deletedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		t.Recurrence.Type = models.RecurrenceType(recType)
+		t.EnergyBand = models.EnergyBand(energyBand)
+		t.Active = active
+
+		if deletedAt.Valid {
+			t.DeletedAt = &deletedAt.String
+		}
+
+		if recWeekdays != "" {
+			var weekdays []int
+			if err := json.Unmarshal([]byte(recWeekdays), &weekdays); err == nil {
+				for _, w := range weekdays {
+					t.Recurrence.WeekdayMask = append(t.Recurrence.WeekdayMask, time.Weekday(w))
+				}
+			}
+		}
+		tasks = append(tasks, t)
+	}
+
+	return tasks, nil
+}
+
 func (s *SQLiteStore) UpdateTask(task models.Task) error {
 	weekdaysJSON, err := json.Marshal(task.Recurrence.WeekdayMask)
 	if err != nil {
