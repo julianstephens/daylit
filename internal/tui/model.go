@@ -12,8 +12,10 @@ import (
 	"github.com/julianstephens/daylit/internal/models"
 	"github.com/julianstephens/daylit/internal/scheduler"
 	"github.com/julianstephens/daylit/internal/storage"
+	"github.com/julianstephens/daylit/internal/tui/components/habits"
 	"github.com/julianstephens/daylit/internal/tui/components/now"
 	"github.com/julianstephens/daylit/internal/tui/components/plan"
+	"github.com/julianstephens/daylit/internal/tui/components/settings"
 	"github.com/julianstephens/daylit/internal/tui/components/tasklist"
 	"github.com/julianstephens/daylit/internal/validation"
 )
@@ -24,11 +26,16 @@ const (
 	StateNow SessionState = iota
 	StatePlan
 	StateTasks
+	StateHabits
+	StateSettings
 	StateFeedback
 	StateEditing
 	StateConfirmDelete
 	StateConfirmRestore
 	StateConfirmOverwrite
+	StateConfirmArchive
+	StateAddHabit
+	StateEditSettings
 )
 
 type TaskFormModel struct {
@@ -38,6 +45,19 @@ type TaskFormModel struct {
 	Interval   string
 	Priority   string
 	Active     bool
+}
+
+type HabitFormModel struct {
+	Name string
+}
+
+type SettingsFormModel struct {
+	DayStart        string
+	DayEnd          string
+	DefaultBlockMin string
+	PromptOnEmpty   bool
+	StrictMode      bool
+	DefaultLogDays  string
 }
 
 type Model struct {
@@ -50,8 +70,12 @@ type Model struct {
 	taskList            tasklist.Model
 	planModel           plan.Model
 	nowModel            now.Model
+	habitsModel         habits.Model
+	settingsModel       settings.Model
 	form                *huh.Form
 	taskForm            *TaskFormModel
+	habitForm           *HabitFormModel
+	settingsForm        *SettingsFormModel
 	editingTask         *models.Task
 	quitting            bool
 	width               int
@@ -59,6 +83,9 @@ type Model struct {
 	feedbackSlotID      int // Index of the slot being rated
 	taskToDeleteID      string
 	taskToRestoreID     string
+	habitToArchiveID    string
+	habitToDeleteID     string
+	habitToRestoreID    string
 	validationWarning   string                // Validation warning message to display
 	validationConflicts []validation.Conflict // Detailed conflict information
 	planToDeleteDate    string
@@ -81,15 +108,27 @@ func NewModel(store storage.Provider, sched *scheduler.Scheduler) Model {
 		nm.SetPlan(planData, tasks)
 	}
 
+	// Initialize habits
+	habitsList, _ := store.GetAllHabits(false, true) // includeArchived=false, includeDeleted=true
+	habitEntries, _ := store.GetHabitEntriesForDay(today)
+	hm := habits.New(habitsList, habitEntries, 0, 0)
+
+	// Initialize settings
+	currentSettings, _ := store.GetSettings()
+	otSettings, _ := store.GetOTSettings()
+	sm := settings.New(currentSettings, otSettings, 0, 0)
+
 	m := Model{
-		store:     store,
-		scheduler: sched,
-		state:     StateNow,
-		keys:      DefaultKeyMap(),
-		help:      help.New(),
-		taskList:  tasklist.New(tasks, 0, 0),
-		planModel: pm,
-		nowModel:  nm,
+		store:         store,
+		scheduler:     sched,
+		state:         StateNow,
+		keys:          DefaultKeyMap(),
+		help:          help.New(),
+		taskList:      tasklist.New(tasks, 0, 0),
+		planModel:     pm,
+		nowModel:      nm,
+		habitsModel:   hm,
+		settingsModel: sm,
 	}
 
 	// Run validation on initialization
@@ -105,6 +144,8 @@ func (m Model) ShortHelp() []key.Binding {
 		keys = append(keys, m.keys.Add, m.keys.Edit, m.keys.Delete)
 	case StatePlan:
 		keys = append(keys, m.keys.Generate)
+	case StateHabits:
+		keys = append(keys, m.keys.Add)
 	}
 	keys = append(keys, m.keys.Feedback)
 	return keys
@@ -120,6 +161,8 @@ func (m Model) FullHelp() [][]key.Binding {
 		actions = []key.Binding{m.keys.Add, m.keys.Edit, m.keys.Delete}
 	case StatePlan:
 		actions = []key.Binding{m.keys.Generate}
+	case StateHabits:
+		actions = []key.Binding{m.keys.Add}
 	}
 
 	return [][]key.Binding{global, navigation, actions}
