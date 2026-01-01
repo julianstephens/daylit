@@ -107,6 +107,9 @@ func findAndValidateTrayProcess(lockfilePath string) (string, string, error) {
 		return "", "", errors.New("invalid process ID in lockfile")
 	}
 	secret := parts[2]
+	if strings.TrimSpace(secret) == "" {
+		return "", "", errors.New("secret in lockfile is empty")
+	}
 
 	process, err := findProcessFunc(pid)
 	if err != nil || process == nil {
