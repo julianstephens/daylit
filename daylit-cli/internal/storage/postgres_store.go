@@ -33,13 +33,15 @@ func (s *PostgresStore) ensureSearchPath() {
 	// Ensure search_path is set to daylit in the connection string
 	if strings.HasPrefix(s.connStr, "postgres://") || strings.HasPrefix(s.connStr, "postgresql://") {
 		u, err := url.Parse(s.connStr)
-		if err == nil {
-			q := u.Query()
-			if q.Get("search_path") == "" {
-				q.Set("search_path", "daylit")
-				u.RawQuery = q.Encode()
-				s.connStr = u.String()
-			}
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to parse Postgres connection string %q: %v\n", s.connStr, err)
+			return
+		}
+		q := u.Query()
+		if q.Get("search_path") == "" {
+			q.Set("search_path", "daylit")
+			u.RawQuery = q.Encode()
+			s.connStr = u.String()
 		}
 	} else {
 		// Assume DSN format
