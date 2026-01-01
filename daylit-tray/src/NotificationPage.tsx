@@ -40,7 +40,7 @@ function NotificationPage() {
         } else {
           handleClose();
         }
-      } catch (e) {
+      } catch {
         handleClose();
       }
     };
@@ -53,10 +53,13 @@ function NotificationPage() {
 
     const setupListener = async () => {
       try {
-        const unlisten = await listen<WebhookPayload>("update_notification", (event) => {
-          console.log("Received live update:", event.payload);
-          setupNotification(event.payload);
-        });
+        const unlisten = await listen<WebhookPayload>(
+          "update_notification",
+          (event) => {
+            console.log("Received live update:", event.payload);
+            setupNotification(event.payload);
+          },
+        );
 
         if (isMounted) {
           unlistenFn = unlisten;

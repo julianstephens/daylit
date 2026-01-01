@@ -50,8 +50,8 @@ pub fn run() {
             get_notification_payload,
             close_notification_window
         ])
-        .on_window_event(|window, event| match event {
-            tauri::WindowEvent::CloseRequested { api, .. } => {
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 if window.label() != "main" {
                     return;
                 }
@@ -59,7 +59,6 @@ pub fn run() {
                 info!("Main window close requested, hiding instead");
                 window.hide().unwrap();
             }
-            _ => {}
         })
         .setup(|app| {
             // --- State and Store Setup ---
@@ -143,10 +142,10 @@ pub fn run() {
             let app_handle = app.handle().clone();
             app.listen("tauri://destroyed", move |_| {
                 let state: State<AppState> = app_handle.state();
-                if let Some(path) = state.lockfile_path.lock().unwrap().as_ref() {
-                    if path.exists() {
-                        fs::remove_file(path).unwrap();
-                    }
+                if let Some(path) = state.lockfile_path.lock().unwrap().as_ref()
+                    && path.exists()
+                {
+                    fs::remove_file(path).unwrap();
                 }
             });
 

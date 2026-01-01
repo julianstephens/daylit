@@ -1,9 +1,5 @@
 # Security
 
-## Overview
-
-Daylit takes security seriously. This document outlines the security mechanisms in place to protect users and their data.
-
 ## Tray-CLI Communication Security
 
 ### Secret-in-Lockfile Authentication
@@ -63,11 +59,3 @@ This mechanism does NOT protect against:
 - **Process injection**: Attackers with code execution in the user's context can access the lock file
 
 These are considered acceptable trade-offs given the threat model of a local desktop application designed for single-user systems.
-
-## Reporting Security Issues
-
-If you discover a security vulnerability in Daylit, please report it privately by emailing the maintainers. Do not create public GitHub issues for security vulnerabilities.
-
-## Security Updates
-
-Security updates will be released as soon as possible after a vulnerability is confirmed. Users are encouraged to keep their installations up to date.

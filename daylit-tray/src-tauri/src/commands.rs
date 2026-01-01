@@ -32,27 +32,27 @@ pub async fn save_settings(settings: Settings, app: AppHandle) -> Result<(), Str
         };
         let new_path = new_config_dir.join("daylit-tray.lock");
 
-        if let Some(old_path) = lockfile_guard.as_ref() {
-            if *old_path != new_path {
-                if old_path.exists() {
-                    let content = fs::read_to_string(old_path).map_err(|e| e.to_string())?;
+        if let Some(old_path) = lockfile_guard.as_ref()
+            && *old_path != new_path
+        {
+            if old_path.exists() {
+                let content = fs::read_to_string(old_path).map_err(|e| e.to_string())?;
 
-                    // Write to new location first, before deleting the old file
-                    fs::create_dir_all(&new_config_dir).map_err(|e| e.to_string())?;
-                    fs::write(&new_path, content).map_err(|e| e.to_string())?;
+                // Write to new location first, before deleting the old file
+                fs::create_dir_all(&new_config_dir).map_err(|e| e.to_string())?;
+                fs::write(&new_path, content).map_err(|e| e.to_string())?;
 
-                    // Set file permissions to 0600 (rw-------)
-                    #[cfg(unix)]
-                    {
-                        let permissions = fs::Permissions::from_mode(0o600);
-                        fs::set_permissions(&new_path, permissions).map_err(|e| e.to_string())?;
-                    }
-
-                    // Only delete the old file after successfully writing the new one
-                    fs::remove_file(old_path).map_err(|e| e.to_string())?;
+                // Set file permissions to 0600 (rw-------)
+                #[cfg(unix)]
+                {
+                    let permissions = fs::Permissions::from_mode(0o600);
+                    fs::set_permissions(&new_path, permissions).map_err(|e| e.to_string())?;
                 }
-                *lockfile_guard = Some(new_path);
+
+                // Only delete the old file after successfully writing the new one
+                fs::remove_file(old_path).map_err(|e| e.to_string())?;
             }
+            *lockfile_guard = Some(new_path);
         }
     }
 

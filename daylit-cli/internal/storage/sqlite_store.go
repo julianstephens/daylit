@@ -371,30 +371,67 @@ func (s *SQLiteStore) GetAllTasksIncludingDeleted() ([]models.Task, error) {
 	var tasks []models.Task
 	for rows.Next() {
 		var t models.Task
-		var recType, recWeekdays, energyBand string
+		var recType, recWeekdays, energyBand sql.NullString
+		var earliestStart, latestEnd, fixedStart, fixedEnd, lastDone sql.NullString
+		var durationMin, recurrenceInterval, priority, successStreak sql.NullInt64
+		var avgActualDuration sql.NullFloat64
 		var active bool
 		var deletedAt sql.NullString
 
 		err := rows.Scan(
-			&t.ID, &t.Name, &t.Kind, &t.DurationMin, &t.EarliestStart, &t.LatestEnd, &t.FixedStart, &t.FixedEnd,
-			&recType, &t.Recurrence.IntervalDays, &recWeekdays, &t.Priority, &energyBand,
-			&active, &t.LastDone, &t.SuccessStreak, &t.AvgActualDurationMin, &deletedAt,
+			&t.ID, &t.Name, &t.Kind, &durationMin, &earliestStart, &latestEnd, &fixedStart, &fixedEnd,
+			&recType, &recurrenceInterval, &recWeekdays, &priority, &energyBand,
+			&active, &lastDone, &successStreak, &avgActualDuration, &deletedAt,
 		)
 		if err != nil {
 			return nil, err
 		}
 
-		t.Recurrence.Type = models.RecurrenceType(recType)
-		t.EnergyBand = models.EnergyBand(energyBand)
+		if durationMin.Valid {
+			t.DurationMin = int(durationMin.Int64)
+		}
+		if recurrenceInterval.Valid {
+			t.Recurrence.IntervalDays = int(recurrenceInterval.Int64)
+		}
+		if priority.Valid {
+			t.Priority = int(priority.Int64)
+		}
+		if successStreak.Valid {
+			t.SuccessStreak = int(successStreak.Int64)
+		}
+		if avgActualDuration.Valid {
+			t.AvgActualDurationMin = avgActualDuration.Float64
+		}
+		if recType.Valid {
+			t.Recurrence.Type = models.RecurrenceType(recType.String)
+		}
+		if energyBand.Valid {
+			t.EnergyBand = models.EnergyBand(energyBand.String)
+		}
+		if earliestStart.Valid {
+			t.EarliestStart = earliestStart.String
+		}
+		if latestEnd.Valid {
+			t.LatestEnd = latestEnd.String
+		}
+		if fixedStart.Valid {
+			t.FixedStart = fixedStart.String
+		}
+		if fixedEnd.Valid {
+			t.FixedEnd = fixedEnd.String
+		}
+		if lastDone.Valid {
+			t.LastDone = lastDone.String
+		}
 		t.Active = active
 
 		if deletedAt.Valid {
 			t.DeletedAt = &deletedAt.String
 		}
 
-		if recWeekdays != "" {
+		if recWeekdays.Valid && recWeekdays.String != "" {
 			var weekdays []int
-			if err := json.Unmarshal([]byte(recWeekdays), &weekdays); err == nil {
+			if err := json.Unmarshal([]byte(recWeekdays.String), &weekdays); err == nil {
 				for _, w := range weekdays {
 					t.Recurrence.WeekdayMask = append(t.Recurrence.WeekdayMask, time.Weekday(w))
 				}
@@ -1388,6 +1425,172 @@ func (s *SQLiteStore) UpdateSlotNotificationTimestamp(date string, revision int,
 	}
 
 	return nil
+}
+
+// GetAllPlans retrieves all plans (all dates, all revisions) including deleted ones
+func (s *SQLiteStore) GetAllPlans() ([]models.DayPlan, error) {
+	rows, err := s.db.Query(`
+		SELECT date, revision, accepted_at, deleted_at
+		FROM plans
+		ORDER BY date, revision`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var plans []models.DayPlan
+	for rows.Next() {
+		var plan models.DayPlan
+		var acceptedAt, deletedAt sql.NullString
+		if err := rows.Scan(&plan.Date, &plan.Revision, &acceptedAt, &deletedAt); err != nil {
+			return nil, err
+		}
+
+		if acceptedAt.Valid {
+			plan.AcceptedAt = &acceptedAt.String
+		}
+		if deletedAt.Valid {
+			plan.DeletedAt = &deletedAt.String
+		}
+
+		// Get slots for this plan (including deleted slots for complete migration)
+		slotRows, err := s.db.Query(`
+			SELECT start_time, end_time, task_id, status, feedback_rating, feedback_note, 
+			       deleted_at, last_notified_start, last_notified_end
+			FROM slots WHERE plan_date = ? AND plan_revision = ?
+			ORDER BY start_time`,
+			plan.Date, plan.Revision)
+		if err != nil {
+			return nil, err
+		}
+
+		for slotRows.Next() {
+			var slot models.Slot
+			var rating, note string
+			var slotDeletedAt, lastNotifiedStart, lastNotifiedEnd sql.NullString
+			err := slotRows.Scan(
+				&slot.Start, &slot.End, &slot.TaskID, &slot.Status,
+				&rating, &note, &slotDeletedAt, &lastNotifiedStart, &lastNotifiedEnd,
+			)
+			if err != nil {
+				slotRows.Close()
+				return nil, err
+			}
+
+			if rating != "" {
+				slot.Feedback = &models.Feedback{
+					Rating: models.FeedbackRating(rating),
+					Note:   note,
+				}
+			}
+			if slotDeletedAt.Valid {
+				slot.DeletedAt = &slotDeletedAt.String
+			}
+			if lastNotifiedStart.Valid {
+				slot.LastNotifiedStart = &lastNotifiedStart.String
+			}
+			if lastNotifiedEnd.Valid {
+				slot.LastNotifiedEnd = &lastNotifiedEnd.String
+			}
+
+			plan.Slots = append(plan.Slots, slot)
+		}
+		slotRows.Close()
+
+		plans = append(plans, plan)
+	}
+
+	return plans, rows.Err()
+}
+
+// GetAllHabitEntries retrieves all habit entries including deleted ones
+func (s *SQLiteStore) GetAllHabitEntries() ([]models.HabitEntry, error) {
+	rows, err := s.db.Query(`
+		SELECT id, habit_id, day, note, created_at, updated_at, deleted_at
+		FROM habit_entries
+		ORDER BY day, habit_id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []models.HabitEntry
+	for rows.Next() {
+		var entry models.HabitEntry
+		var createdAt, updatedAt string
+		var deletedAt sql.NullString
+
+		if err := rows.Scan(&entry.ID, &entry.HabitID, &entry.Day, &entry.Note,
+			&createdAt, &updatedAt, &deletedAt); err != nil {
+			return nil, err
+		}
+
+		var err error
+		entry.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse created_at for habit entry %s: %w", entry.ID, err)
+		}
+		entry.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse updated_at for habit entry %s: %w", entry.ID, err)
+		}
+		if deletedAt.Valid {
+			t, err := time.Parse(time.RFC3339, deletedAt.String)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse deleted_at for habit entry %s: %w", entry.ID, err)
+			}
+			entry.DeletedAt = &t
+		}
+
+		entries = append(entries, entry)
+	}
+
+	return entries, rows.Err()
+}
+
+// GetAllOTEntries retrieves all OT entries including deleted ones
+func (s *SQLiteStore) GetAllOTEntries() ([]models.OTEntry, error) {
+	rows, err := s.db.Query(`
+		SELECT id, day, title, note, created_at, updated_at, deleted_at
+		FROM ot_entries
+		ORDER BY day`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []models.OTEntry
+	for rows.Next() {
+		var entry models.OTEntry
+		var createdAt, updatedAt string
+		var deletedAt sql.NullString
+
+		if err := rows.Scan(&entry.ID, &entry.Day, &entry.Title, &entry.Note,
+			&createdAt, &updatedAt, &deletedAt); err != nil {
+			return nil, err
+		}
+
+		var err error
+		entry.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse created_at for OT entry %s: %w", entry.ID, err)
+		}
+		entry.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse updated_at for OT entry %s: %w", entry.ID, err)
+		}
+		if deletedAt.Valid {
+			t, err := time.Parse(time.RFC3339, deletedAt.String)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse deleted_at for OT entry %s: %w", entry.ID, err)
+			}
+			entry.DeletedAt = &t
+		}
+
+		entries = append(entries, entry)
+	}
+
+	return entries, rows.Err()
 }
 
 func (s *SQLiteStore) GetConfigPath() string {

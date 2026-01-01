@@ -39,7 +39,7 @@ export const FontSizeManager = () => {
             applyFontSize(event.payload.font_size);
           }
         });
-        
+
         if (isMounted) {
           unlistenFn = unlisten;
         } else {

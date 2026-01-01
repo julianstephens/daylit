@@ -1,3 +1,13 @@
+## v0.4.0
+
+- Adds PostgreSQL storage backend for shared access
+- Adds `--source` flag to `daylit init` for database migration
+- Adds Habits and Once-Today (OT) intention tracking
+- Adds TUI support for Settings, Habits, and OT tasks
+- Adds secret-based authentication for tray notifications
+- Adds stateful notification tracking
+- Removes deprecated JSON storage support
+
 ## v0.3.0
 
 - Adds `daylit backup` for database backups and restoration

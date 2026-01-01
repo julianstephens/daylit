@@ -1,8 +1,8 @@
 use crate::state::LOCKFILE_NAME;
 use crate::state::{AppState, Settings, UpdatePayload, WebhookPayload};
+use rand::Rng;
 use rand::distributions::Alphanumeric;
 use rand::rngs::OsRng;
-use rand::Rng;
 use std::fs;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
@@ -10,7 +10,27 @@ use std::thread;
 use subtle::ConstantTimeEq;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_log::log::{error, info};
-use tiny_http::{Response, Server};
+use tiny_http::{Header, Response, Server};
+
+fn validate_request(headers: &[Header], expected_secret: &str) -> bool {
+    headers
+        .iter()
+        .find(|h| {
+            h.field
+                .as_str()
+                .as_str()
+                .eq_ignore_ascii_case("X-Daylit-Secret")
+        })
+        .map(|h| {
+            // Use constant-time comparison to prevent timing-based side-channel attacks
+            h.value
+                .as_str()
+                .as_bytes()
+                .ct_eq(expected_secret.as_bytes())
+                .into()
+        })
+        .unwrap_or(false)
+}
 
 pub fn start_webhook_server(app_handle: AppHandle) {
     thread::spawn(move || {
@@ -46,10 +66,7 @@ pub fn start_webhook_server(app_handle: AppHandle) {
             .collect();
 
         // Store the secret in AppState for validation
-        *state
-            .secret
-            .lock()
-            .expect("Failed to acquire secret lock") = Some(secret.clone());
+        *state.secret.lock().expect("Failed to acquire secret lock") = Some(secret.clone());
 
         let config_dir = if let Some(dir) = settings.lockfile_dir {
             std::path::PathBuf::from(dir)
@@ -104,22 +121,13 @@ pub fn start_webhook_server(app_handle: AppHandle) {
                 continue;
             }
 
-            // Validate X-Daylit-Secret header using constant-time comparison
+            // Validate X-Daylit-Secret header
             let auth_valid = {
                 let state: State<AppState> = app_handle.state();
                 let expected_secret = state.secret.lock().expect("Failed to acquire secret lock");
 
                 if let Some(expected) = expected_secret.as_ref() {
-                    // Check for X-Daylit-Secret header and use constant-time comparison
-                    // to prevent timing-based side-channel attacks
-                    request
-                        .headers()
-                        .iter()
-                        .find(|h| h.field.as_str().eq_ignore_ascii_case("X-Daylit-Secret"))
-                        .map(|h| {
-                            h.value.as_str().as_bytes().ct_eq(expected.as_bytes()).into()
-                        })
-                        .unwrap_or(false)
+                    validate_request(request.headers(), expected)
                 } else {
                     // If no secret is set (shouldn't happen), reject
                     false
@@ -215,4 +223,41 @@ pub fn start_webhook_server(app_handle: AppHandle) {
             }
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tiny_http::Header;
+
+    #[test]
+    fn test_validate_request_success() {
+        let secret = "my_secret_token";
+        let headers = vec![
+            Header::from_bytes("Content-Type", "application/json").unwrap(),
+            Header::from_bytes("X-Daylit-Secret", "my_secret_token").unwrap(),
+        ];
+        assert!(validate_request(&headers, secret));
+    }
+
+    #[test]
+    fn test_validate_request_failure_wrong_secret() {
+        let secret = "my_secret_token";
+        let headers = vec![Header::from_bytes("X-Daylit-Secret", "wrong_token").unwrap()];
+        assert!(!validate_request(&headers, secret));
+    }
+
+    #[test]
+    fn test_validate_request_failure_missing_header() {
+        let secret = "my_secret_token";
+        let headers = vec![Header::from_bytes("Content-Type", "application/json").unwrap()];
+        assert!(!validate_request(&headers, secret));
+    }
+
+    #[test]
+    fn test_validate_request_case_insensitive_header_name() {
+        let secret = "my_secret_token";
+        let headers = vec![Header::from_bytes("x-daylit-secret", "my_secret_token").unwrap()];
+        assert!(validate_request(&headers, secret));
+    }
 }
