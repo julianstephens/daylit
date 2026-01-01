@@ -23,12 +23,14 @@ type Feedback struct {
 }
 
 type Slot struct {
-	Start     string     `json:"start"` // HH:MM format
-	End       string     `json:"end"`   // HH:MM format
-	TaskID    string     `json:"task_id"`
-	Status    SlotStatus `json:"status"`
-	Feedback  *Feedback  `json:"feedback,omitempty"`
-	DeletedAt *string    `json:"deleted_at,omitempty"` // RFC3339 timestamp
+	Start              string     `json:"start"`   // HH:MM format
+	End                string     `json:"end"`     // HH:MM format
+	TaskID             string     `json:"task_id"`
+	Status             SlotStatus `json:"status"`
+	Feedback           *Feedback  `json:"feedback,omitempty"`
+	DeletedAt          *string    `json:"deleted_at,omitempty"`           // RFC3339 timestamp
+	LastNotifiedStart  *string    `json:"last_notified_start,omitempty"`  // RFC3339 timestamp
+	LastNotifiedEnd    *string    `json:"last_notified_end,omitempty"`    // RFC3339 timestamp
 }
 
 type DayPlan struct {

@@ -46,14 +46,15 @@ func (s *SQLiteStore) Init() error {
 	// Initialize default settings if not present
 	if _, err := s.GetSettings(); err != nil {
 		defaultSettings := Settings{
-			DayStart:             "07:00",
-			DayEnd:               "22:00",
-			DefaultBlockMin:      30,
-			NotificationsEnabled: true,
-			NotifyBlockStart:     true,
-			NotifyBlockEnd:       true,
-			BlockStartOffsetMin:  5,
-			BlockEndOffsetMin:    5,
+			DayStart:                   "07:00",
+			DayEnd:                     "22:00",
+			DefaultBlockMin:            30,
+			NotificationsEnabled:       true,
+			NotifyBlockStart:           true,
+			NotifyBlockEnd:             true,
+			BlockStartOffsetMin:        5,
+			BlockEndOffsetMin:          5,
+			NotificationGracePeriodMin: 10,
 		}
 		if err := s.SaveSettings(defaultSettings); err != nil {
 			return fmt.Errorf("failed to save default settings: %w", err)
@@ -203,6 +204,11 @@ func (s *SQLiteStore) GetSettings() (Settings, error) {
 			if _, err := fmt.Sscanf(value, "%d", &settings.BlockEndOffsetMin); err != nil {
 				return Settings{}, fmt.Errorf("parsing block_end_offset_min: %w", err)
 			}
+		case "notification_grace_period_min":
+			if _, err := fmt.Sscanf(value, "%d", &settings.NotificationGracePeriodMin); err != nil {
+				// If not found, use default of 10 minutes
+				settings.NotificationGracePeriodMin = 10
+			}
 		}
 		count++
 	}
@@ -249,6 +255,9 @@ func (s *SQLiteStore) SaveSettings(settings Settings) error {
 		return err
 	}
 	if _, err := stmt.Exec("block_end_offset_min", fmt.Sprintf("%d", settings.BlockEndOffsetMin)); err != nil {
+		return err
+	}
+	if _, err := stmt.Exec("notification_grace_period_min", fmt.Sprintf("%d", settings.NotificationGracePeriodMin)); err != nil {
 		return err
 	}
 
@@ -558,8 +567,8 @@ func (s *SQLiteStore) SavePlan(plan models.DayPlan) error {
 	// Insert slots
 	stmt, err := tx.Prepare(`
 		INSERT INTO slots (
-			plan_date, plan_revision, start_time, end_time, task_id, status, feedback_rating, feedback_note, deleted_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+			plan_date, plan_revision, start_time, end_time, task_id, status, feedback_rating, feedback_note, deleted_at, last_notified_start, last_notified_end
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
@@ -575,8 +584,15 @@ func (s *SQLiteStore) SavePlan(plan models.DayPlan) error {
 		if slot.DeletedAt != nil {
 			slotDeletedAt = sql.NullString{String: *slot.DeletedAt, Valid: true}
 		}
+		var lastNotifiedStart, lastNotifiedEnd sql.NullString
+		if slot.LastNotifiedStart != nil {
+			lastNotifiedStart = sql.NullString{String: *slot.LastNotifiedStart, Valid: true}
+		}
+		if slot.LastNotifiedEnd != nil {
+			lastNotifiedEnd = sql.NullString{String: *slot.LastNotifiedEnd, Valid: true}
+		}
 		_, err = stmt.Exec(
-			plan.Date, plan.Revision, slot.Start, slot.End, slot.TaskID, slot.Status, rating, note, slotDeletedAt,
+			plan.Date, plan.Revision, slot.Start, slot.End, slot.TaskID, slot.Status, rating, note, slotDeletedAt, lastNotifiedStart, lastNotifiedEnd,
 		)
 		if err != nil {
 			return err
@@ -644,7 +660,7 @@ func (s *SQLiteStore) getPlanByRevision(date string, revision int, acceptedAt, d
 
 	// Get slots (exclude soft-deleted slots)
 	rows, err := s.db.Query(`
-		SELECT start_time, end_time, task_id, status, feedback_rating, feedback_note
+		SELECT start_time, end_time, task_id, status, feedback_rating, feedback_note, last_notified_start, last_notified_end
 		FROM slots WHERE plan_date = ? AND plan_revision = ? AND deleted_at IS NULL ORDER BY start_time`,
 		date, revision)
 	if err != nil {
@@ -655,8 +671,9 @@ func (s *SQLiteStore) getPlanByRevision(date string, revision int, acceptedAt, d
 	for rows.Next() {
 		var slot models.Slot
 		var rating, note string
+		var lastNotifiedStart, lastNotifiedEnd sql.NullString
 		err := rows.Scan(
-			&slot.Start, &slot.End, &slot.TaskID, &slot.Status, &rating, &note,
+			&slot.Start, &slot.End, &slot.TaskID, &slot.Status, &rating, &note, &lastNotifiedStart, &lastNotifiedEnd,
 		)
 		if err != nil {
 			return models.DayPlan{}, err
@@ -667,6 +684,12 @@ func (s *SQLiteStore) getPlanByRevision(date string, revision int, acceptedAt, d
 				Rating: models.FeedbackRating(rating),
 				Note:   note,
 			}
+		}
+		if lastNotifiedStart.Valid {
+			slot.LastNotifiedStart = &lastNotifiedStart.String
+		}
+		if lastNotifiedEnd.Valid {
+			slot.LastNotifiedEnd = &lastNotifiedEnd.String
 		}
 		plan.Slots = append(plan.Slots, slot)
 	}
@@ -1334,6 +1357,35 @@ func (s *SQLiteStore) RestoreOTEntry(day string) error {
 	}
 	if rows == 0 {
 		return fmt.Errorf("OT entry not found or not deleted")
+	}
+
+	return nil
+}
+
+// UpdateSlotNotificationTimestamp updates the notification timestamp for a specific slot
+func (s *SQLiteStore) UpdateSlotNotificationTimestamp(date string, revision int, startTime string, notificationType string, timestamp string) error {
+	var column string
+	switch notificationType {
+	case "start":
+		column = "last_notified_start"
+	case "end":
+		column = "last_notified_end"
+	default:
+		return fmt.Errorf("invalid notification type: %s", notificationType)
+	}
+
+	query := fmt.Sprintf("UPDATE slots SET %s = ? WHERE plan_date = ? AND plan_revision = ? AND start_time = ? AND deleted_at IS NULL", column)
+	result, err := s.db.Exec(query, timestamp, date, revision, startTime)
+	if err != nil {
+		return fmt.Errorf("failed to update notification timestamp: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return fmt.Errorf("slot not found or already deleted")
 	}
 
 	return nil
