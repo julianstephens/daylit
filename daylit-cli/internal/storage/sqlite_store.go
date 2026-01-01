@@ -1474,10 +1474,11 @@ func (s *SQLiteStore) GetAllPlans() ([]models.DayPlan, error) {
 	if err == nil {
 		var count int
 		if checkRows.Next() {
-			checkRows.Scan(&count)
+			if err := checkRows.Scan(&count); err == nil {
+				hasNotificationCols = count > 0
+			}
 		}
 		checkRows.Close()
-		hasNotificationCols = count > 0
 	}
 
 	rows, err := s.db.Query(`
