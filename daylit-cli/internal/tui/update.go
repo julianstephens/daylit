@@ -636,7 +636,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.planModel.SetSize(msg.Width-h, listHeight-v)
 		m.nowModel.SetSize(msg.Width, listHeight)
 		m.habitsModel.SetSize(msg.Width-h, listHeight-v)
-		m.settingsModel.SetSize(msg.Width, listHeight)
+		m.settingsModel.SetSize(msg.Width-h, listHeight-v)
 
 	case tasklist.DeleteTaskMsg:
 		m.taskToDeleteID = msg.ID

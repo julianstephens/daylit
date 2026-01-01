@@ -38,7 +38,6 @@ func (c *OTInitCmd) Run(ctx *cli.Context) error {
 
 	// Initialize with defaults
 	settings := models.OTSettings{
-		ID:             1,
 		PromptOnEmpty:  true,
 		StrictMode:     true,
 		DefaultLogDays: 14,

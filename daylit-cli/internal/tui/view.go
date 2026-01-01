@@ -39,7 +39,7 @@ func (m Model) View() string {
 	}
 
 	var banner string
-	if len(m.validationConflicts) > 0 {
+	if len(m.validationConflicts) > 0 && m.state == StatePlan {
 		banner = m.viewConflictBanner()
 	}
 
@@ -88,7 +88,7 @@ func (m Model) viewHabits() string {
 }
 
 func (m Model) viewSettings() string {
-	return m.settingsModel.View()
+	return docStyle.Render(m.settingsModel.View())
 }
 
 func (m Model) viewFeedback() string {

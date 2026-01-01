@@ -380,14 +380,14 @@ func checkOTSettings(ctx *cli.Context) error {
 		return fmt.Errorf("database connection is nil")
 	}
 
-	// Check if ot_settings row exists
+	// Check if OT settings exist in the settings table
 	var count int
-	err := db.QueryRow(`SELECT COUNT(*) FROM ot_settings WHERE id = 1`).Scan(&count)
+	err := db.QueryRow(`SELECT COUNT(*) FROM settings WHERE key LIKE 'ot_%'`).Scan(&count)
 	if err != nil {
-		return fmt.Errorf("failed to check ot_settings: %w", err)
+		return fmt.Errorf("failed to check OT settings: %w", err)
 	}
 	if count == 0 {
-		return fmt.Errorf("ot_settings row missing (run 'daylit ot init')")
+		return fmt.Errorf("OT settings missing from settings table")
 	}
 
 	return nil

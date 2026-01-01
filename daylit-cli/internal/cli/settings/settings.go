@@ -14,6 +14,10 @@ type SettingsCmd struct {
 	NotifyBlockEnd       *bool `help:"Notify on block end."`
 	BlockStartOffsetMin  *int  `help:"Minutes before block start to notify."`
 	BlockEndOffsetMin    *int  `help:"Minutes before block end to notify."`
+
+	OTPromptOnEmpty  *bool `help:"OT: Prompt when no entry exists for today."`
+	OTStrictMode     *bool `help:"OT: Strict mode - only one entry per day."`
+	OTDefaultLogDays *int  `help:"OT: Default number of days to show in log view."`
 }
 
 func (c *SettingsCmd) Run(ctx *cli.Context) error {
@@ -22,11 +26,20 @@ func (c *SettingsCmd) Run(ctx *cli.Context) error {
 		return fmt.Errorf("failed to get settings: %w", err)
 	}
 
+	otSettings, err := ctx.Store.GetOTSettings()
+	if err != nil {
+		return fmt.Errorf("failed to get OT settings: %w", err)
+	}
+
 	if c.List {
 		fmt.Println("Current Settings:")
 		fmt.Printf("  Day Start:             %s\n", settings.DayStart)
 		fmt.Printf("  Day End:               %s\n", settings.DayEnd)
 		fmt.Printf("  Default Block Min:     %d\n", settings.DefaultBlockMin)
+		fmt.Println("\nOnce Today (OT) Settings:")
+		fmt.Printf("  Prompt On Empty:       %v\n", otSettings.PromptOnEmpty)
+		fmt.Printf("  Strict Mode:           %v\n", otSettings.StrictMode)
+		fmt.Printf("  Default Log Days:      %d\n", otSettings.DefaultLogDays)
 		fmt.Println("\nNotification Settings:")
 		fmt.Printf("  Notifications Enabled: %v\n", settings.NotificationsEnabled)
 		fmt.Printf("  Notify Block Start:    %v\n", settings.NotifyBlockStart)
@@ -37,6 +50,8 @@ func (c *SettingsCmd) Run(ctx *cli.Context) error {
 	}
 
 	updated := false
+	otUpdated := false
+
 	if c.NotificationsEnabled != nil {
 		settings.NotificationsEnabled = *c.NotificationsEnabled
 		updated = true
@@ -58,10 +73,35 @@ func (c *SettingsCmd) Run(ctx *cli.Context) error {
 		updated = true
 	}
 
+	if c.OTPromptOnEmpty != nil {
+		otSettings.PromptOnEmpty = *c.OTPromptOnEmpty
+		otUpdated = true
+	}
+	if c.OTStrictMode != nil {
+		otSettings.StrictMode = *c.OTStrictMode
+		otUpdated = true
+	}
+	if c.OTDefaultLogDays != nil {
+		if *c.OTDefaultLogDays < 1 {
+			return fmt.Errorf("OTDefaultLogDays must be at least 1")
+		}
+		otSettings.DefaultLogDays = *c.OTDefaultLogDays
+		otUpdated = true
+	}
+
 	if updated {
 		if err := ctx.Store.SaveSettings(settings); err != nil {
 			return fmt.Errorf("failed to save settings: %w", err)
 		}
+	}
+
+	if otUpdated {
+		if err := ctx.Store.SaveOTSettings(otSettings); err != nil {
+			return fmt.Errorf("failed to save OT settings: %w", err)
+		}
+	}
+
+	if updated || otUpdated {
 		fmt.Println("Settings updated successfully.")
 	} else {
 		fmt.Println("No changes specified. Use --list to view settings or flags to update them.")
