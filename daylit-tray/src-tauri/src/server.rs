@@ -18,11 +18,13 @@ pub fn start_webhook_server(app_handle: AppHandle) {
                 return;
             }
         };
-        
+
         let port = match server.server_addr().to_ip() {
             Some(addr) => addr.port(),
             None => {
-                error!("Failed to get webhook server IP address");
+                error!(
+                    "Failed to get webhook server IP address - webhook server will not be available for notifications"
+                );
                 return;
             }
         };
@@ -34,25 +36,48 @@ pub fn start_webhook_server(app_handle: AppHandle) {
         let config_dir = if let Some(dir) = settings.lockfile_dir {
             std::path::PathBuf::from(dir)
         } else {
-            app_handle.path().app_config_dir().unwrap()
+            match app_handle.path().app_config_dir() {
+                Ok(dir) => dir,
+                Err(e) => {
+                    error!(
+                        "Failed to get app config directory: {} - webhook server will not be available",
+                        e
+                    );
+                    return;
+                }
+            }
         };
 
-        fs::create_dir_all(&config_dir).unwrap();
+        if let Err(e) = fs::create_dir_all(&config_dir) {
+            error!(
+                "Failed to create config directory: {} - webhook server will not be available",
+                e
+            );
+            return;
+        }
         let lock_file_path = config_dir.join(LOCKFILE_NAME);
         let pid = std::process::id();
         let lock_content = format!("{}|{}", port, pid);
-        fs::write(&lock_file_path, lock_content).expect("Failed to write lock file");
+        if let Err(e) = fs::write(&lock_file_path, lock_content) {
+            error!("Failed to write lock file: {}", e);
+            return;
+        }
 
         // Set file permissions to 0600 (rw-------)
         #[cfg(unix)]
         {
             let permissions = fs::Permissions::from_mode(0o600);
-            fs::set_permissions(&lock_file_path, permissions)
-                .expect("Failed to set lock file permissions");
+            if let Err(e) = fs::set_permissions(&lock_file_path, permissions) {
+                error!("Failed to set lock file permissions: {}", e);
+                return;
+            }
         }
 
         // Store the path so we can delete it later
-        *state.lockfile_path.lock().unwrap() = Some(lock_file_path);
+        *state
+            .lockfile_path
+            .lock()
+            .expect("Failed to acquire lockfile_path lock") = Some(lock_file_path);
 
         info!("Webhook server started on port: {}", port);
 
@@ -62,44 +87,48 @@ pub fn start_webhook_server(app_handle: AppHandle) {
             }
 
             let mut content = String::new();
-            request.as_reader().read_to_string(&mut content).unwrap();
+            if let Err(e) = request.as_reader().read_to_string(&mut content) {
+                error!("Failed to read request body: {}", e);
+                continue;
+            }
 
             if let Ok(payload) = serde_json::from_str::<WebhookPayload>(&content) {
                 let state: State<AppState> = app_handle.state();
-                *state.payload.lock().unwrap() = Some(payload.clone());
+                *state
+                    .payload
+                    .lock()
+                    .expect("Failed to acquire payload lock") = Some(payload.clone());
 
                 let app_handle_clone = app_handle.clone();
-                app_handle
-                    .run_on_main_thread(move || {
-                        // --- Re-use or Create Window Logic ---
-                        if let Some(existing_window) =
-                            app_handle_clone.get_webview_window("notification_dialog")
-                        {
-                            info!("Dialog exists. Re-using and sending new data.");
-                            existing_window.set_focus().unwrap();
-                            existing_window
-                                .emit(
-                                    "update_notification",
-                                    &UpdatePayload {
-                                        text: payload.text,
-                                        duration_ms: payload.duration_ms,
-                                    },
-                                )
-                                .unwrap();
-                        } else {
-                            info!("Dialog does not exist. Creating a new one.");
-                            if let Ok(Some(monitor)) = app_handle_clone
-                                .get_webview_window("main")
-                                .unwrap()
-                                .primary_monitor()
-                            {
+                if let Err(e) = app_handle.run_on_main_thread(move || {
+                    // --- Re-use or Create Window Logic ---
+                    if let Some(existing_window) =
+                        app_handle_clone.get_webview_window("notification_dialog")
+                    {
+                        info!("Dialog exists. Re-using and sending new data.");
+                        if let Err(e) = existing_window.set_focus() {
+                            error!("Failed to set window focus: {}", e);
+                        }
+                        if let Err(e) = existing_window.emit(
+                            "update_notification",
+                            &UpdatePayload {
+                                text: payload.text,
+                                duration_ms: payload.duration_ms,
+                            },
+                        ) {
+                            error!("Failed to emit update notification: {}", e);
+                        }
+                    } else {
+                        info!("Dialog does not exist. Creating a new one.");
+                        if let Some(main_window) = app_handle_clone.get_webview_window("main") {
+                            if let Ok(Some(monitor)) = main_window.primary_monitor() {
                                 let monitor_size = monitor.size();
                                 let dialog_width = 1000.0;
                                 let dialog_height = 100.0;
                                 let pos_x = (monitor_size.width as f64 - dialog_width) / 2.0;
                                 let pos_y = 60.0;
 
-                                tauri::WebviewWindowBuilder::new(
+                                if let Err(e) = tauri::WebviewWindowBuilder::new(
                                     &app_handle_clone,
                                     "notification_dialog",
                                     tauri::WebviewUrl::App("/notification".into()),
@@ -110,14 +139,30 @@ pub fn start_webhook_server(app_handle: AppHandle) {
                                 .decorations(false)
                                 .transparent(true)
                                 .build()
-                                .unwrap();
+                                {
+                                    error!("Failed to build notification dialog: {}", e);
+                                }
+                            } else {
+                                error!("Failed to get primary monitor");
                             }
+                        } else {
+                            error!("Main window not found");
                         }
-                    })
-                    .unwrap();
+                    }
+                }) {
+                    error!("Failed to run on main thread: {}", e);
+                }
 
                 let response = Response::from_string("Dialog triggered");
-                request.respond(response).unwrap();
+                if let Err(e) = request.respond(response) {
+                    error!("Failed to respond to webhook request: {}", e);
+                }
+            } else {
+                error!("Failed to parse webhook payload");
+                let response = Response::from_string("Invalid payload").with_status_code(400);
+                if let Err(e) = request.respond(response) {
+                    error!("Failed to respond with error: {}", e);
+                }
             }
         }
     });
