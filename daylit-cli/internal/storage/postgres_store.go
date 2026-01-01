@@ -125,7 +125,7 @@ func (s *PostgresStore) Load() error {
 
 	// Test connection
 	if err := s.db.Ping(); err != nil {
-		if strings.Contains(err.Error(), "SSL is not enabled on the server") {
+		if strings.Contains(err.Error(), "SSL is not enabled on the server") && !strings.Contains(s.connStr, "sslmode=") {
 			return fmt.Errorf("failed to connect to database: %w (hint: try adding ?sslmode=disable to your connection string)", err)
 		}
 		return fmt.Errorf("failed to connect to database: %w", err)
