@@ -60,19 +60,10 @@ jobs:
       - name: Go test
         run: go test ./...
 
-  cli-lint:
-    needs: [changes, cli-test]
-    if: ${{ needs.changes.outputs.cli == 'true' }}
-    name: CLI - golangci-lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.60
+          version: v1.63
           working-directory: daylit-cli
 
   # Tray Jobs
