@@ -1634,7 +1634,10 @@ func (s *SQLiteStore) GetAllOTEntries() ([]models.OTEntry, error) {
 	if err == nil {
 		var count int
 		if checkRows.Next() {
-			checkRows.Scan(&count)
+			if err := checkRows.Scan(&count); err != nil {
+				checkRows.Close()
+				return nil, fmt.Errorf("failed to scan ot_entries table existence: %w", err)
+			}
 		}
 		checkRows.Close()
 		tableExists = count > 0
