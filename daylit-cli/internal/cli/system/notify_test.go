@@ -580,6 +580,11 @@ func TestNotifyCmd_BothStartAndEndNotifications(t *testing.T) {
 	now := time.Now()
 	currentMinutes := now.Hour()*60 + now.Minute()
 
+	// Skip test if running near midnight to avoid negative time calculations
+	if currentMinutes < 40 {
+		t.Skip("Skipping test when running too close to midnight (currentMinutes < 40)")
+	}
+
 	// Create a slot where both start and end should have triggered
 	triggerMinutes := currentMinutes - 35 // Started 35 minutes ago
 	startHour := triggerMinutes / 60
