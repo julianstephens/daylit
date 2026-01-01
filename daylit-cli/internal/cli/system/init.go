@@ -1,0 +1,39 @@
+package system
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
+)
+
+type InitCmd struct {
+	Force bool `help:"Force reset by deleting existing database before initialization."`
+}
+
+func (c *InitCmd) Run(ctx *cli.Context) error {
+	// If force flag is provided, delete existing database
+	if c.Force {
+		dbPath := ctx.Store.GetConfigPath()
+		if _, err := os.Stat(dbPath); err == nil {
+			// Database exists, close it first to prevent file locking issues
+			if err := ctx.Store.Close(); err != nil {
+				return fmt.Errorf("failed to close existing database: %w", err)
+			}
+			// Then delete it
+			if err := os.Remove(dbPath); err != nil {
+				return fmt.Errorf("failed to delete existing database: %w", err)
+			}
+			fmt.Printf("Deleted existing database at: %s\n", dbPath)
+		} else if !os.IsNotExist(err) {
+			// Some other error occurred while checking the database; surface it to the user
+			return fmt.Errorf("failed to access existing database: %w", err)
+		}
+	}
+
+	if err := ctx.Store.Init(); err != nil {
+		return err
+	}
+	fmt.Printf("Initialized daylit storage at: %s\n", ctx.Store.GetConfigPath())
+	return nil
+}

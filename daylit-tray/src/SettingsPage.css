@@ -1,0 +1,144 @@
+.settings-container {
+    display: flex;
+    flex-direction: column;
+    padding: 2rem;
+    max-width: 600px;
+    height: 100vh;
+    overflow-y: auto;
+    margin: 0 auto;
+    color: #f6f6f6;
+    box-sizing: border-box;
+}
+
+.settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #444;
+    margin-bottom: 1rem;
+}
+
+.settings-title {
+    font-size: 1.75rem;
+}
+
+.settings-section {
+    border-bottom: 1px solid #444;
+    padding-bottom: 2rem;
+}
+
+.settings-section:not(:last-of-type) {
+    margin-bottom: 1rem;
+}
+
+.settings-section:last-of-type {
+    border-bottom: none;
+}
+
+.settings-section-title {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.25rem;
+    text-decoration: none;
+    text-transform: uppercase;
+    color: #9b9b9b;
+    font-weight: bold;
+}
+
+.setting-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.setting-item + .setting-item {
+    margin-top: 1.5rem;
+}
+
+.setting-label {
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.setting-control {
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid #555;
+    background-color: #333;
+    color: white;
+    font-size: 1rem;
+}
+
+.setting-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.setting-checkbox {
+    width: 1.2rem;
+    height: 1.2rem;
+}
+
+.status-message {
+    margin-top: 1rem;
+    padding: 0.5rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.status-success {
+    background-color: rgba(76, 175, 80, 0.2);
+    color: #81c784;
+}
+
+.status-error {
+    background-color: rgba(244, 67, 54, 0.2);
+    color: #e57373;
+}
+
+.back-link {
+    display: inline-block;
+    font-size: 1.2rem;
+    color: #8c9eff;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+.save-button {
+    margin-left: auto;
+    margin-top: 1.5rem;
+    padding: 0.75rem 1.5rem;
+    background-color: #7081e6;
+    color: #f6f6f6;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.save-button:hover {
+    background-color: #5a6fd1;
+}
+
+.save-button:disabled {
+    background-color: #555;
+    cursor: not-allowed;
+    color: #888;
+}
+
+
+.setting-hint {
+    font-size: 0.85rem;
+    color: #aaa;
+    margin-top: 0.25rem;
+}
+

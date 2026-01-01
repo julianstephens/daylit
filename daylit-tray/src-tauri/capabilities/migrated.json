@@ -1,0 +1,16 @@
+{
+  "identifier": "migrated",
+  "description": "permissions that were migrated from v1",
+  "local": true,
+  "windows": [
+    "main",
+    "settings"
+  ],
+  "permissions": [
+    "core:default",
+    "shell:allow-open",
+    "notification:default",
+    "shell:default",
+    "log:default"
+  ]
+}
