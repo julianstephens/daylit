@@ -1243,11 +1243,14 @@ func (s *SQLiteStore) GetOTSettings() (models.OTSettings, error) {
 	var tableExists bool
 	checkRows, err := s.db.Query("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='ot_settings'")
 	if err == nil {
+		defer checkRows.Close()
+
 		var count int
 		if checkRows.Next() {
-			checkRows.Scan(&count)
+			if err := checkRows.Scan(&count); err != nil {
+				return models.OTSettings{}, err
+			}
 		}
-		checkRows.Close()
 		tableExists = count > 0
 	}
 	if !tableExists {
