@@ -1440,141 +1440,140 @@ func (s *PostgresStore) UpdateSlotNotificationTimestamp(date string, revision in
 	return nil
 }
 
-
 // GetAllPlans retrieves all plans (all dates, all revisions) including deleted ones
 func (s *PostgresStore) GetAllPlans() ([]models.DayPlan, error) {
-rows, err := s.db.Query(`
+	rows, err := s.db.Query(`
 SELECT date, revision, accepted_at, deleted_at
 FROM plans
 ORDER BY date, revision`)
-if err != nil {
-return nil, err
-}
-defer rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-var plans []models.DayPlan
-for rows.Next() {
-var plan models.DayPlan
-var acceptedAt, deletedAt sql.NullString
-if err := rows.Scan(&plan.Date, &plan.Revision, &acceptedAt, &deletedAt); err != nil {
-return nil, err
-}
+	var plans []models.DayPlan
+	for rows.Next() {
+		var plan models.DayPlan
+		var acceptedAt, deletedAt sql.NullString
+		if err := rows.Scan(&plan.Date, &plan.Revision, &acceptedAt, &deletedAt); err != nil {
+			return nil, err
+		}
 
-if acceptedAt.Valid {
-plan.AcceptedAt = &acceptedAt.String
-}
-if deletedAt.Valid {
-plan.DeletedAt = &deletedAt.String
-}
+		if acceptedAt.Valid {
+			plan.AcceptedAt = &acceptedAt.String
+		}
+		if deletedAt.Valid {
+			plan.DeletedAt = &deletedAt.String
+		}
 
-// Get slots for this plan (including deleted slots for complete migration)
-slotRows, err := s.db.Query(`
+		// Get slots for this plan (including deleted slots for complete migration)
+		slotRows, err := s.db.Query(`
 SELECT start_time, end_time, task_id, status, feedback_rating, feedback_note, 
        deleted_at, last_notified_start, last_notified_end
 FROM slots WHERE plan_date = $1 AND plan_revision = $2
 ORDER BY start_time`,
-plan.Date, plan.Revision)
-if err != nil {
-return nil, err
-}
+			plan.Date, plan.Revision)
+		if err != nil {
+			return nil, err
+		}
 
-for slotRows.Next() {
-var slot models.Slot
-var rating, note string
-var slotDeletedAt, lastNotifiedStart, lastNotifiedEnd sql.NullString
-err := slotRows.Scan(
-&slot.Start, &slot.End, &slot.TaskID, &slot.Status,
-&rating, &note, &slotDeletedAt, &lastNotifiedStart, &lastNotifiedEnd,
-)
-if err != nil {
-slotRows.Close()
-return nil, err
-}
+		for slotRows.Next() {
+			var slot models.Slot
+			var rating, note string
+			var slotDeletedAt, lastNotifiedStart, lastNotifiedEnd sql.NullString
+			err := slotRows.Scan(
+				&slot.Start, &slot.End, &slot.TaskID, &slot.Status,
+				&rating, &note, &slotDeletedAt, &lastNotifiedStart, &lastNotifiedEnd,
+			)
+			if err != nil {
+				slotRows.Close()
+				return nil, err
+			}
 
-if rating != "" {
-slot.Feedback = &models.Feedback{
-Rating: models.FeedbackRating(rating),
-Note:   note,
-}
-}
-if slotDeletedAt.Valid {
-slot.DeletedAt = &slotDeletedAt.String
-}
-if lastNotifiedStart.Valid {
-slot.LastNotifiedStart = &lastNotifiedStart.String
-}
-if lastNotifiedEnd.Valid {
-slot.LastNotifiedEnd = &lastNotifiedEnd.String
-}
+			if rating != "" {
+				slot.Feedback = &models.Feedback{
+					Rating: models.FeedbackRating(rating),
+					Note:   note,
+				}
+			}
+			if slotDeletedAt.Valid {
+				slot.DeletedAt = &slotDeletedAt.String
+			}
+			if lastNotifiedStart.Valid {
+				slot.LastNotifiedStart = &lastNotifiedStart.String
+			}
+			if lastNotifiedEnd.Valid {
+				slot.LastNotifiedEnd = &lastNotifiedEnd.String
+			}
 
-plan.Slots = append(plan.Slots, slot)
-}
-slotRows.Close()
+			plan.Slots = append(plan.Slots, slot)
+		}
+		slotRows.Close()
 
-plans = append(plans, plan)
-}
+		plans = append(plans, plan)
+	}
 
-return plans, rows.Err()
+	return plans, rows.Err()
 }
 
 // GetAllHabitEntries retrieves all habit entries including deleted ones
 func (s *PostgresStore) GetAllHabitEntries() ([]models.HabitEntry, error) {
-rows, err := s.db.Query(`
+	rows, err := s.db.Query(`
 SELECT id, habit_id, day, note, created_at, updated_at, deleted_at
 FROM habit_entries
 ORDER BY day, habit_id`)
-if err != nil {
-return nil, err
-}
-defer rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-var entries []models.HabitEntry
-for rows.Next() {
-var entry models.HabitEntry
-var deletedAt sql.NullTime
+	var entries []models.HabitEntry
+	for rows.Next() {
+		var entry models.HabitEntry
+		var deletedAt sql.NullTime
 
-if err := rows.Scan(&entry.ID, &entry.HabitID, &entry.Day, &entry.Note,
-&entry.CreatedAt, &entry.UpdatedAt, &deletedAt); err != nil {
-return nil, err
-}
+		if err := rows.Scan(&entry.ID, &entry.HabitID, &entry.Day, &entry.Note,
+			&entry.CreatedAt, &entry.UpdatedAt, &deletedAt); err != nil {
+			return nil, err
+		}
 
-if deletedAt.Valid {
-entry.DeletedAt = &deletedAt.Time
-}
+		if deletedAt.Valid {
+			entry.DeletedAt = &deletedAt.Time
+		}
 
-entries = append(entries, entry)
-}
+		entries = append(entries, entry)
+	}
 
-return entries, rows.Err()
+	return entries, rows.Err()
 }
 
 // GetAllOTEntries retrieves all OT entries including deleted ones
 func (s *PostgresStore) GetAllOTEntries() ([]models.OTEntry, error) {
-rows, err := s.db.Query(`
+	rows, err := s.db.Query(`
 SELECT id, day, title, note, created_at, updated_at, deleted_at
 FROM ot_entries
 ORDER BY day`)
-if err != nil {
-return nil, err
-}
-defer rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-var entries []models.OTEntry
-for rows.Next() {
-var entry models.OTEntry
-var deletedAt sql.NullTime
+	var entries []models.OTEntry
+	for rows.Next() {
+		var entry models.OTEntry
+		var deletedAt sql.NullTime
 
-if err := rows.Scan(&entry.ID, &entry.Day, &entry.Title, &entry.Note,
-&entry.CreatedAt, &entry.UpdatedAt, &deletedAt); err != nil {
-return nil, err
-}
+		if err := rows.Scan(&entry.ID, &entry.Day, &entry.Title, &entry.Note,
+			&entry.CreatedAt, &entry.UpdatedAt, &deletedAt); err != nil {
+			return nil, err
+		}
 
-if deletedAt.Valid {
-entry.DeletedAt = &deletedAt.Time
-}
+		if deletedAt.Valid {
+			entry.DeletedAt = &deletedAt.Time
+		}
 
-entries = append(entries, entry)
-}
+		entries = append(entries, entry)
+	}
 
-return entries, rows.Err()
+	return entries, rows.Err()
 }
