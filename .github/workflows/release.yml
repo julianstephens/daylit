@@ -22,7 +22,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create $GITHUB_REF_NAME --title "$GITHUB_REF_NAME" --notes-from-tag --draft
+          git fetch origin refs/tags/$GITHUB_REF_NAME:refs/tags/$GITHUB_REF_NAME
+          git tag -l --format='%(subject)%0a%0a%(body)' $GITHUB_REF_NAME > release_notes.md
+          gh release create $GITHUB_REF_NAME --title "$GITHUB_REF_NAME" --notes-file release_notes.md --draft
 
   build-cli:
     name: Build CLI binaries
