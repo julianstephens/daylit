@@ -123,7 +123,7 @@ func (s *PostgresStore) validateSchemaVersion() error {
 	if err != nil {
 		return fmt.Errorf("failed to access postgres migrations: %w", err)
 	}
-	
+
 	runner := migration.NewRunner(s.db, subFS)
 	return runner.ValidateVersion()
 }

@@ -118,7 +118,7 @@ func (s *SQLiteStore) validateSchemaVersion() error {
 	if err != nil {
 		return fmt.Errorf("failed to access sqlite migrations: %w", err)
 	}
-	
+
 	runner := migration.NewRunner(s.db, subFS)
 	return runner.ValidateVersion()
 }
