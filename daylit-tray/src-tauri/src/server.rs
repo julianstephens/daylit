@@ -11,7 +11,13 @@ use tiny_http::{Response, Server};
 pub fn start_webhook_server(app_handle: AppHandle) {
     thread::spawn(move || {
         // Bind to port 0 to let the OS choose an available port
-        let server = Server::http("127.0.0.1:0").unwrap();
+        let server = match Server::http("127.0.0.1:0") {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("Failed to create webhook server: {}", e);
+                return;
+            }
+        };
         let port = server.server_addr().to_ip().unwrap().port();
 
         // --- Create Lock File ---
