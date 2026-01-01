@@ -29,11 +29,6 @@ func (c *InitCmd) Run(ctx *cli.Context) error {
 			absSource, err := filepath.Abs(c.Source)
 			if err == nil && absSource == dbPath {
 				return fmt.Errorf("cannot use --force when source and destination are the same: %s", dbPath)
-			} else if err == nil {
-				// Use normalized source for the check
-				if absSource == dbPath {
-					return fmt.Errorf("cannot use --force when source and destination are the same: %s", dbPath)
-				}
 			}
 		}
 		if _, err := os.Stat(dbPath); err == nil {
