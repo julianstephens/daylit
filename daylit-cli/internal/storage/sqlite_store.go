@@ -1197,7 +1197,6 @@ func (s *SQLiteStore) RestoreHabitEntry(id string) error {
 
 func (s *SQLiteStore) GetOTSettings() (models.OTSettings, error) {
 	settings := models.OTSettings{
-		ID:             1, // Keep for backward compatibility
 		PromptOnEmpty:  true,
 		StrictMode:     true,
 		DefaultLogDays: 14,

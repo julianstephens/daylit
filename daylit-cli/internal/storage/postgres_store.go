@@ -1304,7 +1304,6 @@ func (s *PostgresStore) GetOTSettings() (models.OTSettings, error) {
 	defer rows.Close()
 
 	settings := models.OTSettings{
-		ID:             1, // Keep for backward compatibility
 		PromptOnEmpty:  true,
 		StrictMode:     true,
 		DefaultLogDays: 14,

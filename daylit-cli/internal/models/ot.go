@@ -4,7 +4,6 @@ import "time"
 
 // OTSettings holds configuration for Once-Today feature
 type OTSettings struct {
-	ID             int  `json:"id"` // Always 1
 	PromptOnEmpty  bool `json:"prompt_on_empty"`
 	StrictMode     bool `json:"strict_mode"`
 	DefaultLogDays int  `json:"default_log_days"`

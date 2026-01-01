@@ -284,9 +284,6 @@ func TestOTSettingsCRUD(t *testing.T) {
 		t.Fatalf("failed to get OT settings: %v", err)
 	}
 
-	if settings.ID != 1 {
-		t.Errorf("expected ID 1, got %d", settings.ID)
-	}
 	if !settings.PromptOnEmpty {
 		t.Error("expected PromptOnEmpty to be true")
 	}
