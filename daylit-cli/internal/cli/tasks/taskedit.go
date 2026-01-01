@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 )
 
@@ -85,25 +86,25 @@ func (c *TaskEditCmd) Run(ctx *cli.Context) error {
 
 	// Update time constraints
 	if c.Earliest != nil {
-		if _, err := time.Parse("15:04", *c.Earliest); err != nil {
+		if _, err := time.Parse(constants.TimeFormat, *c.Earliest); err != nil {
 			return fmt.Errorf("invalid earliest time: %w", err)
 		}
 		task.EarliestStart = *c.Earliest
 	}
 	if c.Latest != nil {
-		if _, err := time.Parse("15:04", *c.Latest); err != nil {
+		if _, err := time.Parse(constants.TimeFormat, *c.Latest); err != nil {
 			return fmt.Errorf("invalid latest time: %w", err)
 		}
 		task.LatestEnd = *c.Latest
 	}
 	if c.FixedStart != nil {
-		if _, err := time.Parse("15:04", *c.FixedStart); err != nil {
+		if _, err := time.Parse(constants.TimeFormat, *c.FixedStart); err != nil {
 			return fmt.Errorf("invalid fixed start time: %w", err)
 		}
 		task.FixedStart = *c.FixedStart
 	}
 	if c.FixedEnd != nil {
-		if _, err := time.Parse("15:04", *c.FixedEnd); err != nil {
+		if _, err := time.Parse(constants.TimeFormat, *c.FixedEnd); err != nil {
 			return fmt.Errorf("invalid fixed end time: %w", err)
 		}
 		task.FixedEnd = *c.FixedEnd

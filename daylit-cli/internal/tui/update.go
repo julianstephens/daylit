@@ -106,7 +106,7 @@ func newSettingsForm(fm *SettingsFormModel) *huh.Form {
 				Title("Day Start (HH:MM)").
 				Value(&fm.DayStart).
 				Validate(func(s string) error {
-					_, err := time.Parse("15:04", s)
+					_, err := time.Parse(constants.TimeFormat, s)
 					if err != nil {
 						return fmt.Errorf("invalid time format, use HH:MM")
 					}
@@ -116,12 +116,12 @@ func newSettingsForm(fm *SettingsFormModel) *huh.Form {
 				Title("Day End (HH:MM)").
 				Value(&fm.DayEnd).
 				Validate(func(s string) error {
-					endTime, err := time.Parse("15:04", s)
+					endTime, err := time.Parse(constants.TimeFormat, s)
 					if err != nil {
 						return fmt.Errorf("invalid time format, use HH:MM")
 					}
 					// Cross-field validation: ensure Day End is after Day Start
-					startTime, err := time.Parse("15:04", fm.DayStart)
+					startTime, err := time.Parse(constants.TimeFormat, fm.DayStart)
 					if err == nil && !endTime.After(startTime) {
 						return fmt.Errorf("day end must be after day start")
 					}
@@ -205,11 +205,11 @@ func parseTimeToMinutes(timeStr string) (int, error) {
 }
 
 func calculateSlotDuration(slot models.Slot) int {
-	start, err := time.Parse("15:04", slot.Start)
+	start, err := time.Parse(constants.TimeFormat, slot.Start)
 	if err != nil {
 		return 0
 	}
-	end, err := time.Parse("15:04", slot.End)
+	end, err := time.Parse(constants.TimeFormat, slot.End)
 	if err != nil {
 		return 0
 	}
@@ -301,7 +301,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if err := m.store.AddHabit(habit); err == nil {
 				// Refresh habits list only if add succeeded
-				today := time.Now().Format("2006-01-02")
+				today := time.Now().Format(constants.DateFormat)
 				habitsList, _ := m.store.GetAllHabits(false, true)
 				habitEntries, _ := m.store.GetHabitEntriesForDay(today)
 				m.habitsModel.SetHabits(habitsList, habitEntries)
@@ -416,7 +416,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			// Apply feedback
-			today := time.Now().Format("2006-01-02")
+			today := time.Now().Format(constants.DateFormat)
 			plan, err := m.store.GetPlan(today)
 			if err == nil && m.feedbackSlotID >= 0 && m.feedbackSlotID < len(plan.Slots) {
 				slot := &plan.Slots[m.feedbackSlotID]
@@ -536,7 +536,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						return m, nil
 					}
 					// Restore succeeded - refresh plan
-					today := time.Now().Format("2006-01-02")
+					today := time.Now().Format(constants.DateFormat)
 					plan, err := m.store.GetPlan(today)
 					tasks, _ := m.store.GetAllTasksIncludingDeleted()
 					if err == nil {
@@ -609,7 +609,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, nil
 				}
 				// Refresh habits list
-				today := time.Now().Format("2006-01-02")
+				today := time.Now().Format(constants.DateFormat)
 				habitsList, _ := m.store.GetAllHabits(false, true)
 				habitEntries, _ := m.store.GetHabitEntriesForDay(today)
 				m.habitsModel.SetHabits(habitsList, habitEntries)
@@ -697,7 +697,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.form.Init()
 
 	case habits.MarkHabitMsg:
-		today := time.Now().Format("2006-01-02")
+		today := time.Now().Format(constants.DateFormat)
 		entry := models.HabitEntry{
 			ID:        uuid.New().String(),
 			HabitID:   msg.ID,
@@ -713,7 +713,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case habits.UnmarkHabitMsg:
-		today := time.Now().Format("2006-01-02")
+		today := time.Now().Format(constants.DateFormat)
 		entry, err := m.store.GetHabitEntry(msg.ID, today)
 		if err == nil {
 			if err := m.store.DeleteHabitEntry(entry.ID); err == nil {
@@ -731,7 +731,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case habits.DeleteHabitMsg:
 		if err := m.store.DeleteHabit(msg.ID); err == nil {
-			today := time.Now().Format("2006-01-02")
+			today := time.Now().Format(constants.DateFormat)
 			habitsList, _ := m.store.GetAllHabits(false, true)
 			habitEntries, _ := m.store.GetHabitEntriesForDay(today)
 			m.habitsModel.SetHabits(habitsList, habitEntries)
@@ -740,7 +740,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case habits.RestoreHabitMsg:
 		if err := m.store.RestoreHabit(msg.ID); err == nil {
-			today := time.Now().Format("2006-01-02")
+			today := time.Now().Format(constants.DateFormat)
 			habitsList, _ := m.store.GetAllHabits(false, true)
 			habitEntries, _ := m.store.GetHabitEntriesForDay(today)
 			m.habitsModel.SetHabits(habitsList, habitEntries)
@@ -784,7 +784,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case key.Matches(msg, m.keys.Feedback):
 			// Find slot for feedback
-			today := time.Now().Format("2006-01-02")
+			today := time.Now().Format(constants.DateFormat)
 			plan, err := m.store.GetPlan(today)
 			if err == nil {
 				now := time.Now()
@@ -825,7 +825,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case StatePlan:
 		if msg, ok := msg.(tea.KeyMsg); ok && key.Matches(msg, m.keys.Generate) {
 			// Generate plan
-			today := time.Now().Format("2006-01-02")
+			today := time.Now().Format(constants.DateFormat)
 
 			// Check if plan already exists
 			_, err := m.store.GetPlan(today)

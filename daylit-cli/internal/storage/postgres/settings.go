@@ -3,6 +3,7 @@ package postgres
 import (
 	"fmt"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
 )
 
@@ -21,29 +22,29 @@ func (s *Store) GetSettings() (storage.Settings, error) {
 			return storage.Settings{}, err
 		}
 		switch key {
-		case "day_start":
+		case constants.SettingDayStart:
 			settings.DayStart = value
-		case "day_end":
+		case constants.SettingDayEnd:
 			settings.DayEnd = value
-		case "default_block_min":
+		case constants.SettingDefaultBlockMin:
 			if _, err := fmt.Sscanf(value, "%d", &settings.DefaultBlockMin); err != nil {
 				return storage.Settings{}, fmt.Errorf("parsing default_block_min: %w", err)
 			}
-		case "notifications_enabled":
+		case constants.SettingNotificationsEnabled:
 			settings.NotificationsEnabled = value == "true"
-		case "notify_block_start":
+		case constants.SettingNotifyBlockStart:
 			settings.NotifyBlockStart = value == "true"
-		case "notify_block_end":
+		case constants.SettingNotifyBlockEnd:
 			settings.NotifyBlockEnd = value == "true"
-		case "block_start_offset_min":
+		case constants.SettingBlockStartOffsetMin:
 			if _, err := fmt.Sscanf(value, "%d", &settings.BlockStartOffsetMin); err != nil {
 				return storage.Settings{}, fmt.Errorf("parsing block_start_offset_min: %w", err)
 			}
-		case "block_end_offset_min":
+		case constants.SettingBlockEndOffsetMin:
 			if _, err := fmt.Sscanf(value, "%d", &settings.BlockEndOffsetMin); err != nil {
 				return storage.Settings{}, fmt.Errorf("parsing block_end_offset_min: %w", err)
 			}
-		case "notification_grace_period_min":
+		case constants.SettingNotificationGracePeriodMin:
 			if _, err := fmt.Sscanf(value, "%d", &settings.NotificationGracePeriodMin); err != nil {
 				return storage.Settings{}, fmt.Errorf("parsing notification_grace_period_min: %w", err)
 			}
@@ -75,31 +76,31 @@ func (s *Store) SaveSettings(settings storage.Settings) error {
 	}
 	defer stmt.Close()
 
-	if _, err := stmt.Exec("day_start", settings.DayStart); err != nil {
+	if _, err := stmt.Exec(constants.SettingDayStart, settings.DayStart); err != nil {
 		return err
 	}
-	if _, err := stmt.Exec("day_end", settings.DayEnd); err != nil {
+	if _, err := stmt.Exec(constants.SettingDayEnd, settings.DayEnd); err != nil {
 		return err
 	}
-	if _, err := stmt.Exec("default_block_min", fmt.Sprintf("%d", settings.DefaultBlockMin)); err != nil {
+	if _, err := stmt.Exec(constants.SettingDefaultBlockMin, fmt.Sprintf("%d", settings.DefaultBlockMin)); err != nil {
 		return err
 	}
-	if _, err := stmt.Exec("notifications_enabled", fmt.Sprintf("%v", settings.NotificationsEnabled)); err != nil {
+	if _, err := stmt.Exec(constants.SettingNotificationsEnabled, fmt.Sprintf("%v", settings.NotificationsEnabled)); err != nil {
 		return err
 	}
-	if _, err := stmt.Exec("notify_block_start", fmt.Sprintf("%v", settings.NotifyBlockStart)); err != nil {
+	if _, err := stmt.Exec(constants.SettingNotifyBlockStart, fmt.Sprintf("%v", settings.NotifyBlockStart)); err != nil {
 		return err
 	}
-	if _, err := stmt.Exec("notify_block_end", fmt.Sprintf("%v", settings.NotifyBlockEnd)); err != nil {
+	if _, err := stmt.Exec(constants.SettingNotifyBlockEnd, fmt.Sprintf("%v", settings.NotifyBlockEnd)); err != nil {
 		return err
 	}
-	if _, err := stmt.Exec("block_start_offset_min", fmt.Sprintf("%d", settings.BlockStartOffsetMin)); err != nil {
+	if _, err := stmt.Exec(constants.SettingBlockStartOffsetMin, fmt.Sprintf("%d", settings.BlockStartOffsetMin)); err != nil {
 		return err
 	}
-	if _, err := stmt.Exec("block_end_offset_min", fmt.Sprintf("%d", settings.BlockEndOffsetMin)); err != nil {
+	if _, err := stmt.Exec(constants.SettingBlockEndOffsetMin, fmt.Sprintf("%d", settings.BlockEndOffsetMin)); err != nil {
 		return err
 	}
-	if _, err := stmt.Exec("notification_grace_period_min", fmt.Sprintf("%d", settings.NotificationGracePeriodMin)); err != nil {
+	if _, err := stmt.Exec(constants.SettingNotificationGracePeriodMin, fmt.Sprintf("%d", settings.NotificationGracePeriodMin)); err != nil {
 		return err
 	}
 

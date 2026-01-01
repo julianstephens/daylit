@@ -12,6 +12,7 @@ import (
 
 	pq "github.com/lib/pq"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/migration"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
 	"github.com/julianstephens/daylit/daylit-cli/migrations"
@@ -46,14 +47,14 @@ func (s *Store) ensureSearchPath() {
 		q := u.Query()
 		// Only set search_path if it's not already present
 		if q.Get("search_path") == "" {
-			q.Set("search_path", "daylit")
+			q.Set("search_path", constants.SchemaName)
 			u.RawQuery = q.Encode()
 			s.connStr = u.String()
 		}
 	} else {
 		// Assume DSN format - only append if search_path is not already present
 		if !hasSearchPathParam(s.connStr) {
-			s.connStr = strings.TrimSpace(s.connStr) + " search_path=daylit"
+			s.connStr = strings.TrimSpace(s.connStr) + " search_path=" + constants.SchemaName
 		}
 	}
 }
@@ -158,7 +159,7 @@ func (s *Store) Init() error {
 	db.SetConnMaxLifetime(5 * time.Minute)
 
 	// Create schema if it doesn't exist (before assigning to s.db to maintain consistency)
-	if _, err := db.Exec("CREATE SCHEMA IF NOT EXISTS daylit"); err != nil {
+	if _, err := db.Exec("CREATE SCHEMA IF NOT EXISTS " + constants.SchemaName); err != nil {
 		db.Close()
 		return fmt.Errorf("failed to create schema: %w", err)
 	}
@@ -182,15 +183,15 @@ func (s *Store) Init() error {
 	// Initialize default settings if not present
 	if _, err := s.GetSettings(); err != nil {
 		defaultSettings := storage.Settings{
-			DayStart:                   "07:00",
-			DayEnd:                     "22:00",
-			DefaultBlockMin:            30,
-			NotificationsEnabled:       true,
-			NotifyBlockStart:           true,
-			NotifyBlockEnd:             true,
-			BlockStartOffsetMin:        5,
-			BlockEndOffsetMin:          5,
-			NotificationGracePeriodMin: 10,
+			DayStart:                   constants.DefaultDayStart,
+			DayEnd:                     constants.DefaultDayEnd,
+			DefaultBlockMin:            constants.DefaultBlockMin,
+			NotificationsEnabled:       constants.DefaultNotificationsEnabled,
+			NotifyBlockStart:           constants.DefaultNotifyBlockStart,
+			NotifyBlockEnd:             constants.DefaultNotifyBlockEnd,
+			BlockStartOffsetMin:        constants.DefaultBlockStartOffsetMin,
+			BlockEndOffsetMin:          constants.DefaultBlockEndOffsetMin,
+			NotificationGracePeriodMin: constants.DefaultNotificationGracePeriodMin,
 		}
 		if err := s.SaveSettings(defaultSettings); err != nil {
 			return fmt.Errorf("failed to save default settings: %w", err)

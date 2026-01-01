@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/backup"
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/scheduler"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
@@ -111,11 +112,11 @@ func ParseTimeToMinutes(timeStr string) (int, error) {
 // CalculateSlotDuration returns the duration of a slot in minutes.
 // Returns 0 if the time format is invalid (which the caller should check).
 func CalculateSlotDuration(slot models.Slot) int {
-	start, err := time.Parse("15:04", slot.Start)
+	start, err := time.Parse(constants.TimeFormat, slot.Start)
 	if err != nil {
 		return 0
 	}
-	end, err := time.Parse("15:04", slot.End)
+	end, err := time.Parse(constants.TimeFormat, slot.End)
 	if err != nil {
 		return 0
 	}

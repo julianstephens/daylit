@@ -9,6 +9,7 @@ import (
 
 	_ "modernc.org/sqlite"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/migration"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/migrations"
@@ -48,15 +49,15 @@ func (s *Store) Init() error {
 	settings, err := s.GetSettings()
 	if err != nil || settings.DayStart == "" {
 		defaultSettings := models.Settings{
-			DayStart:                   "07:00",
-			DayEnd:                     "22:00",
-			DefaultBlockMin:            30,
-			NotificationsEnabled:       true,
-			NotifyBlockStart:           true,
-			NotifyBlockEnd:             true,
-			BlockStartOffsetMin:        5,
-			BlockEndOffsetMin:          5,
-			NotificationGracePeriodMin: 10,
+			DayStart:                   constants.DefaultDayStart,
+			DayEnd:                     constants.DefaultDayEnd,
+			DefaultBlockMin:            constants.DefaultBlockMin,
+			NotificationsEnabled:       constants.DefaultNotificationsEnabled,
+			NotifyBlockStart:           constants.DefaultNotifyBlockStart,
+			NotifyBlockEnd:             constants.DefaultNotifyBlockEnd,
+			BlockStartOffsetMin:        constants.DefaultBlockStartOffsetMin,
+			BlockEndOffsetMin:          constants.DefaultBlockEndOffsetMin,
+			NotificationGracePeriodMin: constants.DefaultNotificationGracePeriodMin,
 		}
 		if err := s.SaveSettings(defaultSettings); err != nil {
 			return fmt.Errorf("failed to save default settings: %w", err)

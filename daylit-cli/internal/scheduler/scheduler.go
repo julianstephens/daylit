@@ -6,6 +6,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 )
 
@@ -23,7 +24,7 @@ func (s *Scheduler) GeneratePlan(date string, tasks []models.Task, dayStart, day
 	}
 
 	// Parse date
-	planDate, err := time.Parse("2006-01-02", date)
+	planDate, err := time.Parse(constants.DateFormat, date)
 	if err != nil {
 		return plan, fmt.Errorf("invalid date format: %w", err)
 	}
@@ -172,7 +173,7 @@ type timeBlock struct {
 }
 
 func parseTime(timeStr string) (int, error) {
-	t, err := time.Parse("15:04", timeStr)
+	t, err := time.Parse(constants.TimeFormat, timeStr)
 	if err != nil {
 		return 0, err
 	}
@@ -210,7 +211,7 @@ func shouldScheduleTask(task models.Task, date time.Time) bool {
 		if task.LastDone == "" {
 			return true
 		}
-		lastDone, err := time.Parse("2006-01-02", task.LastDone)
+		lastDone, err := time.Parse(constants.DateFormat, task.LastDone)
 		if err != nil {
 			return false
 		}
@@ -229,7 +230,7 @@ func calculateLateness(task models.Task, date time.Time) float64 {
 		return 1.0
 	}
 
-	lastDone, err := time.Parse("2006-01-02", task.LastDone)
+	lastDone, err := time.Parse(constants.DateFormat, task.LastDone)
 	if err != nil {
 		return 0.0
 	}

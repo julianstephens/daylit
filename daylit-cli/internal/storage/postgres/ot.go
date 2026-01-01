@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 )
 
@@ -29,11 +30,11 @@ func (s *Store) GetOTSettings() (models.OTSettings, error) {
 			return models.OTSettings{}, err
 		}
 		switch key {
-		case "ot_prompt_on_empty":
+		case constants.SettingOTPromptOnEmpty:
 			settings.PromptOnEmpty = value == "true"
-		case "ot_strict_mode":
+		case constants.SettingOTStrictMode:
 			settings.StrictMode = value == "true"
-		case "ot_default_log_days":
+		case constants.SettingOTDefaultLogDays:
 			if _, err := fmt.Sscanf(value, "%d", &settings.DefaultLogDays); err != nil {
 				return models.OTSettings{}, fmt.Errorf("parsing ot_default_log_days: %w", err)
 			}
@@ -56,13 +57,13 @@ func (s *Store) SaveOTSettings(settings models.OTSettings) error {
 	}
 	defer stmt.Close()
 
-	if _, err := stmt.Exec("ot_prompt_on_empty", fmt.Sprintf("%v", settings.PromptOnEmpty)); err != nil {
+	if _, err := stmt.Exec(constants.SettingOTPromptOnEmpty, fmt.Sprintf("%v", settings.PromptOnEmpty)); err != nil {
 		return err
 	}
-	if _, err := stmt.Exec("ot_strict_mode", fmt.Sprintf("%v", settings.StrictMode)); err != nil {
+	if _, err := stmt.Exec(constants.SettingOTStrictMode, fmt.Sprintf("%v", settings.StrictMode)); err != nil {
 		return err
 	}
-	if _, err := stmt.Exec("ot_default_log_days", fmt.Sprintf("%d", settings.DefaultLogDays)); err != nil {
+	if _, err := stmt.Exec(constants.SettingOTDefaultLogDays, fmt.Sprintf("%d", settings.DefaultLogDays)); err != nil {
 		return err
 	}
 

@@ -5,6 +5,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 )
 
@@ -218,7 +219,7 @@ func (v *Validator) ValidatePlan(plan models.DayPlan, tasks []models.Task, daySt
 	}
 
 	// Check for invalid date
-	planDate, err := time.Parse("2006-01-02", plan.Date)
+	planDate, err := time.Parse(constants.DateFormat, plan.Date)
 	if err != nil {
 		result.Conflicts = append(result.Conflicts, Conflict{
 			Type:        ConflictInvalidDateTime,
@@ -382,7 +383,7 @@ func (v *Validator) ValidatePlan(plan models.DayPlan, tasks []models.Task, daySt
 // Helper functions
 
 func isValidTimeFormat(timeStr string) bool {
-	_, err := time.Parse("15:04", timeStr)
+	_, err := time.Parse(constants.TimeFormat, timeStr)
 	return err == nil
 }
 

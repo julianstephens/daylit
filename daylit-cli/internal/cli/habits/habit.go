@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
 )
@@ -104,10 +105,10 @@ func (c *HabitMarkCmd) Run(ctx *cli.Context) error {
 	// Determine the date
 	day := c.Date
 	if day == "" {
-		day = time.Now().Format("2006-01-02")
+		day = time.Now().Format(constants.DateFormat)
 	} else {
 		// Validate date format
-		if _, err := time.Parse("2006-01-02", day); err != nil {
+		if _, err := time.Parse(constants.DateFormat, day); err != nil {
 			return fmt.Errorf("invalid date format: %s (expected YYYY-MM-DD)", day)
 		}
 	}

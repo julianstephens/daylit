@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 )
 
@@ -34,8 +35,8 @@ func TestStore_Integration(t *testing.T) {
 		}
 
 		// Verify default settings were created
-		if settings.DayStart != "07:00" {
-			t.Errorf("Expected day start 07:00, got %s", settings.DayStart)
+		if settings.DayStart != constants.DefaultDayStart {
+			t.Errorf("Expected day start %s, got %s", constants.DefaultDayStart, settings.DayStart)
 		}
 
 		// Update settings
