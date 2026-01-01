@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -158,23 +159,9 @@ func TestEnsureSearchPath(t *testing.T) {
 			store := NewPostgresStore(tt.inputConnStr)
 			store.ensureSearchPath()
 			
-			if !containsSubstring(store.connStr, tt.expectedMatch) {
+			if !strings.Contains(store.connStr, tt.expectedMatch) {
 				t.Errorf("ensureSearchPath() result %q does not contain expected substring %q", store.connStr, tt.expectedMatch)
 			}
 		})
 	}
-}
-
-// Helper function to check if a string contains a substring
-func containsSubstring(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && findSubstring(s, substr))
-}
-
-func findSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
