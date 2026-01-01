@@ -37,13 +37,25 @@ Daylit is designed to work as a cohesive system:
 To get the full Daylit experience, you should set up both components.
 
 ### Prerequisites
-- **Go** (for the CLI)
-- **Node.js** & **Rust** (for the Tray app)
+- **Go** (for building the CLI from source)
+- **Node.js** & **Rust** (for building the Tray app from source)
 
 ### Installation
 
-#### 1. Install the CLI
-Navigate to the `daylit-cli` directory and build the binary:
+#### Quick Start: Use Pre-built Artifacts
+
+The easiest way to get started is to download pre-built binaries from the [latest release](https://github.com/julianstephens/daylit/releases/latest):
+
+1. **Download the CLI binary** for your operating system and architecture
+2. **Download the Tray app** for your platform (macOS, Linux, or Windows)
+3. Extract and run the applications
+
+#### Building from Source
+
+If you prefer to build from source:
+
+##### 1. Build the CLI
+Navigate to the `daylit-cli` directory:
 ```bash
 cd daylit-cli
 make build
@@ -51,8 +63,8 @@ make build
 go install ./cmd/daylit
 ```
 
-#### 2. Install and Run the Tray App
-Navigate to the `daylit-tray` directory and run the application:
+##### 2. Build and Run the Tray App
+Navigate to the `daylit-tray` directory:
 ```bash
 cd daylit-tray
 npm install
