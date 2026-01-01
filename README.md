@@ -33,8 +33,20 @@ Daylit is designed to work as a cohesive system:
 
 1. **The CLI** acts as the brain. It stores your schedule, knows what time it is, and determines what you should be doing.
 2. **The Tray App** acts as the notifier. It runs in the background and exposes a local server.
-3. When the CLI needs to alert you (e.g., a task is starting or ending), it discovers the Tray app's port via a lock file and sends a notification request.
-4. The Tray app receives the request and displays a native desktop notification window.
+3. When the CLI needs to alert you (e.g., a task is starting or ending), it discovers the Tray app's port and authentication secret via a lock file and sends an authenticated notification request.
+4. The Tray app validates the request's authentication secret and, if valid, displays a native desktop notification window.
+
+### Security
+
+The system uses a secret-in-lockfile authentication mechanism to ensure secure communication:
+
+- When the tray app starts, it generates a secure random secret and writes it to the lock file along with its port and process ID in the format: `PORT|PID|SECRET`
+- The CLI reads this lock file to discover how to connect to the tray app
+- All notification requests from the CLI include an `X-Daylit-Secret` header with this secret
+- The tray app validates the secret before processing any notification request, rejecting unauthorized requests with a 401 response
+- The secret is session-specific and changes each time the tray app restarts
+
+This approach ensures that only authorized processes running as the same user can trigger notifications, preventing unauthorized access from other users or malicious applications on the system.
 
 ## Getting Started
 
