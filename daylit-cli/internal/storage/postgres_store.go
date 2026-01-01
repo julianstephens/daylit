@@ -38,13 +38,14 @@ func (s *PostgresStore) ensureSearchPath() {
 			return
 		}
 		q := u.Query()
+		// Only set search_path if it's not already present
 		if q.Get("search_path") == "" {
 			q.Set("search_path", "daylit")
 			u.RawQuery = q.Encode()
 			s.connStr = u.String()
 		}
 	} else {
-		// Assume DSN format
+		// Assume DSN format - only append if search_path is not already present
 		if !strings.Contains(s.connStr, "search_path") {
 			s.connStr = strings.TrimSpace(s.connStr) + " search_path=daylit"
 		}
@@ -57,21 +58,24 @@ func (s *PostgresStore) Init() error {
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
-	s.db = db
 
 	// Configure connection pool parameters to avoid connection exhaustion
 	db.SetMaxOpenConns(25)
 	db.SetMaxIdleConns(25)
 	db.SetConnMaxLifetime(5 * time.Minute)
 
-	// Create schema if it doesn't exist
-	if _, err := s.db.Exec("CREATE SCHEMA IF NOT EXISTS daylit"); err != nil {
+	// Create schema if it doesn't exist (before assigning to s.db to maintain consistency)
+	if _, err := db.Exec("CREATE SCHEMA IF NOT EXISTS daylit"); err != nil {
+		db.Close()
 		return fmt.Errorf("failed to create schema: %w", err)
 	}
 
+	// Assign to s.db only after schema creation succeeds
+	s.db = db
+
 	// Test connection
 	if err := s.db.Ping(); err != nil {
-		if strings.Contains(err.Error(), "SSL is not enabled on the server") {
+		if strings.Contains(err.Error(), "SSL is not enabled on the server") && !strings.Contains(strings.ToLower(s.connStr), "sslmode") {
 			return fmt.Errorf("failed to connect to database: %w (hint: try adding ?sslmode=disable to your connection string)", err)
 		}
 		return fmt.Errorf("failed to connect to database: %w", err)
