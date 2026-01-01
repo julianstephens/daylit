@@ -3,6 +3,7 @@ package storage
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"net/url"
@@ -10,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/lib/pq"
+	pq "github.com/lib/pq"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/migration"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
@@ -21,6 +22,11 @@ type PostgresStore struct {
 	connStr string
 	db      *sql.DB
 }
+
+var (
+	ErrInvalidConnectionString = errors.New("invalid PostgreSQL connection string")
+	ErrEmbeddedCredentials     = errors.New("connection string must not contain a password")
+)
 
 func NewPostgresStore(connStr string) *PostgresStore {
 	s := &PostgresStore{
@@ -98,54 +104,46 @@ func hasSSLMode(connStr string) bool {
 	return false
 }
 
-// HasEmbeddedCredentials checks if a PostgreSQL connection string contains embedded credentials.
-// This includes checking for passwords in both URL format (postgres://user:pass@host/db) and
-// DSN format (user=user password=pass host=host).
-func HasEmbeddedCredentials(connStr string) bool {
-	// Try parsing as URL first (postgres:// or postgresql://)
+// ValidatePostgresConnString checks if a connection string is a valid
+// PostgreSQL connection string (URI or DSN) and ensures it does not
+// contain a password.
+//
+// It returns true if the connection string is valid and contains no password.
+// Otherwise, it returns false and an error describing the issue.
+func ValidatePostgresConnString(connStr string) (bool, error) {
+	if strings.TrimSpace(connStr) == "" {
+		return false, fmt.Errorf("%w: connection string cannot be empty", ErrInvalidConnectionString)
+	}
+
+	_, err := pq.NewConnector(connStr)
+	if err != nil {
+		return false, fmt.Errorf("%w: invalid connection string format: %v", ErrInvalidConnectionString, err)
+	}
+
 	if strings.HasPrefix(connStr, "postgres://") || strings.HasPrefix(connStr, "postgresql://") {
-		u, err := url.Parse(connStr)
+		parsedURL, err := url.Parse(connStr)
 		if err != nil {
-			// If parsing fails, we log a warning but don't block.
-			// This avoids false positives for valid but non-standard connection strings.
-			fmt.Fprintf(os.Stderr, "Warning: Skipping embedded-credentials security check; could not parse connection string as PostgreSQL URL: %v\n", err)
-			return false
-		}
-		// Check if password is present in the User info
-		if u.User != nil {
-			password, hasPassword := u.User.Password()
-			// Only return true if password is both present and non-empty
-			return hasPassword && password != ""
-		}
-		return false
-	}
-
-	// Check DSN format (space-separated key=value pairs)
-	// To avoid false positives (e.g. random text containing "password="),
-	// we first check if it looks like a DSN by checking for other common keys.
-	isDSN := false
-	hasPassword := false
-
-	parts := strings.Fields(connStr)
-	for _, part := range parts {
-		kv := strings.SplitN(part, "=", 2)
-		if len(kv) != 2 {
-			continue
-		}
-		key := strings.ToLower(kv[0])
-
-		// Check for common DSN keys to confirm it's likely a DSN
-		if key == "host" || key == "port" || key == "dbname" || key == "user" || key == "sslmode" {
-			isDSN = true
+			return false, fmt.Errorf("%w: failed to parse connection URL: %v", ErrInvalidConnectionString, err)
 		}
 
-		// Check for password parameter (case-insensitive)
-		if key == "password" && kv[1] != "" {
-			hasPassword = true
+		if _, isSet := parsedURL.User.Password(); isSet {
+			return false, ErrEmbeddedCredentials
+		}
+
+		if parsedURL.Host == "" && parsedURL.User == nil && (parsedURL.Path == "" || parsedURL.Path == "/") {
+			return false, fmt.Errorf("%w: connection URL is incomplete", ErrInvalidConnectionString)
+		}
+	} else {
+		pairs := strings.Fields(connStr)
+		for _, pair := range pairs {
+			parts := strings.SplitN(pair, "=", 2)
+			if len(parts) == 2 && strings.ToLower(strings.TrimSpace(parts[0])) == "password" {
+				return false, ErrEmbeddedCredentials
+			}
 		}
 	}
 
-	return isDSN && hasPassword
+	return true, nil
 }
 
 func (s *PostgresStore) Init() error {

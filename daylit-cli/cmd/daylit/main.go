@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -90,14 +91,17 @@ func main() {
 		envConfig := os.Getenv("DAYLIT_CONFIG")
 		configFromEnv := envConfig != "" && envConfig == CLI.Config
 
-		if !configFromEnv && storage.HasEmbeddedCredentials(CLI.Config) {
+		_, err := storage.ValidatePostgresConnString(CLI.Config)
+		hasPasswordError := err != nil && errors.Is(err, storage.ErrEmbeddedCredentials)
+
+		if !configFromEnv && hasPasswordError {
 			fmt.Fprintf(os.Stderr, "❌ Error: PostgreSQL connection strings with embedded credentials are NOT allowed via command line flags.\n")
 			fmt.Fprintf(os.Stderr, "       Use one of these secure alternatives:\n")
 			fmt.Fprintf(os.Stderr, "       1. Environment:   export DAYLIT_CONFIG=\"postgresql://user:your_password@host:5432/daylit\"\n")
 			fmt.Fprintf(os.Stderr, "       2. .pgpass file:  Create ~/.pgpass with credentials\n")
 			fmt.Fprintf(os.Stderr, "\n       For more information, see docs/user-guides/POSTGRES_SETUP.md\n")
 			os.Exit(1)
-		} else if configFromEnv && storage.HasEmbeddedCredentials(CLI.Config) {
+		} else if configFromEnv && hasPasswordError {
 			// Warn user about embedded credentials in environment variable
 			fmt.Fprintf(os.Stderr, "⚠️  Warning: Using embedded credentials in DAYLIT_CONFIG environment variable.\n")
 			fmt.Fprintf(os.Stderr, "            Consider using a .pgpass file for better security.\n")

@@ -181,27 +181,27 @@ func TestEnsureSearchPath(t *testing.T) {
 	}
 }
 
-func TestHasEmbeddedCredentials(t *testing.T) {
+func TestValidatePostgresConnString(t *testing.T) {
 	tests := []struct {
 		name     string
 		connStr  string
-		expected bool
+		expected bool // true = valid (no password), false = invalid or has password
 	}{
 		// URL format tests
 		{
 			name:     "URL with username and password",
 			connStr:  "postgres://user:pass@localhost:5432/daylit",
-			expected: true,
+			expected: false,
 		},
 		{
 			name:     "URL with username but no password",
 			connStr:  "postgres://user@localhost:5432/daylit",
-			expected: false,
+			expected: true,
 		},
 		{
 			name:     "URL with no user info",
 			connStr:  "postgres://localhost:5432/daylit",
-			expected: false,
+			expected: true,
 		},
 		{
 			name:     "URL with empty password",
@@ -211,33 +211,33 @@ func TestHasEmbeddedCredentials(t *testing.T) {
 		{
 			name:     "URL with password and query params",
 			connStr:  "postgres://user:pass@localhost:5432/daylit?sslmode=disable",
-			expected: true,
+			expected: false,
 		},
 		{
 			name:     "postgresql:// prefix with password",
 			connStr:  "postgresql://user:secret@localhost/db",
-			expected: true,
+			expected: false,
 		},
 		{
 			name:     "postgresql:// prefix without password",
 			connStr:  "postgresql://user@localhost/db",
-			expected: false,
+			expected: true,
 		},
 		{
 			name:     "URL with special characters in password",
 			connStr:  "postgres://user:p@ssw0rd!@localhost:5432/daylit",
-			expected: true,
+			expected: false,
 		},
 		{
 			name:     "URL with encoded password",
 			connStr:  "postgres://user:p%40ss@localhost:5432/daylit",
-			expected: true,
+			expected: false,
 		},
 		// DSN format tests
 		{
 			name:     "DSN with password parameter",
 			connStr:  "host=localhost port=5432 dbname=daylit user=postgres password=secret",
-			expected: true,
+			expected: false,
 		},
 		{
 			name:     "DSN with empty password parameter",
@@ -247,22 +247,22 @@ func TestHasEmbeddedCredentials(t *testing.T) {
 		{
 			name:     "DSN without password parameter",
 			connStr:  "host=localhost port=5432 dbname=daylit user=postgres",
-			expected: false,
+			expected: true,
 		},
 		{
 			name:     "DSN with PASSWORD uppercase",
 			connStr:  "host=localhost PASSWORD=secret dbname=daylit",
-			expected: true,
+			expected: false,
 		},
 		{
 			name:     "DSN with Password mixed case",
 			connStr:  "host=localhost Password=secret dbname=daylit",
-			expected: true,
+			expected: false,
 		},
 		{
 			name:     "DSN with service name (no password)",
 			connStr:  "service=daylit",
-			expected: false,
+			expected: true,
 		},
 		// Edge cases
 		{
@@ -273,17 +273,17 @@ func TestHasEmbeddedCredentials(t *testing.T) {
 		{
 			name:     "Unparseable URL",
 			connStr:  "postgres://user:pass\n@host/db",
-			expected: false, // url.Parse fails, returns false (warning logged)
+			expected: false,
 		},
 		{
 			name:     "Plain text with password param",
 			connStr:  "some random text password=hidden",
-			expected: false, // Should be false as it lacks other DSN keys
+			expected: false,
 		},
 		{
 			name:     "DSN with only password",
 			connStr:  "password=secret123",
-			expected: false, // Should be false as it lacks other DSN keys
+			expected: false,
 		},
 		{
 			name:     "Plain text (not URL or DSN)",
@@ -294,7 +294,7 @@ func TestHasEmbeddedCredentials(t *testing.T) {
 		{
 			name:     "SQLite default path",
 			connStr:  "~/.config/daylit/daylit.db",
-			expected: false,
+			expected: false, // Invalid postgres format
 		},
 		{
 			name:     "SQLite absolute path",
@@ -315,9 +315,9 @@ func TestHasEmbeddedCredentials(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := HasEmbeddedCredentials(tt.connStr)
-			if result != tt.expected {
-				t.Errorf("HasEmbeddedCredentials(%q) = %v, want %v", tt.connStr, result, tt.expected)
+			valid, _ := ValidatePostgresConnString(tt.connStr)
+			if valid != tt.expected {
+				t.Errorf("ValidatePostgresConnString(%q) = %v, want %v", tt.connStr, valid, tt.expected)
 			}
 		})
 	}
