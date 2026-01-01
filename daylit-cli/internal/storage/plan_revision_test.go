@@ -388,4 +388,3 @@ func TestFeedbackAttachesToLatestRevision(t *testing.T) {
 		t.Error("feedback should not be on revision 1")
 	}
 }
-
