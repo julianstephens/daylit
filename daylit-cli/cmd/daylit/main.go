@@ -55,7 +55,7 @@ var CLI struct {
 	Habit    habits.HabitCmd      `cmd:"" help:"Manage habits and habit tracking."`
 	OT       ot.OTCmd             `cmd:"" help:"Manage Once-Today (OT) intentions."`
 	Settings settings.SettingsCmd `cmd:"" help:"Manage application settings."`
-	Notify   system.NotifyCmd     `cmd:"" help:"Check schedule and trigger notifications."`
+	Notify   system.NotifyCmd     `cmd:"" hidden:"" help:"Send a notification (used internally)."`
 }
 
 func main() {

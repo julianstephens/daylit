@@ -121,15 +121,18 @@ const SettingsPage = () => {
             type="text"
             id="daylit-path"
             value={settings.daylit_path || ""}
-            onChange={(e) => setSettings((prev) => ({
-              ...prev,
-              daylit_path: e.target.value === "" ? null : e.target.value,
-            }))}
+            onChange={(e) =>
+              setSettings((prev) => ({
+                ...prev,
+                daylit_path: e.target.value === "" ? null : e.target.value,
+              }))
+            }
             placeholder="e.g., /usr/local/bin/daylit or C:\Program Files\daylit.exe"
             className="setting-control"
           />
           <p className="setting-hint">
-            Path to the daylit CLI executable. Leave empty to use the default (daylit in PATH).
+            Path to the daylit CLI executable. Leave empty to use the default
+            (daylit in PATH).
           </p>
         </div>
         <div className="setting-item">

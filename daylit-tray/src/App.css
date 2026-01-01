@@ -21,11 +21,11 @@ html {
   width: 100vw;
 }
 
-body, #root {
+body,
+#root {
   height: 100%;
   width: 100%;
 }
-
 
 .container {
   display: flex;
@@ -77,4 +77,3 @@ body, #root {
 .settings-link:hover {
   background-color: #444;
 }
-
