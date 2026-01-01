@@ -100,7 +100,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "       Use one of these secure alternatives:\n")
 			fmt.Fprintf(os.Stderr, "       1. Environment:   export DAYLIT_CONFIG=\"postgresql://user:your_password@host:5432/daylit\"\n")
 			fmt.Fprintf(os.Stderr, "       2. .pgpass file:  Create ~/.pgpass with credentials\n")
-			fmt.Fprintf(os.Stderr, "\n       For more information, see docs/POSTGRES_SETUP.md\n")
+			fmt.Fprintf(os.Stderr, "\n       For more information, see docs/user-guides/POSTGRES_SETUP.md\n")
 			os.Exit(1)
 		}
 		store = storage.NewPostgresStore(CLI.Config)
