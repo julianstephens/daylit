@@ -467,9 +467,15 @@ func TestUpdateSlotNotificationTimestamp(t *testing.T) {
 		t.Fatalf("failed to save plan: %v", err)
 	}
 
+	// Retrieve plan to get the actual revision assigned by SavePlan
+	savedPlan, err := store.GetPlan("2024-03-01")
+	if err != nil {
+		t.Fatalf("failed to retrieve plan after save: %v", err)
+	}
+
 	// Update start notification timestamp
 	timestamp := time.Now().Format(time.RFC3339)
-	err := store.UpdateSlotNotificationTimestamp("2024-03-01", 1, "09:00", task.ID, "start", timestamp)
+	err = store.UpdateSlotNotificationTimestamp("2024-03-01", savedPlan.Revision, "09:00", task.ID, "start", timestamp)
 	if err != nil {
 		t.Fatalf("failed to update start notification timestamp: %v", err)
 	}
