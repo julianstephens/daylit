@@ -256,7 +256,7 @@ This will:
 3. Run all necessary migrations to create tables
 4. Initialize default settings
 
-**Note:** The connection string you provide via `--config` should NOT contain a password. Credentials should be provided through `.pgpass` or the `PGPASSWORD` environment variable.
+**Note:** The connection string you provide via `--config` should NOT contain a password. Credentials should currently be provided through `.pgpass` or the `PGPASSWORD` environment variable. OS keyring integration is planned for a future release and is not yet available.
 
 ## Security Considerations
 
