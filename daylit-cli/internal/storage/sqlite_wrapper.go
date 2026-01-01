@@ -2,6 +2,7 @@ package storage
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage/sqlite"
@@ -40,7 +41,13 @@ func (s *SQLiteStore) Load() error {
 	return err
 }
 
-func (s *SQLiteStore) Close() error               { return s.store.Close() }
+func (s *SQLiteStore) Close() error {
+	err := s.store.Close()
+	if err == nil {
+		s.db = nil // Mark as closed
+	}
+	return err
+}
 func (s *SQLiteStore) GetConfigPath() string      { return s.store.GetConfigPath() }
 func (s *SQLiteStore) GetDB() *sql.DB             {
 	if s.db == nil {
@@ -51,8 +58,12 @@ func (s *SQLiteStore) GetDB() *sql.DB             {
 
 // tableExists is exposed for test compatibility
 func (s *SQLiteStore) tableExists(tableName string) (bool, error) {
+	db := s.GetDB()
+	if db == nil {
+		return false, fmt.Errorf("database is not initialized or has been closed")
+	}
 	var count int
-	row := s.GetDB().QueryRow("SELECT count(*) FROM sqlite_master WHERE type='table' AND name COLLATE NOCASE = ?", tableName)
+	row := db.QueryRow("SELECT count(*) FROM sqlite_master WHERE type='table' AND name COLLATE NOCASE = ?", tableName)
 	if err := row.Scan(&count); err != nil {
 		return false, err
 	}
