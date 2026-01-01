@@ -276,9 +276,14 @@ func TestHasEmbeddedCredentials(t *testing.T) {
 			expected: false, // url.Parse fails, returns false (warning logged)
 		},
 		{
-			name:     "Plain text (not URL or DSN)",
+			name:     "Plain text with password param",
 			connStr:  "some random text password=hidden",
-			expected: false, // Should be false now as it lacks other DSN keys
+			expected: true, // Now detected as containing a password
+		},
+		{
+			name:     "DSN with only password",
+			connStr:  "password=secret123",
+			expected: true,
 		},
 		// SQLite file path tests
 		{
