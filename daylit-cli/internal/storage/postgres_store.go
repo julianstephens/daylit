@@ -69,9 +69,32 @@ func hasSearchPathParam(connStr string) bool {
 	return false
 }
 
-// hasSSLMode checks if the connection string contains an sslmode parameter (case-insensitive).
+// hasSSLMode checks if the connection string contains an sslmode parameter key (case-insensitive).
+// It supports both URL-style and DSN-style connection strings.
 func hasSSLMode(connStr string) bool {
-	return strings.Contains(strings.ToLower(connStr), "sslmode")
+	// First, try to interpret the connection string as a URL (e.g. postgres://...?sslmode=disable).
+	if u, err := url.Parse(connStr); err == nil && u.Scheme != "" {
+		q := u.Query()
+		for key := range q {
+			if strings.EqualFold(key, "sslmode") {
+				return true
+			}
+		}
+	}
+
+	// Fallback: treat the connection string as DSN-style space-separated key=value pairs.
+	parts := strings.Fields(connStr)
+	for _, part := range parts {
+		kv := strings.SplitN(part, "=", 2)
+		if len(kv) != 2 {
+			continue
+		}
+		if strings.EqualFold(kv[0], "sslmode") {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (s *PostgresStore) Init() error {

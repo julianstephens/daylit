@@ -105,9 +105,24 @@ func TestHasSSLMode(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "sslmode in password",
+			name:     "sslmode in password should not match",
 			connStr:  "host=localhost password=sslmode123",
-			expected: true, // This is expected behavior - we use contains for simplicity
+			expected: false, // sslmode appearing only inside a value (e.g., password) should not be treated as an sslmode parameter
+		},
+		{
+			name:     "sslmode in database name should not match",
+			connStr:  "host=localhost dbname=test_sslmode",
+			expected: false,
+		},
+		{
+			name:     "URL with uppercase SSLMODE",
+			connStr:  "postgres://localhost/db?SSLMODE=require",
+			expected: true,
+		},
+		{
+			name:     "URL with sslmode in password",
+			connStr:  "postgres://user:sslmode@localhost/db",
+			expected: false,
 		},
 	}
 
