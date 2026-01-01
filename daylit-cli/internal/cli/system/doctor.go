@@ -200,7 +200,7 @@ func checkSchemaVersion(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to access sqlite migrations: %w", err)
 	}
-	
+
 	runner := migration.NewRunner(db, subFS)
 
 	currentVersion, err := runner.GetCurrentVersion()
@@ -237,7 +237,7 @@ func checkMigrationsComplete(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to access sqlite migrations: %w", err)
 	}
-	
+
 	runner := migration.NewRunner(db, subFS)
 
 	currentVersion, err := runner.GetCurrentVersion()

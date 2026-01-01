@@ -125,13 +125,13 @@ func TestCheckMigrationsComplete_Incomplete(t *testing.T) {
 	}
 
 	db := sqliteStore.GetDB()
-	
+
 	// Get the embedded SQLite migrations sub-filesystem
 	subFS, err := fs.Sub(migrations.FS, "sqlite")
 	if err != nil {
 		t.Fatalf("failed to access sqlite migrations: %v", err)
 	}
-	
+
 	runner := migration.NewRunner(db, subFS)
 
 	currentVersion, err := runner.GetCurrentVersion()

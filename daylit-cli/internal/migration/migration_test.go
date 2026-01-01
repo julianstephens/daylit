@@ -32,14 +32,14 @@ func setupTestDB(t *testing.T) (*sql.DB, string, func()) {
 func setupTestMigrations(t *testing.T, migrations map[string]string) fs.FS {
 	// Create a map-based filesystem for testing
 	mapFS := fstest.MapFS{}
-	
+
 	for filename, content := range migrations {
 		mapFS[filename] = &fstest.MapFile{
 			Data: []byte(content),
 			Mode: 0644,
 		}
 	}
-	
+
 	return mapFS
 }
 
