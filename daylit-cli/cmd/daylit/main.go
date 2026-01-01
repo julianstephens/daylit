@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/alecthomas/kong"
 
@@ -21,7 +22,7 @@ import (
 
 var CLI struct {
 	Version kong.VersionFlag
-	Config  string `help:"Config file path." type:"path" default:"~/.config/daylit/daylit.db"`
+	Config  string `help:"Config file path or PostgreSQL connection string (postgres://...)." type:"string" default:"~/.config/daylit/daylit.db"`
 
 	Init     system.InitCmd     `cmd:"" help:"Initialize daylit storage."`
 	Migrate  system.MigrateCmd  `cmd:"" help:"Run database migrations."`
@@ -69,8 +70,15 @@ func main() {
 		kong.Vars{"version": "v0.4.0"},
 	)
 
-	// Initialize SQLite storage
-	store := storage.NewSQLiteStore(CLI.Config)
+	// Initialize storage based on config format
+	var store storage.Provider
+	if strings.HasPrefix(CLI.Config, "postgres://") || strings.HasPrefix(CLI.Config, "postgresql://") {
+		// PostgreSQL connection string detected
+		store = storage.NewPostgresStore(CLI.Config)
+	} else {
+		// Default to SQLite
+		store = storage.NewSQLiteStore(CLI.Config)
+	}
 
 	appCtx := &cli.Context{
 		Store:     store,
