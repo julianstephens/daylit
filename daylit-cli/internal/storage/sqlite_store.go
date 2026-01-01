@@ -1363,7 +1363,7 @@ func (s *SQLiteStore) RestoreOTEntry(day string) error {
 }
 
 // UpdateSlotNotificationTimestamp updates the notification timestamp for a specific slot
-func (s *SQLiteStore) UpdateSlotNotificationTimestamp(date string, revision int, startTime string, notificationType string, timestamp string) error {
+func (s *SQLiteStore) UpdateSlotNotificationTimestamp(date string, revision int, startTime string, taskID string, notificationType string, timestamp string) error {
 	var column string
 	switch notificationType {
 	case "start":
@@ -1374,8 +1374,8 @@ func (s *SQLiteStore) UpdateSlotNotificationTimestamp(date string, revision int,
 		return fmt.Errorf("invalid notification type: %s", notificationType)
 	}
 
-	query := fmt.Sprintf("UPDATE slots SET %s = ? WHERE plan_date = ? AND plan_revision = ? AND start_time = ? AND deleted_at IS NULL", column)
-	result, err := s.db.Exec(query, timestamp, date, revision, startTime)
+	query := fmt.Sprintf("UPDATE slots SET %s = ? WHERE plan_date = ? AND plan_revision = ? AND start_time = ? AND task_id = ? AND deleted_at IS NULL", column)
+	result, err := s.db.Exec(query, timestamp, date, revision, startTime, taskID)
 	if err != nil {
 		return fmt.Errorf("failed to update notification timestamp: %w", err)
 	}
@@ -1385,7 +1385,8 @@ func (s *SQLiteStore) UpdateSlotNotificationTimestamp(date string, revision int,
 		return err
 	}
 	if rows == 0 {
-		return fmt.Errorf("slot not found or already deleted")
+		// This is OK - it means the slot was already notified or doesn't exist
+		return nil
 	}
 
 	return nil

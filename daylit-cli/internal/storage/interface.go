@@ -35,6 +35,8 @@ type Provider interface {
 	GetLatestPlanRevision(date string) (models.DayPlan, error)
 	DeletePlan(date string) error
 	RestorePlan(date string) error
+	// UpdateSlotNotificationTimestamp updates the notification timestamp for a specific slot
+	UpdateSlotNotificationTimestamp(date string, revision int, startTime string, taskID string, notificationType string, timestamp string) error
 
 	// Habits
 	AddHabit(models.Habit) error

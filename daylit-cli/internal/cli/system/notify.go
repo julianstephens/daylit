@@ -193,7 +193,7 @@ func (c *NotifyCmd) checkAndSendStartNotification(
 
 	// Update notification timestamp
 	timestamp := now.Format(time.RFC3339)
-	if err := ctx.Store.UpdateSlotNotificationTimestamp(planDate, planRevision, slot.Start, "start", timestamp); err != nil {
+	if err := ctx.Store.UpdateSlotNotificationTimestamp(planDate, planRevision, slot.Start, slot.TaskID, "start", timestamp); err != nil {
 		return fmt.Errorf("failed to update notification timestamp: %w", err)
 	}
 
@@ -270,7 +270,7 @@ func (c *NotifyCmd) checkAndSendEndNotification(
 
 	// Update notification timestamp
 	timestamp := now.Format(time.RFC3339)
-	if err := ctx.Store.UpdateSlotNotificationTimestamp(planDate, planRevision, slot.Start, "end", timestamp); err != nil {
+	if err := ctx.Store.UpdateSlotNotificationTimestamp(planDate, planRevision, slot.Start, slot.TaskID, "end", timestamp); err != nil {
 		return fmt.Errorf("failed to update notification timestamp: %w", err)
 	}
 
