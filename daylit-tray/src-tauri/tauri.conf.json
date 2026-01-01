@@ -23,6 +23,7 @@
   "identifier": "com.daylit.daylit-tray",
   "plugins": {},
   "app": {
+    "macOSPrivateApi": true,
     "windows": [
       {
         "title": "daylit-tray",
