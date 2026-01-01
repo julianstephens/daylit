@@ -52,16 +52,20 @@ function NotificationPage() {
     let isMounted = true;
 
     const setupListener = async () => {
-      const unlisten = await listen<WebhookPayload>("update_notification", (event) => {
-        console.log("Received live update:", event.payload);
-        setupNotification(event.payload);
-      });
-      
-      if (isMounted) {
-        unlistenFn = unlisten;
-      } else {
-        // Component unmounted before listener was set up, clean it up immediately
-        unlisten();
+      try {
+        const unlisten = await listen<WebhookPayload>("update_notification", (event) => {
+          console.log("Received live update:", event.payload);
+          setupNotification(event.payload);
+        });
+        
+        if (isMounted) {
+          unlistenFn = unlisten;
+        } else {
+          // Component unmounted before listener was set up, clean it up immediately
+          unlisten();
+        }
+      } catch (error) {
+        console.error("Failed to set up notification listener:", error);
       }
     };
 
