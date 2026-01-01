@@ -46,10 +46,55 @@ func (s *PostgresStore) ensureSearchPath() {
 		}
 	} else {
 		// Assume DSN format - only append if search_path is not already present
-		if !strings.Contains(s.connStr, "search_path") {
+		if !hasSearchPathParam(s.connStr) {
 			s.connStr = strings.TrimSpace(s.connStr) + " search_path=daylit"
 		}
 	}
+}
+
+// hasSearchPathParam returns true if the given DSN-style connection string
+// contains a search_path parameter key (case-insensitive).
+func hasSearchPathParam(connStr string) bool {
+	// DSN format is typically space-separated key=value pairs.
+	parts := strings.Fields(connStr)
+	for _, part := range parts {
+		kv := strings.SplitN(part, "=", 2)
+		if len(kv) != 2 {
+			continue
+		}
+		if strings.EqualFold(kv[0], "search_path") {
+			return true
+		}
+	}
+	return false
+}
+
+// hasSSLMode checks if the connection string contains an sslmode parameter key (case-insensitive).
+// It supports both URL-style and DSN-style connection strings.
+func hasSSLMode(connStr string) bool {
+	// First, try to interpret the connection string as a URL (e.g. postgres://...?sslmode=disable).
+	if u, err := url.Parse(connStr); err == nil && u.Scheme != "" {
+		q := u.Query()
+		for key := range q {
+			if strings.EqualFold(key, "sslmode") {
+				return true
+			}
+		}
+	}
+
+	// Fallback: treat the connection string as DSN-style space-separated key=value pairs.
+	parts := strings.Fields(connStr)
+	for _, part := range parts {
+		kv := strings.SplitN(part, "=", 2)
+		if len(kv) != 2 {
+			continue
+		}
+		if strings.EqualFold(kv[0], "sslmode") {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (s *PostgresStore) Init() error {
@@ -75,7 +120,7 @@ func (s *PostgresStore) Init() error {
 
 	// Test connection
 	if err := s.db.Ping(); err != nil {
-		if strings.Contains(err.Error(), "SSL is not enabled on the server") && !strings.Contains(strings.ToLower(s.connStr), "sslmode") {
+		if strings.Contains(err.Error(), "SSL is not enabled on the server") && !hasSSLMode(s.connStr) {
 			return fmt.Errorf("failed to connect to database: %w (hint: try adding ?sslmode=disable to your connection string)", err)
 		}
 		return fmt.Errorf("failed to connect to database: %w", err)
@@ -125,7 +170,7 @@ func (s *PostgresStore) Load() error {
 
 	// Test connection
 	if err := s.db.Ping(); err != nil {
-		if strings.Contains(err.Error(), "SSL is not enabled on the server") && !strings.Contains(s.connStr, "sslmode=") {
+		if strings.Contains(err.Error(), "SSL is not enabled on the server") && !hasSSLMode(s.connStr) {
 			return fmt.Errorf("failed to connect to database: %w (hint: try adding ?sslmode=disable to your connection string)", err)
 		}
 		return fmt.Errorf("failed to connect to database: %w", err)
