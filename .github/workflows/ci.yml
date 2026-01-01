@@ -107,7 +107,7 @@ jobs:
   tray-rust-check:
     needs: changes
     if: ${{ needs.changes.outputs.tray-rust == 'true' }}
-    name: Tray Rust - Cargo check, clippy, and test
+    name: Tray Rust - Cargo clippy and test
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -130,9 +130,6 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: ./daylit-tray/src-tauri
-
-      - name: Cargo check
-        run: cargo check --workspace
 
       - name: Cargo clippy
         run: cargo clippy --workspace -- -D warnings
