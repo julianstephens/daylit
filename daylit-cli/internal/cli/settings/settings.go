@@ -82,6 +82,9 @@ func (c *SettingsCmd) Run(ctx *cli.Context) error {
 		otUpdated = true
 	}
 	if c.OTDefaultLogDays != nil {
+		if *c.OTDefaultLogDays < 1 {
+			return fmt.Errorf("OTDefaultLogDays must be at least 1")
+		}
 		otSettings.DefaultLogDays = *c.OTDefaultLogDays
 		otUpdated = true
 	}

@@ -1239,7 +1239,7 @@ func (s *PostgresStore) GetOTSettings() (models.OTSettings, error) {
 		}
 	}
 
-	return settings, nil
+	return settings, rows.Err()
 }
 
 func (s *PostgresStore) SaveOTSettings(settings models.OTSettings) error {

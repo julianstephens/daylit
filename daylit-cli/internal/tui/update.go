@@ -154,8 +154,8 @@ func newSettingsForm(fm *SettingsFormModel) *huh.Form {
 					if err != nil {
 						return err
 					}
-					if i < 0 {
-						return fmt.Errorf("must be a non-negative number")
+					if i < 1 {
+						return fmt.Errorf("must be at least 1")
 					}
 					return nil
 				}),

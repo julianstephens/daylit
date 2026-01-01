@@ -1204,7 +1204,7 @@ func (s *SQLiteStore) GetOTSettings() (models.OTSettings, error) {
 		}
 	}
 
-	return settings, nil
+	return settings, rows.Err()
 }
 
 func (s *SQLiteStore) SaveOTSettings(settings models.OTSettings) error {
