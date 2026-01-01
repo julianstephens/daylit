@@ -108,7 +108,7 @@ func HasEmbeddedCredentials(connStr string) bool {
 		if err != nil {
 			// If parsing fails, we log a warning but don't block.
 			// This avoids false positives for valid but non-standard connection strings.
-			fmt.Fprintf(os.Stderr, "Warning: Could not parse connection string for security check: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Warning: Skipping embedded-credentials security check; could not parse connection string as PostgreSQL URL: %v\n", err)
 			return false
 		}
 		// Check if password is present in the User info
