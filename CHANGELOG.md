@@ -6,6 +6,10 @@
 - Adds TUI support for Settings, Habits, and OT tasks
 - Adds secret-based authentication for tray notifications
 - Adds stateful notification tracking
+- Adds `DAYLIT_CONFIG` environment variable for unified configuration
+- Adds support for DSN format connection strings
+- Enforces security check for embedded credentials in CLI flags
+- Restructures documentation with dedicated user guides
 - Removes deprecated JSON storage support
 
 ## v0.3.0
