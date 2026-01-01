@@ -373,30 +373,67 @@ FROM tasks`)
 	var tasks []models.Task
 	for rows.Next() {
 		var t models.Task
-		var recType, recWeekdays, energyBand string
+		var recType, recWeekdays, energyBand sql.NullString
+		var earliestStart, latestEnd, fixedStart, fixedEnd, lastDone sql.NullString
+		var durationMin, recurrenceInterval, priority, successStreak sql.NullInt64
+		var avgActualDuration sql.NullFloat64
 		var active bool
 		var deletedAt sql.NullString
 
 		err := rows.Scan(
-			&t.ID, &t.Name, &t.Kind, &t.DurationMin, &t.EarliestStart, &t.LatestEnd, &t.FixedStart, &t.FixedEnd,
-			&recType, &t.Recurrence.IntervalDays, &recWeekdays, &t.Priority, &energyBand,
-			&active, &t.LastDone, &t.SuccessStreak, &t.AvgActualDurationMin, &deletedAt,
+			&t.ID, &t.Name, &t.Kind, &durationMin, &earliestStart, &latestEnd, &fixedStart, &fixedEnd,
+			&recType, &recurrenceInterval, &recWeekdays, &priority, &energyBand,
+			&active, &lastDone, &successStreak, &avgActualDuration, &deletedAt,
 		)
 		if err != nil {
 			return nil, err
 		}
 
-		t.Recurrence.Type = models.RecurrenceType(recType)
-		t.EnergyBand = models.EnergyBand(energyBand)
+		if durationMin.Valid {
+			t.DurationMin = int(durationMin.Int64)
+		}
+		if recurrenceInterval.Valid {
+			t.Recurrence.IntervalDays = int(recurrenceInterval.Int64)
+		}
+		if priority.Valid {
+			t.Priority = int(priority.Int64)
+		}
+		if successStreak.Valid {
+			t.SuccessStreak = int(successStreak.Int64)
+		}
+		if avgActualDuration.Valid {
+			t.AvgActualDurationMin = avgActualDuration.Float64
+		}
+		if recType.Valid {
+			t.Recurrence.Type = models.RecurrenceType(recType.String)
+		}
+		if energyBand.Valid {
+			t.EnergyBand = models.EnergyBand(energyBand.String)
+		}
+		if earliestStart.Valid {
+			t.EarliestStart = earliestStart.String
+		}
+		if latestEnd.Valid {
+			t.LatestEnd = latestEnd.String
+		}
+		if fixedStart.Valid {
+			t.FixedStart = fixedStart.String
+		}
+		if fixedEnd.Valid {
+			t.FixedEnd = fixedEnd.String
+		}
+		if lastDone.Valid {
+			t.LastDone = lastDone.String
+		}
 		t.Active = active
 
 		if deletedAt.Valid {
 			t.DeletedAt = &deletedAt.String
 		}
 
-		if recWeekdays != "" {
+		if recWeekdays.Valid && recWeekdays.String != "" {
 			var weekdays []int
-			if err := json.Unmarshal([]byte(recWeekdays), &weekdays); err == nil {
+			if err := json.Unmarshal([]byte(recWeekdays.String), &weekdays); err == nil {
 				for _, w := range weekdays {
 					t.Recurrence.WeekdayMask = append(t.Recurrence.WeekdayMask, time.Weekday(w))
 				}
