@@ -1440,6 +1440,7 @@ func (s *PostgresStore) UpdateSlotNotificationTimestamp(date string, revision in
 	return nil
 }
 
+
 // GetAllPlans retrieves all plans (all dates, all revisions) including deleted ones
 func (s *PostgresStore) GetAllPlans() ([]models.DayPlan, error) {
 rows, err := s.db.Query(`

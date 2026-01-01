@@ -1525,10 +1525,20 @@ func (s *SQLiteStore) GetAllHabitEntries() ([]models.HabitEntry, error) {
 			return nil, err
 		}
 
-		entry.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
-		entry.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+		var err error
+		entry.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse created_at for habit entry %s: %w", entry.ID, err)
+		}
+		entry.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse updated_at for habit entry %s: %w", entry.ID, err)
+		}
 		if deletedAt.Valid {
-			t, _ := time.Parse(time.RFC3339, deletedAt.String)
+			t, err := time.Parse(time.RFC3339, deletedAt.String)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse deleted_at for habit entry %s: %w", entry.ID, err)
+			}
 			entry.DeletedAt = &t
 		}
 
@@ -1560,10 +1570,20 @@ func (s *SQLiteStore) GetAllOTEntries() ([]models.OTEntry, error) {
 			return nil, err
 		}
 
-		entry.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
-		entry.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+		var err error
+		entry.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse created_at for OT entry %s: %w", entry.ID, err)
+		}
+		entry.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse updated_at for OT entry %s: %w", entry.ID, err)
+		}
 		if deletedAt.Valid {
-			t, _ := time.Parse(time.RFC3339, deletedAt.String)
+			t, err := time.Parse(time.RFC3339, deletedAt.String)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse deleted_at for OT entry %s: %w", entry.ID, err)
+			}
 			entry.DeletedAt = &t
 		}
 
