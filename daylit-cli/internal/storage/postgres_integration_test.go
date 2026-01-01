@@ -57,14 +57,14 @@ func TestPostgresStore_Integration(t *testing.T) {
 	// Test Tasks
 	t.Run("Tasks", func(t *testing.T) {
 		task := models.Task{
-			ID:           "test-task-pg-1",
-			Name:         "Test PostgreSQL Task",
-			Kind:         "flexible",
-			DurationMin:  30,
-			Priority:     5,
-			EnergyBand:   "high",
-			Active:       true,
-			Recurrence:   models.Recurrence{Type: "none"},
+			ID:          "test-task-pg-1",
+			Name:        "Test PostgreSQL Task",
+			Kind:        "flexible",
+			DurationMin: 30,
+			Priority:    5,
+			EnergyBand:  "high",
+			Active:      true,
+			Recurrence:  models.Recurrence{Type: "none"},
 		}
 
 		// Add task
