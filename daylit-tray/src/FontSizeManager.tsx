@@ -30,18 +30,27 @@ export const FontSizeManager = () => {
     loadSettings();
 
     let unlistenFn: (() => void) | null = null;
+    let isMounted = true;
 
     const setupListener = async () => {
-      unlistenFn = await listen<Settings>("settings-updated", (event) => {
+      const unlisten = await listen<Settings>("settings-updated", (event) => {
         if (event.payload && event.payload.font_size) {
           applyFontSize(event.payload.font_size);
         }
       });
+      
+      if (isMounted) {
+        unlistenFn = unlisten;
+      } else {
+        // Component unmounted before listener was set up, clean it up immediately
+        unlisten();
+      }
     };
 
     setupListener();
 
     return () => {
+      isMounted = false;
       if (unlistenFn) {
         unlistenFn();
       }

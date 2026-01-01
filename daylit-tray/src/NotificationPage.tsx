@@ -49,17 +49,26 @@ function NotificationPage() {
 
   useEffect(() => {
     let unlistenFn: (() => void) | null = null;
+    let isMounted = true;
 
     const setupListener = async () => {
-      unlistenFn = await listen<WebhookPayload>("update_notification", (event) => {
+      const unlisten = await listen<WebhookPayload>("update_notification", (event) => {
         console.log("Received live update:", event.payload);
         setupNotification(event.payload);
       });
+      
+      if (isMounted) {
+        unlistenFn = unlisten;
+      } else {
+        // Component unmounted before listener was set up, clean it up immediately
+        unlisten();
+      }
     };
 
     setupListener();
 
     return () => {
+      isMounted = false;
       if (unlistenFn) {
         unlistenFn();
       }
