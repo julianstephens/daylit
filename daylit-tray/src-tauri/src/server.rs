@@ -1,11 +1,13 @@
 use crate::state::LOCKFILE_NAME;
 use crate::state::{AppState, Settings, UpdatePayload, WebhookPayload};
 use rand::distributions::Alphanumeric;
-use rand::{thread_rng, Rng};
+use rand::rngs::OsRng;
+use rand::Rng;
 use std::fs;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::thread;
+use subtle::ConstantTimeEq;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_log::log::{error, info};
 use tiny_http::{Response, Server};
@@ -35,8 +37,9 @@ pub fn start_webhook_server(app_handle: AppHandle) {
         let state: State<AppState> = app_handle.state();
         let settings = Settings::load(&state.settings);
 
-        // Generate a secure random secret (32 characters)
-        let secret: String = thread_rng()
+        // Generate a cryptographically secure random secret (32 characters)
+        // Using OsRng which is explicitly a cryptographically secure RNG
+        let secret: String = OsRng
             .sample_iter(&Alphanumeric)
             .take(32)
             .map(char::from)
@@ -101,18 +104,21 @@ pub fn start_webhook_server(app_handle: AppHandle) {
                 continue;
             }
 
-            // Validate X-Daylit-Secret header
+            // Validate X-Daylit-Secret header using constant-time comparison
             let auth_valid = {
                 let state: State<AppState> = app_handle.state();
                 let expected_secret = state.secret.lock().expect("Failed to acquire secret lock");
 
                 if let Some(expected) = expected_secret.as_ref() {
-                    // Check for X-Daylit-Secret header
+                    // Check for X-Daylit-Secret header and use constant-time comparison
+                    // to prevent timing-based side-channel attacks
                     request
                         .headers()
                         .iter()
                         .find(|h| h.field.as_str().eq_ignore_ascii_case("X-Daylit-Secret"))
-                        .map(|h| h.value.as_str() == expected)
+                        .map(|h| {
+                            h.value.as_str().as_bytes().ct_eq(expected.as_bytes()).into()
+                        })
                         .unwrap_or(false)
                 } else {
                     // If no secret is set (shouldn't happen), reject

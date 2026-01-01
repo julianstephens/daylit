@@ -118,7 +118,40 @@ func TestFindAndValidateTrayProcess(t *testing.T) {
 		t.Error("expected error for malformed lockfile")
 	}
 
-	// Test 4: Process not running
+	// Test 4: Empty secret
+	err = os.WriteFile(lockfilePath, []byte("8080|12345|"), 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, err = findAndValidateTrayProcess(lockfilePath)
+	if err == nil {
+		t.Error("expected error for empty secret")
+	}
+	if err != nil && !strings.Contains(err.Error(), "secret") {
+		t.Errorf("expected error about empty secret, got: %v", err)
+	}
+
+	// Test 5: Invalid port (empty)
+	err = os.WriteFile(lockfilePath, []byte("|12345|testsecret123"), 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, err = findAndValidateTrayProcess(lockfilePath)
+	if err == nil {
+		t.Error("expected error for empty port")
+	}
+
+	// Test 6: Invalid port (out of range)
+	err = os.WriteFile(lockfilePath, []byte("99999|12345|testsecret123"), 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, err = findAndValidateTrayProcess(lockfilePath)
+	if err == nil {
+		t.Error("expected error for port out of range")
+	}
+
+	// Test 7: Process not running
 	err = os.WriteFile(lockfilePath, []byte("8080|12345|testsecret123"), 0644)
 	if err != nil {
 		t.Fatal(err)
@@ -131,7 +164,7 @@ func TestFindAndValidateTrayProcess(t *testing.T) {
 		t.Error("expected error for missing process")
 	}
 
-	// Test 5: Wrong executable
+	// Test 8: Wrong executable
 	findProcessFunc = func(pid int) (ps.Process, error) {
 		return &mockProcess{pid: pid, executable: "other-app"}, nil
 	}
@@ -140,7 +173,7 @@ func TestFindAndValidateTrayProcess(t *testing.T) {
 		t.Error("expected error for wrong executable")
 	}
 
-	// Test 6: Success
+	// Test 9: Success
 	findProcessFunc = func(pid int) (ps.Process, error) {
 		return &mockProcess{pid: pid, executable: "daylit-tray"}, nil
 	}

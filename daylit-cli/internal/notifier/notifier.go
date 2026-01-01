@@ -102,6 +102,18 @@ func findAndValidateTrayProcess(lockfilePath string) (string, string, error) {
 	}
 
 	port := parts[0]
+	if strings.TrimSpace(port) == "" {
+		return "", "", errors.New("port in lockfile is empty")
+	}
+	// Validate port is a valid number in the valid TCP range (1-65535)
+	portNum, err := strconv.Atoi(port)
+	if err != nil {
+		return "", "", errors.New("invalid port number in lockfile")
+	}
+	if portNum < 1 || portNum > 65535 {
+		return "", "", fmt.Errorf("port number %d is outside valid range (1-65535)", portNum)
+	}
+
 	pid, err := strconv.Atoi(parts[1])
 	if err != nil {
 		return "", "", errors.New("invalid process ID in lockfile")
