@@ -223,7 +223,13 @@ func (r *Runner) ApplyMigrations(logFn func(string)) (int, error) {
 			return appliedCount, fmt.Errorf("failed to clear version in migration %d: %w", migration.Version, err)
 		}
 
-		if _, err := tx.Exec("INSERT INTO schema_version (version) VALUES (?)", migration.Version); err != nil {
+		// Use $1 for Postgres compatibility (SQLite supports it too in recent versions, or we can use a simpler query)
+		// Since we don't know the driver here easily without more refactoring, let's try a generic approach or check the error.
+		// Actually, the issue is likely that the `?` placeholder is not supported by the Postgres driver (lib/pq).
+		// We should use a placeholder-agnostic way or detect the driver.
+		// Given the constraints, let's just construct the query string safely since version is an int.
+		query := fmt.Sprintf("INSERT INTO schema_version (version) VALUES (%d)", migration.Version)
+		if _, err := tx.Exec(query); err != nil {
 			_ = tx.Rollback()
 			return appliedCount, fmt.Errorf("failed to set version in migration %d: %w", migration.Version, err)
 		}
