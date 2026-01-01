@@ -85,17 +85,12 @@ func main() {
 
 	if isPostgres {
 		// PostgreSQL connection string detected - validate for embedded credentials
-		// We only enforce this check if the config was passed via flag (insecure process list)
-		// If it came from an environment variable, it is considered secure.
-		configFromFlag := false
-		for _, arg := range os.Args {
-			if arg == "--config" || strings.HasPrefix(arg, "--config=") {
-				configFromFlag = true
-				break
-			}
-		}
+		// We only enforce this check if the config was NOT sourced from the environment
+		// (e.g. came from command line flags, which are visible in the process list).
+		envConfig := os.Getenv("DAYLIT_CONFIG")
+		configFromEnv := envConfig != "" && envConfig == CLI.Config
 
-		if configFromFlag && storage.HasEmbeddedCredentials(CLI.Config) {
+		if !configFromEnv && storage.HasEmbeddedCredentials(CLI.Config) {
 			fmt.Fprintf(os.Stderr, "❌ Error: PostgreSQL connection strings with embedded credentials are NOT allowed via command line flags.\n")
 			fmt.Fprintf(os.Stderr, "       Use one of these secure alternatives:\n")
 			fmt.Fprintf(os.Stderr, "       1. Environment:   export DAYLIT_CONFIG=\"postgresql://user:your_password@host:5432/daylit\"\n")
