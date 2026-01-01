@@ -79,6 +79,11 @@ func (s *PostgresStore) Load() error {
 	}
 	s.db = db
 
+	// Configure connection pool parameters to avoid connection exhaustion
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(25)
+	db.SetConnMaxLifetime(5 * time.Minute)
+
 	// Test connection
 	if err := s.db.Ping(); err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
