@@ -1174,39 +1174,63 @@ func (s *SQLiteStore) RestoreHabitEntry(id string) error {
 // OT Settings
 
 func (s *SQLiteStore) GetOTSettings() (models.OTSettings, error) {
-	row := s.db.QueryRow(`
-		SELECT id, prompt_on_empty, strict_mode, default_log_days
-		FROM ot_settings WHERE id = 1`)
-
-	var settings models.OTSettings
-	var promptOnEmpty, strictMode int
-
-	err := row.Scan(&settings.ID, &promptOnEmpty, &strictMode, &settings.DefaultLogDays)
+	rows, err := s.db.Query("SELECT key, value FROM settings WHERE key LIKE 'ot_%'")
 	if err != nil {
 		return models.OTSettings{}, err
 	}
+	defer rows.Close()
 
-	settings.PromptOnEmpty = promptOnEmpty == 1
-	settings.StrictMode = strictMode == 1
+	settings := models.OTSettings{
+		ID:             1, // Keep for backward compatibility
+		PromptOnEmpty:  true,
+		StrictMode:     true,
+		DefaultLogDays: 14,
+	}
+
+	for rows.Next() {
+		var key, value string
+		if err := rows.Scan(&key, &value); err != nil {
+			return models.OTSettings{}, err
+		}
+		switch key {
+		case "ot_prompt_on_empty":
+			settings.PromptOnEmpty = value == "true"
+		case "ot_strict_mode":
+			settings.StrictMode = value == "true"
+		case "ot_default_log_days":
+			if _, err := fmt.Sscanf(value, "%d", &settings.DefaultLogDays); err != nil {
+				return models.OTSettings{}, fmt.Errorf("parsing ot_default_log_days: %w", err)
+			}
+		}
+	}
 
 	return settings, nil
 }
 
 func (s *SQLiteStore) SaveOTSettings(settings models.OTSettings) error {
-	var promptOnEmpty, strictMode int
-	if settings.PromptOnEmpty {
-		promptOnEmpty = 1
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
 	}
-	if settings.StrictMode {
-		strictMode = 1
+	defer tx.Rollback()
+
+	stmt, err := tx.Prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	if _, err := stmt.Exec("ot_prompt_on_empty", fmt.Sprintf("%v", settings.PromptOnEmpty)); err != nil {
+		return err
+	}
+	if _, err := stmt.Exec("ot_strict_mode", fmt.Sprintf("%v", settings.StrictMode)); err != nil {
+		return err
+	}
+	if _, err := stmt.Exec("ot_default_log_days", fmt.Sprintf("%d", settings.DefaultLogDays)); err != nil {
+		return err
 	}
 
-	_, err := s.db.Exec(`
-		INSERT OR REPLACE INTO ot_settings (id, prompt_on_empty, strict_mode, default_log_days)
-		VALUES (1, ?, ?, ?)`,
-		promptOnEmpty, strictMode, settings.DefaultLogDays)
-
-	return err
+	return tx.Commit()
 }
 
 // OT Entries
