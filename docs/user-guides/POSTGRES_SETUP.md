@@ -227,7 +227,23 @@ $env:DAYLIT_CONFIG="postgres://daylit_user:password@localhost:5432/daylit?sslmod
 [System.Environment]::SetEnvironmentVariable('DAYLIT_CONFIG', 'postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable', 'User')
 ```
 
-### Secure Method 3: Shell Alias with .pgpass
+### Secure Method 3: PGPASSWORD Environment Variable
+
+Alternatively, you can use the standard PostgreSQL environment variable `PGPASSWORD` to supply the password separately from the connection string:
+
+**Bash/Zsh:**
+```bash
+export PGPASSWORD="your_password"
+daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" init
+```
+
+**Windows PowerShell:**
+```powershell
+$env:PGPASSWORD="your_password"
+daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" init
+```
+
+### Secure Method 4: Shell Alias with .pgpass
 
 Create an alias for convenience (requires .pgpass setup):
 
