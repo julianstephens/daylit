@@ -84,7 +84,7 @@ func main() {
 	}
 
 	// Load the store before running the command (Init command will handle its own loading)
-	if CLI.Init.Force == false && ctx.Selected() != nil && ctx.Selected().Name != "init" {
+	if !CLI.Init.Force && ctx.Selected() != nil && ctx.Selected().Name != "init" {
 		if err := store.Load(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
