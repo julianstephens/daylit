@@ -104,22 +104,22 @@ daylit supports three secure methods for providing database credentials:
 
 #### 1. Environment Variable (Recommended for Automation)
 
-Set the connection string with credentials in an environment variable:
+Set the connection string with credentials in the `DAYLIT_CONFIG` environment variable:
 
 **Bash/Zsh:**
 ```bash
-export DAYLIT_DB_CONNECTION="postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"
+export DAYLIT_CONFIG="postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"
 
-# Then use daylit with a connection string without password
-daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" init
+# Then use daylit without the --config flag
+daylit init
 ```
 
 **Windows PowerShell:**
 ```powershell
-$env:DAYLIT_DB_CONNECTION="postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"
+$env:DAYLIT_CONFIG="postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"
 
 # For persistence:
-[System.Environment]::SetEnvironmentVariable('DAYLIT_DB_CONNECTION', 'postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable', 'User')
+[System.Environment]::SetEnvironmentVariable('DAYLIT_CONFIG', 'postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable', 'User')
 ```
 
 #### 2. .pgpass File (Recommended for Interactive Use)
@@ -157,8 +157,8 @@ daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" i
 
 **Remote database with environment variable:**
 ```bash
-export DAYLIT_DB_CONNECTION="postgres://daylit_user:secure_password@db.example.com:5432/daylit?sslmode=require"
-daylit --config "postgres://daylit_user@db.example.com:5432/daylit?sslmode=require" task list
+export DAYLIT_CONFIG="postgres://daylit_user:secure_password@db.example.com:5432/daylit?sslmode=require"
+daylit task list
 ```
 
 **WSL2 accessing Windows PostgreSQL with .pgpass:**
@@ -198,26 +198,26 @@ daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" t
 
 ### Secure Method 2: Environment Variable (Recommended for Automation)
 
-Set the connection credentials in an environment variable:
+Set the connection credentials in the `DAYLIT_CONFIG` environment variable:
 
 **Bash/Zsh:**
 ```bash
 # Set for current session
-export DAYLIT_DB_CONNECTION="postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"
+export DAYLIT_CONFIG="postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"
 
 # Or add to ~/.bashrc or ~/.zshrc for persistence
-echo 'export DAYLIT_DB_CONNECTION="postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"' >> ~/.bashrc
+echo 'export DAYLIT_CONFIG="postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"' >> ~/.bashrc
 
-# Use with connection string (credentials pulled from environment)
-daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" init
+# Use without --config flag
+daylit init
 ```
 
 **Windows PowerShell:**
 ```powershell
-$env:DAYLIT_DB_CONNECTION="postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"
+$env:DAYLIT_CONFIG="postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"
 
 # For persistence:
-[System.Environment]::SetEnvironmentVariable('DAYLIT_DB_CONNECTION', 'postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable', 'User')
+[System.Environment]::SetEnvironmentVariable('DAYLIT_CONFIG', 'postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable', 'User')
 ```
 
 ### Secure Method 3: Shell Alias with .pgpass
@@ -246,8 +246,8 @@ daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" i
 
 **With environment variable:**
 ```bash
-export DAYLIT_DB_CONNECTION="postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"
-daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" init
+export DAYLIT_CONFIG="postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"
+daylit init
 ```
 
 This will:
@@ -277,7 +277,7 @@ daylit --config "host=localhost password=secret dbname=daylit" init
 
 1. **Use environment variables:**
    ```bash
-   export DAYLIT_DB_PASSWORD="your_password"
+   export PGPASSWORD="your_password"
    # Connection string used by libpq will read from environment
    daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" init
    ```

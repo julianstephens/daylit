@@ -2,17 +2,28 @@
 
 The default configuration file is located at `~/.config/daylit/daylit.db`.
 
-You can specify a different location using the `--config` flag:
+You can specify a different location using the `--config` flag or the `DAYLIT_CONFIG` environment variable:
 
 ```bash
+# Using flag
 daylit --config /path/to/config.db init
+
+# Using environment variable
+export DAYLIT_CONFIG="/path/to/config.db"
+daylit init
 ```
 
 ## PostgreSQL Backend
 
-daylit also supports PostgreSQL as a storage backend. For security reasons, connection strings with embedded passwords are **NOT ALLOWED**.
+daylit also supports PostgreSQL as a storage backend. For security reasons, connection strings with embedded passwords are **NOT ALLOWED** when passed via command line flags.
 
-**Secure usage:**
+**Secure usage with Environment Variable:**
+```bash
+export DAYLIT_CONFIG="postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"
+daylit init
+```
+
+**Secure usage with .pgpass:**
 ```bash
 # Setup .pgpass file with credentials (recommended)
 echo "localhost:5432:daylit:daylit_user:password" > ~/.pgpass

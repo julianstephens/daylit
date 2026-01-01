@@ -22,7 +22,7 @@ import (
 
 var CLI struct {
 	Version kong.VersionFlag
-	Config  string `help:"Config file path or PostgreSQL connection string. For PostgreSQL, credentials must NOT be embedded in the connection string. Use environment variables, .pgpass, or OS keyring instead." type:"string" default:"~/.config/daylit/daylit.db"`
+	Config  string `help:"Config file path or PostgreSQL connection string. For PostgreSQL, credentials must NOT be embedded in the connection string. Use environment variables, .pgpass, or OS keyring instead." type:"string" default:"~/.config/daylit/daylit.db" env:"DAYLIT_CONFIG"`
 
 	Init     system.InitCmd     `cmd:"" help:"Initialize daylit storage."`
 	Migrate  system.MigrateCmd  `cmd:"" help:"Run database migrations."`
@@ -72,13 +72,34 @@ func main() {
 
 	// Initialize storage based on config format
 	var store storage.Provider
-	if strings.HasPrefix(CLI.Config, "postgres://") || strings.HasPrefix(CLI.Config, "postgresql://") {
+
+	// Check for Postgres URL or DSN format
+	isPostgres := strings.HasPrefix(CLI.Config, "postgres://") ||
+		strings.HasPrefix(CLI.Config, "postgresql://") ||
+		// Simple DSN heuristic: contains space and common keys
+		(strings.Contains(CLI.Config, " ") &&
+			(strings.Contains(CLI.Config, "host=") ||
+				strings.Contains(CLI.Config, "dbname=") ||
+				strings.Contains(CLI.Config, "user=") ||
+				strings.Contains(CLI.Config, "sslmode=")))
+
+	if isPostgres {
 		// PostgreSQL connection string detected - validate for embedded credentials
-		if storage.HasEmbeddedCredentials(CLI.Config) {
-			fmt.Fprintf(os.Stderr, "❌ Error: PostgreSQL connection strings with embedded credentials are NOT allowed.\n")
+		// We only enforce this check if the config was passed via flag (insecure process list)
+		// If it came from an environment variable, it is considered secure.
+		configFromFlag := false
+		for _, arg := range os.Args {
+			if strings.HasPrefix(arg, "--config") {
+				configFromFlag = true
+				break
+			}
+		}
+
+		if configFromFlag && storage.HasEmbeddedCredentials(CLI.Config) {
+			fmt.Fprintf(os.Stderr, "❌ Error: PostgreSQL connection strings with embedded credentials are NOT allowed via command line flags.\n")
 			fmt.Fprintf(os.Stderr, "       Use one of these secure alternatives:\n")
-			fmt.Fprintf(os.Stderr, "       1. .pgpass file:  Create ~/.pgpass with credentials, use: \"postgresql://user@host:5432/daylit\"\n")
-			fmt.Fprintf(os.Stderr, "       2. Environment:   export PGPASSWORD=\"password\" then use connection string without password\n")
+			fmt.Fprintf(os.Stderr, "       1. Environment:   export DAYLIT_CONFIG=\"postgresql://user:password@host:5432/daylit\"\n")
+			fmt.Fprintf(os.Stderr, "       2. .pgpass file:  Create ~/.pgpass with credentials\n")
 			fmt.Fprintf(os.Stderr, "\n       For more information, see docs/POSTGRES_SETUP.md\n")
 			os.Exit(1)
 		}
