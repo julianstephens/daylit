@@ -89,7 +89,7 @@ func main() {
 		// If it came from an environment variable, it is considered secure.
 		configFromFlag := false
 		for _, arg := range os.Args {
-			if strings.HasPrefix(arg, "--config") {
+			if arg == "--config" || strings.HasPrefix(arg, "--config=") {
 				configFromFlag = true
 				break
 			}

@@ -121,19 +121,31 @@ func HasEmbeddedCredentials(connStr string) bool {
 	}
 
 	// Check DSN format (space-separated key=value pairs)
+	// To avoid false positives (e.g. random text containing "password="),
+	// we first check if it looks like a DSN by checking for other common keys.
+	isDSN := false
+	hasPassword := false
+
 	parts := strings.Fields(connStr)
 	for _, part := range parts {
 		kv := strings.SplitN(part, "=", 2)
 		if len(kv) != 2 {
 			continue
 		}
+		key := strings.ToLower(kv[0])
+
+		// Check for common DSN keys to confirm it's likely a DSN
+		if key == "host" || key == "port" || key == "dbname" || key == "user" || key == "sslmode" {
+			isDSN = true
+		}
+
 		// Check for password parameter (case-insensitive)
-		if strings.EqualFold(kv[0], "password") && kv[1] != "" {
-			return true
+		if key == "password" && kv[1] != "" {
+			hasPassword = true
 		}
 	}
 
-	return false
+	return isDSN && hasPassword
 }
 
 func (s *PostgresStore) Init() error {
