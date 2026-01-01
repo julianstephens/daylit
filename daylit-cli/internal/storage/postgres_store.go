@@ -255,7 +255,7 @@ func (s *PostgresStore) GetConfigPath() string {
 // Task methods
 
 func (s *PostgresStore) AddTask(task models.Task) error {
-return s.UpdateTask(task)
+	return s.UpdateTask(task)
 }
 
 func (s *PostgresStore) GetTask(id string) (models.Task, error) {
