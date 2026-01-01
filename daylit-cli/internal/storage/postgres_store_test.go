@@ -278,12 +278,12 @@ func TestHasEmbeddedCredentials(t *testing.T) {
 		{
 			name:     "Plain text with password param",
 			connStr:  "some random text password=hidden",
-			expected: true, // Now detected as containing a password
+			expected: true,
 		},
 		{
-			name:     "DSN with only password",
-			connStr:  "password=secret123",
-			expected: true,
+			name:     "Plain text (not URL or DSN)",
+			connStr:  "this is just plain text",
+			expected: false,
 		},
 		// SQLite file path tests
 		{
