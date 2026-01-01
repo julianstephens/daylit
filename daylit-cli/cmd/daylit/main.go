@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/alecthomas/kong"
 
@@ -70,13 +69,8 @@ func main() {
 		kong.Vars{"version": "v0.4.0"},
 	)
 
-	// Determine storage type based on extension
-	var store storage.Provider
-	if filepath.Ext(CLI.Config) == ".json" {
-		store = storage.NewJSONStore(CLI.Config)
-	} else {
-		store = storage.NewSQLiteStore(CLI.Config)
-	}
+	// Initialize SQLite storage
+	store := storage.NewSQLiteStore(CLI.Config)
 
 	appCtx := &cli.Context{
 		Store:     store,
