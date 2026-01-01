@@ -9,6 +9,7 @@ interface Settings {
   font_size: string;
   launch_at_login: boolean;
   lockfile_dir: string | null;
+  daylit_path: string | null;
 }
 
 const SettingsPage = () => {
@@ -16,11 +17,13 @@ const SettingsPage = () => {
     font_size: "medium",
     launch_at_login: false,
     lockfile_dir: null,
+    daylit_path: null,
   });
   const [initialSettings, setInitialSettings] = useState<Settings>({
     font_size: "medium",
     launch_at_login: false,
     lockfile_dir: null,
+    daylit_path: null,
   });
   const [status, setStatus] = useState<{
     type: "success" | "error";
@@ -110,6 +113,25 @@ const SettingsPage = () => {
 
       <section className="settings-section">
         <h3 className="settings-section-title">Configuration</h3>
+        <div className="setting-item">
+          <label htmlFor="daylit-path" className="setting-label">
+            Daylit CLI Path
+          </label>
+          <input
+            type="text"
+            id="daylit-path"
+            value={settings.daylit_path || ""}
+            onChange={(e) => setSettings((prev) => ({
+              ...prev,
+              daylit_path: e.target.value === "" ? null : e.target.value,
+            }))}
+            placeholder="e.g., /usr/local/bin/daylit or C:\Program Files\daylit.exe"
+            className="setting-control"
+          />
+          <p className="setting-hint">
+            Path to the daylit CLI executable. Leave empty to use the default (daylit in PATH).
+          </p>
+        </div>
         <div className="setting-item">
           <label htmlFor="daylit-dir" className="setting-label">
             Daylit Directory

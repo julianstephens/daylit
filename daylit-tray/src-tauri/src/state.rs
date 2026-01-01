@@ -11,6 +11,7 @@ pub struct Settings {
     pub font_size: String,
     pub launch_at_login: bool,
     pub lockfile_dir: Option<String>,
+    pub daylit_path: Option<String>,
 }
 
 impl Default for Settings {
@@ -19,6 +20,7 @@ impl Default for Settings {
             font_size: "medium".into(),
             launch_at_login: false,
             lockfile_dir: None,
+            daylit_path: None,
         }
     }
 }
