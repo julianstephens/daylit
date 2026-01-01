@@ -112,7 +112,7 @@ pub fn start_webhook_server(app_handle: AppHandle) {
                         .headers()
                         .iter()
                         .find(|h| h.field.as_str().eq_ignore_ascii_case("X-Daylit-Secret"))
-                        .and_then(|h| Some(h.value.as_str() == expected))
+                        .map(|h| h.value.as_str() == expected)
                         .unwrap_or(false)
                 } else {
                     // If no secret is set (shouldn't happen), reject
