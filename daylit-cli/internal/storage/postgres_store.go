@@ -14,7 +14,6 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/migration"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/migrations"
-	_ "github.com/lib/pq"
 )
 
 type PostgresStore struct {
