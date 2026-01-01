@@ -15,9 +15,11 @@ daylit init
 
 ## PostgreSQL Backend
 
-daylit also supports PostgreSQL as a storage backend. For security reasons, connection strings with embedded passwords are **NOT ALLOWED** when passed via command line flags.
+daylit also supports PostgreSQL as a storage backend.
 
-However, passing credentials via environment variables **IS ALLOWED** and considered secure, as they are not visible in process lists.
+**Security Restriction:** To prevent credential leakage in process lists, connection strings with embedded passwords are **blocked** when passed via the `--config` command-line flag.
+
+However, you **can** securely use embedded passwords by setting the `DAYLIT_CONFIG` environment variable, as environment variables are not visible to other users on the system.
 
 **Secure usage with Environment Variable:**
 ```bash
