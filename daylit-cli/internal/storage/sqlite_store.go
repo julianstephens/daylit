@@ -118,10 +118,13 @@ func (s *SQLiteStore) runMigrations() error {
 	migrationsPath := s.getMigrationsPath()
 
 	// Create migration runner
-	runner := migration.NewRunner(s.db, migrationsPath)
+	runner, err := migration.NewRunner(s.db, migrationsPath, migration.DriverSQLite)
+	if err != nil {
+		return fmt.Errorf("failed to create migration runner: %w", err)
+	}
 
 	// Apply all pending migrations
-	_, err := runner.ApplyMigrations(func(msg string) {
+	_, err = runner.ApplyMigrations(func(msg string) {
 		fmt.Println(msg)
 	})
 	return err
@@ -129,7 +132,10 @@ func (s *SQLiteStore) runMigrations() error {
 
 func (s *SQLiteStore) validateSchemaVersion() error {
 	migrationsPath := s.getMigrationsPath()
-	runner := migration.NewRunner(s.db, migrationsPath)
+	runner, err := migration.NewRunner(s.db, migrationsPath, migration.DriverSQLite)
+	if err != nil {
+		return fmt.Errorf("failed to create migration runner: %w", err)
+	}
 	return runner.ValidateVersion()
 }
 

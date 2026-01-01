@@ -194,7 +194,10 @@ func checkSchemaVersion(ctx *cli.Context) error {
 	}
 
 	migrationsPath := sqliteStore.GetMigrationsPath()
-	runner := migration.NewRunner(db, migrationsPath)
+	runner, err := migration.NewRunner(db, migrationsPath, migration.DriverSQLite)
+	if err != nil {
+		return fmt.Errorf("failed to create migration runner: %w", err)
+	}
 
 	currentVersion, err := runner.GetCurrentVersion()
 	if err != nil {
@@ -226,7 +229,10 @@ func checkMigrationsComplete(ctx *cli.Context) error {
 	}
 
 	migrationsPath := sqliteStore.GetMigrationsPath()
-	runner := migration.NewRunner(db, migrationsPath)
+	runner, err := migration.NewRunner(db, migrationsPath, migration.DriverSQLite)
+	if err != nil {
+		return fmt.Errorf("failed to create migration runner: %w", err)
+	}
 
 	currentVersion, err := runner.GetCurrentVersion()
 	if err != nil {
