@@ -154,8 +154,8 @@ func newSettingsForm(fm *SettingsFormModel) *huh.Form {
 					if err != nil {
 						return err
 					}
-					if i < 1 {
-						return fmt.Errorf("must be at least 1")
+					if i < 0 {
+						return fmt.Errorf("must be a non-negative number")
 					}
 					return nil
 				}),
@@ -636,7 +636,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.planModel.SetSize(msg.Width-h, listHeight-v)
 		m.nowModel.SetSize(msg.Width, listHeight)
 		m.habitsModel.SetSize(msg.Width-h, listHeight-v)
-		m.settingsModel.SetSize(msg.Width, listHeight)
+		m.settingsModel.SetSize(msg.Width-h, listHeight-v)
 
 	case tasklist.DeleteTaskMsg:
 		m.taskToDeleteID = msg.ID

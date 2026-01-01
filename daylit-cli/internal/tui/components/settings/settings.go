@@ -3,6 +3,7 @@ package settings
 import (
 	"fmt"
 
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
@@ -17,6 +18,7 @@ type Model struct {
 	otSettings models.OTSettings
 	width      int
 	height     int
+	viewport   viewport.Model
 }
 
 var (
@@ -39,17 +41,21 @@ var (
 )
 
 func New(settings storage.Settings, otSettings models.OTSettings, width, height int) Model {
-	return Model{
+	m := Model{
 		settings:   settings,
 		otSettings: otSettings,
 		width:      width,
 		height:     height,
+		viewport:   viewport.New(width, height),
 	}
+	m.updateViewportContent()
+	return m
 }
 
 func (m *Model) SetSettings(settings storage.Settings, otSettings models.OTSettings) {
 	m.settings = settings
 	m.otSettings = otSettings
+	m.updateViewportContent()
 }
 
 func (m Model) Init() tea.Cmd {
@@ -57,6 +63,7 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+	var cmd tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -64,14 +71,26 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			return m, func() tea.Msg { return EditSettingsMsg{} }
 		}
 	}
-	return m, nil
+	m.viewport, cmd = m.viewport.Update(msg)
+	return m, cmd
 }
 
 func (m Model) View() string {
 	if m.width == 0 {
 		return ""
 	}
+	return m.viewport.View()
+}
 
+func (m *Model) SetSize(width, height int) {
+	m.width = width
+	m.height = height
+	m.viewport.Width = width
+	m.viewport.Height = height
+	m.updateViewportContent()
+}
+
+func (m *Model) updateViewportContent() {
 	var sections []string
 
 	// General Settings
@@ -116,18 +135,5 @@ func (m Model) View() string {
 	sections = append(sections, helpText)
 
 	content := lipgloss.JoinVertical(lipgloss.Left, sections...)
-
-	// Center the content
-	return lipgloss.Place(
-		m.width,
-		m.height,
-		lipgloss.Left,
-		lipgloss.Top,
-		lipgloss.NewStyle().Padding(2, 4).Render(content),
-	)
-}
-
-func (m *Model) SetSize(width, height int) {
-	m.width = width
-	m.height = height
+	m.viewport.SetContent(lipgloss.NewStyle().Padding(0, 2).Render(content))
 }

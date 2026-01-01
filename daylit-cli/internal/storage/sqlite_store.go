@@ -45,8 +45,9 @@ func (s *SQLiteStore) Init() error {
 		return fmt.Errorf("failed to run migrations: %w", err)
 	}
 
-	// Initialize default settings if not present
-	if _, err := s.GetSettings(); err != nil {
+	// Initialize default settings if not present or incomplete
+	settings, err := s.GetSettings()
+	if err != nil || settings.DayStart == "" {
 		defaultSettings := Settings{
 			DayStart:                   "07:00",
 			DayEnd:                     "22:00",
