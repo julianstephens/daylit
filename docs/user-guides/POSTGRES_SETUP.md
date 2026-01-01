@@ -142,10 +142,13 @@ Then use connection string without password:
 daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" init
 ```
 
-#### 3. OS Keyring (Future Enhancement)
+> **Note:** The application automatically appends `search_path=daylit` to the connection string to ensure all tables are created within the `daylit` schema for isolation.
+
+### Future Features
+
+#### OS Keyring Integration (Planned)
 
 Support for OS keyring storage is planned for a future release. Use `.pgpass` or environment variables in the meantime.
-> **Note:** The application automatically appends `search_path=daylit` to the connection string to ensure all tables are created within the `daylit` schema for isolation.
 
 ### Examples
 
