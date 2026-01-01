@@ -381,3 +381,4 @@ t.Errorf("expected slot task ID 'task-1', got '%s'", migratedPlan.Slots[0].TaskI
 
 destStore.Close()
 }
+

@@ -1530,15 +1530,29 @@ ORDER BY day, habit_id`)
 	var entries []models.HabitEntry
 	for rows.Next() {
 		var entry models.HabitEntry
-		var deletedAt sql.NullTime
+		var createdAt, updatedAt string
+		var deletedAt sql.NullString
 
 		if err := rows.Scan(&entry.ID, &entry.HabitID, &entry.Day, &entry.Note,
-			&entry.CreatedAt, &entry.UpdatedAt, &deletedAt); err != nil {
+			&createdAt, &updatedAt, &deletedAt); err != nil {
 			return nil, err
 		}
 
+		entry.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse created_at for habit entry %s: %w", entry.ID, err)
+		}
+		entry.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse updated_at for habit entry %s: %w", entry.ID, err)
+		}
+
 		if deletedAt.Valid {
-			entry.DeletedAt = &deletedAt.Time
+			t, err := time.Parse(time.RFC3339, deletedAt.String)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse deleted_at for habit entry %s: %w", entry.ID, err)
+			}
+			entry.DeletedAt = &t
 		}
 
 		entries = append(entries, entry)
@@ -1561,15 +1575,29 @@ ORDER BY day`)
 	var entries []models.OTEntry
 	for rows.Next() {
 		var entry models.OTEntry
-		var deletedAt sql.NullTime
+		var createdAt, updatedAt string
+		var deletedAt sql.NullString
 
 		if err := rows.Scan(&entry.ID, &entry.Day, &entry.Title, &entry.Note,
-			&entry.CreatedAt, &entry.UpdatedAt, &deletedAt); err != nil {
+			&createdAt, &updatedAt, &deletedAt); err != nil {
 			return nil, err
 		}
 
+		entry.CreatedAt, err = time.Parse(time.RFC3339, createdAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse created_at for OT entry %s: %w", entry.ID, err)
+		}
+		entry.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse updated_at for OT entry %s: %w", entry.ID, err)
+		}
+
 		if deletedAt.Valid {
-			entry.DeletedAt = &deletedAt.Time
+			t, err := time.Parse(time.RFC3339, deletedAt.String)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse deleted_at for OT entry %s: %w", entry.ID, err)
+			}
+			entry.DeletedAt = &t
 		}
 
 		entries = append(entries, entry)

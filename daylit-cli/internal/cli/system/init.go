@@ -3,6 +3,7 @@ package system
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
@@ -19,8 +20,21 @@ func (c *InitCmd) Run(ctx *cli.Context) error {
 	if c.Force {
 		dbPath := ctx.Store.GetConfigPath()
 		// Don't delete if it's the source (user error protection)
-		if c.Source != "" && dbPath == c.Source {
-			return fmt.Errorf("cannot use --force when source and destination are the same: %s", dbPath)
+		if c.Source != "" {
+			// Normalize paths to absolute for accurate comparison
+			absDbPath, err := filepath.Abs(dbPath)
+			if err == nil {
+				dbPath = absDbPath
+			}
+			absSource, err := filepath.Abs(c.Source)
+			if err == nil && absSource == dbPath {
+				return fmt.Errorf("cannot use --force when source and destination are the same: %s", dbPath)
+			} else if err == nil {
+				// Use normalized source for the check
+				if absSource == dbPath {
+					return fmt.Errorf("cannot use --force when source and destination are the same: %s", dbPath)
+				}
+			}
 		}
 		if _, err := os.Stat(dbPath); err == nil {
 			// Database exists, close it first to prevent file locking issues
