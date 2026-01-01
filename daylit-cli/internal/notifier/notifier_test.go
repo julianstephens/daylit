@@ -93,53 +93,66 @@ func TestFindAndValidateTrayProcess(t *testing.T) {
 	lockfilePath := filepath.Join(tempDir, NotifierLockfileName)
 
 	// Test 1: Lockfile missing
-	_, err = findAndValidateTrayProcess(lockfilePath)
+	_, _, err = findAndValidateTrayProcess(lockfilePath)
 	if err == nil {
 		t.Error("expected error for missing lockfile")
 	}
 
-	// Test 2: Malformed lockfile
-	err = os.WriteFile(lockfilePath, []byte("invalid"), 0644)
+	// Test 2: Malformed lockfile (old 2-part format)
+	err = os.WriteFile(lockfilePath, []byte("8080|12345"), 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = findAndValidateTrayProcess(lockfilePath)
+	_, _, err = findAndValidateTrayProcess(lockfilePath)
 	if err == nil {
 		t.Error("expected error for malformed lockfile")
 	}
 
-	// Test 3: Process not running
-	err = os.WriteFile(lockfilePath, []byte("8080|12345"), 0644)
+	// Test 3: Malformed lockfile (invalid format)
+	err = os.WriteFile(lockfilePath, []byte("invalid"), 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, err = findAndValidateTrayProcess(lockfilePath)
+	if err == nil {
+		t.Error("expected error for malformed lockfile")
+	}
+
+	// Test 4: Process not running
+	err = os.WriteFile(lockfilePath, []byte("8080|12345|testsecret123"), 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
 	findProcessFunc = func(pid int) (ps.Process, error) {
 		return nil, nil // Process not found
 	}
-	_, err = findAndValidateTrayProcess(lockfilePath)
+	_, _, err = findAndValidateTrayProcess(lockfilePath)
 	if err == nil {
 		t.Error("expected error for missing process")
 	}
 
-	// Test 4: Wrong executable
+	// Test 5: Wrong executable
 	findProcessFunc = func(pid int) (ps.Process, error) {
 		return &mockProcess{pid: pid, executable: "other-app"}, nil
 	}
-	_, err = findAndValidateTrayProcess(lockfilePath)
+	_, _, err = findAndValidateTrayProcess(lockfilePath)
 	if err == nil {
 		t.Error("expected error for wrong executable")
 	}
 
-	// Test 5: Success
+	// Test 6: Success
 	findProcessFunc = func(pid int) (ps.Process, error) {
 		return &mockProcess{pid: pid, executable: "daylit-tray"}, nil
 	}
-	port, err := findAndValidateTrayProcess(lockfilePath)
+	port, secret, err := findAndValidateTrayProcess(lockfilePath)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 	if port != "8080" {
 		t.Errorf("expected port 8080, got %s", port)
+	}
+	if secret != "testsecret123" {
+		t.Errorf("expected secret testsecret123, got %s", secret)
 	}
 }
 
@@ -150,6 +163,20 @@ func TestSendNotification(t *testing.T) {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
+
+		// Check for secret header
+		secret := r.Header.Get("X-Daylit-Secret")
+		if secret == "" {
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte("Unauthorized"))
+			return
+		}
+		if secret != "test-secret" {
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte("Unauthorized"))
+			return
+		}
+
 		var payload WebhookPayload
 		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
@@ -168,13 +195,25 @@ func TestSendNotification(t *testing.T) {
 	port := parts[len(parts)-1]
 
 	// Test 1: Success
-	err := sendNotification(port, WebhookPayload{Text: "hello"})
+	err := sendNotification(port, "test-secret", WebhookPayload{Text: "hello"})
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 
-	// Test 2: Server error
-	err = sendNotification(port, WebhookPayload{Text: "fail"})
+	// Test 2: Missing secret
+	err = sendNotification(port, "", WebhookPayload{Text: "hello"})
+	if err == nil {
+		t.Error("expected error for missing secret")
+	}
+
+	// Test 3: Wrong secret
+	err = sendNotification(port, "wrong-secret", WebhookPayload{Text: "hello"})
+	if err == nil {
+		t.Error("expected error for wrong secret")
+	}
+
+	// Test 4: Server error
+	err = sendNotification(port, "test-secret", WebhookPayload{Text: "fail"})
 	if err == nil {
 		t.Error("expected error for server failure")
 	}

@@ -1,5 +1,7 @@
 use crate::state::LOCKFILE_NAME;
 use crate::state::{AppState, Settings, UpdatePayload, WebhookPayload};
+use rand::distributions::Alphanumeric;
+use rand::{thread_rng, Rng};
 use std::fs;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
@@ -33,6 +35,19 @@ pub fn start_webhook_server(app_handle: AppHandle) {
         let state: State<AppState> = app_handle.state();
         let settings = Settings::load(&state.settings);
 
+        // Generate a secure random secret (32 characters)
+        let secret: String = thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(32)
+            .map(char::from)
+            .collect();
+
+        // Store the secret in AppState for validation
+        *state
+            .secret
+            .lock()
+            .expect("Failed to acquire secret lock") = Some(secret.clone());
+
         let config_dir = if let Some(dir) = settings.lockfile_dir {
             std::path::PathBuf::from(dir)
         } else {
@@ -57,7 +72,7 @@ pub fn start_webhook_server(app_handle: AppHandle) {
         }
         let lock_file_path = config_dir.join(LOCKFILE_NAME);
         let pid = std::process::id();
-        let lock_content = format!("{}|{}", port, pid);
+        let lock_content = format!("{}|{}|{}", port, pid, secret);
         if let Err(e) = fs::write(&lock_file_path, lock_content) {
             error!("Failed to write lock file: {}", e);
             return;
@@ -83,6 +98,34 @@ pub fn start_webhook_server(app_handle: AppHandle) {
 
         for mut request in server.incoming_requests() {
             if request.method().as_str() != "POST" {
+                continue;
+            }
+
+            // Validate X-Daylit-Secret header
+            let auth_valid = {
+                let state: State<AppState> = app_handle.state();
+                let expected_secret = state.secret.lock().expect("Failed to acquire secret lock");
+
+                if let Some(expected) = expected_secret.as_ref() {
+                    // Check for X-Daylit-Secret header
+                    request
+                        .headers()
+                        .iter()
+                        .find(|h| h.field.as_str().eq_ignore_ascii_case("X-Daylit-Secret"))
+                        .and_then(|h| Some(h.value.as_str() == expected))
+                        .unwrap_or(false)
+                } else {
+                    // If no secret is set (shouldn't happen), reject
+                    false
+                }
+            };
+
+            if !auth_valid {
+                error!("Unauthorized request: missing or invalid X-Daylit-Secret header");
+                let response = Response::from_string("Unauthorized").with_status_code(401);
+                if let Err(e) = request.respond(response) {
+                    error!("Failed to respond with error: {}", e);
+                }
                 continue;
             }
 

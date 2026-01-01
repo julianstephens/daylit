@@ -43,7 +43,7 @@ func (n *Notifier) Notify(text string) error {
 		return err
 	}
 
-	port, err := findAndValidateTrayProcess(filepath.Join(trayAppConfigPath, NotifierLockfileName))
+	port, secret, err := findAndValidateTrayProcess(filepath.Join(trayAppConfigPath, NotifierLockfileName))
 	if err != nil {
 		return err
 	}
@@ -53,7 +53,7 @@ func (n *Notifier) Notify(text string) error {
 		DurationMs: NotificationDurationMs,
 	}
 
-	if err := sendNotification(port, payload); err != nil {
+	if err := sendNotification(port, secret, payload); err != nil {
 		return err
 	}
 
@@ -90,36 +90,37 @@ func GetTrayAppConfigDir() (string, error) {
 	return trayConfigDir, nil
 }
 
-func findAndValidateTrayProcess(lockfilePath string) (string, error) {
+func findAndValidateTrayProcess(lockfilePath string) (string, string, error) {
 	content, err := os.ReadFile(lockfilePath)
 	if err != nil {
-		return "", errors.New("daylit-tray is not running")
+		return "", "", errors.New("daylit-tray is not running")
 	}
 
 	parts := strings.Split(strings.TrimSpace(string(content)), "|")
-	if len(parts) != 2 {
-		return "", errors.New("lockfile is malformed")
+	if len(parts) != 3 {
+		return "", "", errors.New("lockfile is malformed")
 	}
 
 	port := parts[0]
 	pid, err := strconv.Atoi(parts[1])
 	if err != nil {
-		return "", errors.New("invalid process ID in lockfile")
+		return "", "", errors.New("invalid process ID in lockfile")
 	}
+	secret := parts[2]
 
 	process, err := findProcessFunc(pid)
 	if err != nil || process == nil {
-		return "", errors.New("daylit-tray process not running")
+		return "", "", errors.New("daylit-tray process not running")
 	}
 
 	if !strings.HasPrefix(process.Executable(), "daylit-tray") {
-		return "", fmt.Errorf("process with PID %d is not daylit-tray (is %s)", pid, process.Executable())
+		return "", "", fmt.Errorf("process with PID %d is not daylit-tray (is %s)", pid, process.Executable())
 	}
 
-	return port, nil
+	return port, secret, nil
 }
 
-func sendNotification(port string, payload WebhookPayload) error {
+func sendNotification(port string, secret string, payload WebhookPayload) error {
 	url := fmt.Sprintf("http://127.0.0.1:%s", port)
 
 	jsonData, err := json.Marshal(payload)
@@ -127,7 +128,16 @@ func sendNotification(port string, payload WebhookPayload) error {
 		return err
 	}
 
-	res, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Daylit-Secret", secret)
+
+	client := &http.Client{}
+	res, err := client.Do(req)
 	if err != nil {
 		return err
 	}

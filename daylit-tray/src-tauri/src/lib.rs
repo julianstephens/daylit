@@ -75,6 +75,7 @@ pub fn run() {
                 settings: store,
                 payload: Default::default(),
                 lockfile_path: Mutex::new(None),
+                secret: Mutex::new(None),
             };
             app.manage(app_state);
 

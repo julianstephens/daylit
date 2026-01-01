@@ -52,4 +52,5 @@ pub struct AppState {
     pub settings: Arc<Store<Wry>>,
     pub payload: Mutex<Option<WebhookPayload>>,
     pub lockfile_path: Mutex<Option<std::path::PathBuf>>,
+    pub secret: Mutex<Option<String>>,
 }

@@ -24,6 +24,7 @@ tauri-plugin-shell = "2"
 tauri-plugin-notification = "2"
 tauri-plugin-store = "2"
 tauri-plugin-autostart = "2"
+rand = "0.8"
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
