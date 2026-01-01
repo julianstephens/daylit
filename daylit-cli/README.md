@@ -1,32 +1,77 @@
-# daylit-cli
+# daylit-cli (Developer Guide)
 
-A daily structure scheduler and time-blocking companion CLI tool.
+This document contains technical details for developers working on the `daylit-cli` component. For user documentation, see the [root README](../README.md) and the `docs/` directory.
 
-## Overview
+## Development Setup
 
-`daylit` helps you structure your day by:
+### Prerequisites
 
-- Managing task templates (recurring and one-off)
-- Generating daily time-blocked schedules
-- Tracking what you should be doing now
-- Collecting feedback to improve future plans
+- **Go 1.25+**
+- **Make** (optional, for using the Makefile)
+- **PostgreSQL** (optional, for integration testing)
 
-## Storage Backends
+### Setup
 
-daylit supports multiple storage backends:
+1. Clone the repository.
+2. Navigate to `daylit-cli`.
+3. Install dependencies:
+   ```bash
+   go mod download
+   ```
 
-- **SQLite** (default): Local file-based database, perfect for single-user desktop use
-- **PostgreSQL**: Centralized database server, ideal for concurrent access (e.g., WSL2 + Windows) or multi-device setups
+## Project Structure
 
-See [PostgreSQL Setup Guide](docs/POSTGRES_SETUP.md) for details on using PostgreSQL.
+```
+daylit/
+├── cmd/
+│   └── daylit/
+│       └── main.go           # CLI interface using kong
+├── internal/
+│   ├── backup/
+│   │   ├── backup.go          # Backup management and operations
+│   │   ├── backup_test.go     # Unit tests for backup
+│   │   └── integration_test.go # Integration tests for backup
+│   ├── cli/
+│   │   ├── backup.go          # Backup CLI commands
+│   │   ├── plan.go            # Plan CLI commands
+│   │   └── ...                # Other CLI commands
+│   ├── models/
+│   │   ├── task.go            # Task data models
+│   │   └── plan.go            # Plan and slot models
+│   ├── scheduler/
+│   │   └── scheduler.go       # Scheduling algorithm
+│   └── storage/
+│       ├── interface.go       # Storage interface
+│       └── sqlite_store.go    # SQLite storage implementation
+├── go.mod
+└── go.sum
+```
 
-## Documentation
+## Building
 
-- [Installation](docs/INSTALLATION.md)
-- [Quick Start](docs/QUICK_START.md)
-- [CLI Reference](docs/CLI.md)
-- [Configuration](docs/CONFIGURATION.md)
-- [PostgreSQL Setup](docs/POSTGRES_SETUP.md)
-- [Concepts (Scheduling & Data Model)](docs/CONCEPTS.md)
-- [Development](docs/DEVELOPMENT.md)
-- [Roadmap](docs/ROADMAP.md)
+```bash
+go build -o daylit ./cmd/daylit
+```
+
+## Testing
+
+### Unit Tests
+
+Run standard Go tests:
+
+```bash
+go test ./...
+```
+
+### Integration Tests
+
+To run integration tests (including PostgreSQL tests), set the environment variable:
+
+```bash
+export POSTGRES_TEST_URL="postgres://user:pass@localhost:5432/daylit_test?sslmode=disable"
+go test ./internal/storage/... -v
+```
+
+## Roadmap
+
+See the [root README](../README.md) for the project roadmap.

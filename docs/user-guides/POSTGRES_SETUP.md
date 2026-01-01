@@ -415,12 +415,17 @@ If migrations fail:
 
 To migrate existing SQLite data to PostgreSQL:
 
-1. Set up PostgreSQL database as described above
-2. Initialize the PostgreSQL database: `daylit --config "postgres://..." init`
-3. Export data from SQLite (manual process - copy tasks, plans, etc.)
-4. Import into PostgreSQL using the appropriate `daylit` commands
+1. Set up PostgreSQL database as described above.
+2. Run the `init` command with the `--source` flag pointing to your existing SQLite database:
 
-Note: Automatic migration tools are not currently available. Manual data transfer is required.
+```bash
+# Using .pgpass for credentials (recommended)
+daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" init --source ~/.config/daylit/daylit.db
+```
+
+This will:
+1. Initialize the PostgreSQL schema.
+2. Automatically migrate all data (tasks, plans, habits, settings, etc.) from the source SQLite database to PostgreSQL.
 
 ## Concurrent Access
 
