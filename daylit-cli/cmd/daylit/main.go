@@ -97,7 +97,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "       2. .pgpass file:  Create ~/.pgpass with credentials\n")
 			fmt.Fprintf(os.Stderr, "\n       For more information, see docs/user-guides/POSTGRES_SETUP.md\n")
 			os.Exit(1)
-		} else if !configFromFlag && storage.HasEmbeddedCredentials(CLI.Config) {
+		} else if configFromEnv && storage.HasEmbeddedCredentials(CLI.Config) {
 			// Warn user about embedded credentials in environment variable
 			fmt.Fprintf(os.Stderr, "⚠️  Warning: Using embedded credentials in DAYLIT_CONFIG environment variable.\n")
 			fmt.Fprintf(os.Stderr, "            Consider using a .pgpass file for better security.\n")
