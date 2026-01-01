@@ -1,18 +1,30 @@
+use crate::state::{AppState, Settings};
 use std::time::Duration;
 use std::{process::Command, thread};
 use tauri::AppHandle;
+use tauri::Manager;
 use tauri_plugin_log::log::{error, info};
 
-pub fn start_scheduler_thread(_app_handle: AppHandle) {
+pub fn start_scheduler_thread(app_handle: AppHandle) {
     thread::spawn(move || {
         loop {
             // Run every minute to check for upcoming tasks
             thread::sleep(Duration::from_secs(60));
 
-            // Execute 'daylit notify'
+            // Get the configured daylit path or default to "daylit"
+            let daylit_path = {
+                let state: tauri::State<AppState> = app_handle.state();
+                let settings = Settings::load(&state.settings);
+                settings
+                    .daylit_path
+                    .clone()
+                    .unwrap_or_else(|| "daylit".to_string())
+            };
+
+            // Execute 'daylit notify' (or custom path to daylit)
             // This command checks the schedule in the database and sends a webhook
             // back to the tray app's server if a notification is due.
-            match Command::new("daylit").arg("notify").output() {
+            match Command::new(&daylit_path).arg("notify").output() {
                 Ok(output) => {
                     if output.status.success() {
                         info!("daylit notify executed successfully");
@@ -25,7 +37,10 @@ pub fn start_scheduler_thread(_app_handle: AppHandle) {
                     }
                 }
                 Err(e) => {
-                    error!("Failed to execute daylit notify command: {}", e);
+                    error!(
+                        "Failed to execute daylit notify command at '{}': {}",
+                        daylit_path, e
+                    );
                 }
             }
         }
