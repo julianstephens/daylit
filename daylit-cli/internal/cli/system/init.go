@@ -75,10 +75,6 @@ func (c *InitCmd) migrateData(ctx *cli.Context, sourcePath string) error {
 		}
 		sourceStore = storage.NewPostgresStore(sourcePath)
 	} else {
-		// For non-URL sources, still validate that there are no embedded credentials
-		if storage.HasEmbeddedCredentials(sourcePath) {
-			return fmt.Errorf("source path or connection string contains embedded credentials. Use environment variables, .pgpass, or another secure credential store instead")
-		}
 		// Default to SQLite for file paths
 		sourceStore = storage.NewSQLiteStore(sourcePath)
 	}
