@@ -17,6 +17,8 @@ daylit init
 
 daylit also supports PostgreSQL as a storage backend. For security reasons, connection strings with embedded passwords are **NOT ALLOWED** when passed via command line flags.
 
+However, passing credentials via environment variables **IS ALLOWED** and considered secure, as they are not visible in process lists.
+
 **Secure usage with Environment Variable:**
 ```bash
 export DAYLIT_CONFIG="postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"

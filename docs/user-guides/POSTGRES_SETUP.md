@@ -179,6 +179,13 @@ daylit --config "postgres://daylit_user@172.20.240.1:5432/daylit?sslmode=disable
 
 ⚠️ **SECURITY WARNING:** Passing connection strings with embedded passwords via command line is **NOT ALLOWED** as it exposes credentials in shell history and process lists.
 
+The following usage will be blocked by the application:
+
+```bash
+# ❌ BLOCKED - Password in connection string
+daylit --config "postgres://user:password@host:5432/daylit" init
+```
+
 Use the secure methods described below instead.
 
 ### Secure Method 1: .pgpass File (Recommended for Interactive Use)
@@ -322,9 +329,10 @@ The secure methods above avoid these issues by:
 
 ### SSL/TLS
 
-For remote databases, always use SSL:
-```
-postgres://user:password@host:5432/database?sslmode=require
+For remote databases, always use SSL. When setting `DAYLIT_CONFIG`, include the `sslmode` parameter:
+
+```bash
+export DAYLIT_CONFIG="postgres://daylit_user:your_password@host:5432/daylit?sslmode=require"
 ```
 
 SSL modes:

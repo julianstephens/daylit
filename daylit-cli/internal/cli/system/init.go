@@ -71,13 +71,13 @@ func (c *InitCmd) migrateData(ctx *cli.Context, sourcePath string) error {
 	if strings.HasPrefix(sourcePath, "postgres://") || strings.HasPrefix(sourcePath, "postgresql://") {
 		// Validate source connection string for embedded credentials
 		if storage.HasEmbeddedCredentials(sourcePath) {
-			return fmt.Errorf("PostgreSQL source connection string contains embedded credentials. Use environment variables, .pgpass, or OS keyring instead")
+			return fmt.Errorf("PostgreSQL source connection string contains embedded credentials. Use environment variables, .pgpass instead")
 		}
 		sourceStore = storage.NewPostgresStore(sourcePath)
 	} else {
 		// For non-URL sources, still validate that there are no embedded credentials
 		if storage.HasEmbeddedCredentials(sourcePath) {
-			return fmt.Errorf("source path or connection string contains embedded credentials. Use environment variables, .pgpass, OS keyring, or another secure credential store instead")
+			return fmt.Errorf("source path or connection string contains embedded credentials. Use environment variables, .pgpass, or another secure credential store instead")
 		}
 		// Default to SQLite for file paths
 		sourceStore = storage.NewSQLiteStore(sourcePath)

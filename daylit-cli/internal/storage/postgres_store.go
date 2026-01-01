@@ -106,8 +106,10 @@ func HasEmbeddedCredentials(connStr string) bool {
 	if strings.HasPrefix(connStr, "postgres://") || strings.HasPrefix(connStr, "postgresql://") {
 		u, err := url.Parse(connStr)
 		if err != nil {
-			// If parsing fails, be conservative and assume credentials might be present
-			return true
+			// If parsing fails, we log a warning but don't block.
+			// This avoids false positives for valid but non-standard connection strings.
+			fmt.Fprintf(os.Stderr, "Warning: Could not parse connection string for security check: %v\n", err)
+			return false
 		}
 		// Check if password is present in the User info
 		if u.User != nil {

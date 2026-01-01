@@ -271,14 +271,35 @@ func TestHasEmbeddedCredentials(t *testing.T) {
 			expected: false,
 		},
 		{
-			name:     "Invalid URL format",
-			connStr:  "postgres://invalid@@@url",
-			expected: false, // url.Parse succeeds but doesn't find valid password
+			name:     "Unparseable URL",
+			connStr:  "postgres://user:pass\n@host/db",
+			expected: false, // url.Parse fails, returns false (warning logged)
 		},
 		{
 			name:     "Plain text (not URL or DSN)",
 			connStr:  "some random text password=hidden",
 			expected: true,
+		},
+		// SQLite file path tests
+		{
+			name:     "SQLite default path",
+			connStr:  "~/.config/daylit/daylit.db",
+			expected: false,
+		},
+		{
+			name:     "SQLite absolute path",
+			connStr:  "/home/user/daylit.db",
+			expected: false,
+		},
+		{
+			name:     "SQLite relative path",
+			connStr:  "./daylit.db",
+			expected: false,
+		},
+		{
+			name:     "SQLite path with 'password' in name",
+			connStr:  "/home/user/password_manager/daylit.db",
+			expected: false,
 		},
 	}
 
