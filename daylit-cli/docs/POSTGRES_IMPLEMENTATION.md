@@ -28,6 +28,7 @@ Created 5 PostgreSQL-compatible migration files:
 Complete implementation of all 48 methods from the `storage.Provider` interface:
 
 **Key PostgreSQL Adaptations:**
+- **Schema Isolation**: All tables are created within the `daylit` schema for better isolation. The connection string automatically includes `search_path=daylit`.
 - **Placeholder Conversion**: All `?` placeholders converted to numbered parameters (`$1`, `$2`, `$3`, ...)
 - **Upsert Operations**: Converted `INSERT OR REPLACE` to `INSERT ... ON CONFLICT DO UPDATE`
 - **Boolean Types**: Direct use of PostgreSQL `BOOLEAN` type (no INTEGER conversion needed)

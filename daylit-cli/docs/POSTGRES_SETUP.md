@@ -25,7 +25,9 @@ You need access to a PostgreSQL server (version 12 or later recommended). You ca
 
 ### 2. Database Setup
 
-Create a database and user for daylit:
+Because daylit isolates its data in a `daylit` schema, you can either create a dedicated database or use an existing one.
+
+#### Option A: Dedicated Database (Recommended)
 
 ```bash
 # Connect to PostgreSQL as superuser
@@ -45,11 +47,35 @@ CREATE USER daylit_user WITH PASSWORD 'your_secure_password_here';
 -- Grant privileges
 GRANT ALL PRIVILEGES ON DATABASE daylit TO daylit_user;
 
--- For PostgreSQL 15+, you also need to grant schema privileges
+-- Connect to the database
 \c daylit
-GRANT ALL ON SCHEMA public TO daylit_user;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO daylit_user;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO daylit_user;
+
+-- Create the daylit schema and authorize the user
+CREATE SCHEMA daylit AUTHORIZATION daylit_user;
+
+-- Set the search path for the user so they default to the daylit schema
+ALTER USER daylit_user SET search_path TO daylit;
+```
+
+#### Option B: Existing Database
+
+If you prefer to use an existing database (e.g., `my_shared_db`), just create the schema and user within it:
+
+```sql
+-- Connect to your existing database
+\c my_shared_db
+
+-- Create user (if not using an existing one)
+CREATE USER daylit_user WITH PASSWORD 'your_secure_password_here';
+
+-- Grant connect privileges
+GRANT CONNECT ON DATABASE my_shared_db TO daylit_user;
+
+-- Create the daylit schema and authorize the user
+CREATE SCHEMA daylit AUTHORIZATION daylit_user;
+
+-- Set the search path for the user
+ALTER USER daylit_user SET search_path TO daylit;
 ```
 
 Exit psql with `\q`.
@@ -119,6 +145,7 @@ daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" i
 #### 3. OS Keyring (Future Enhancement)
 
 Support for OS keyring storage is planned for a future release. Use `.pgpass` or environment variables in the meantime.
+> **Note:** The application automatically appends `search_path=daylit` to the connection string to ensure all tables are created within the `daylit` schema for isolation.
 
 ### Examples
 
@@ -332,11 +359,11 @@ Error: failed to connect to database: dial tcp 127.0.0.1:5432: connect: connecti
 ### Permission Denied
 
 ```
-Error: pq: permission denied for schema public
+Error: pq: permission denied for schema daylit
 ```
 
 **Solution:**
-Run the GRANT commands from the Database Setup section above.
+Ensure the `daylit` schema exists and the user has permissions. Run the schema creation and authorization commands from the Database Setup section above.
 
 ### Authentication Failed
 
