@@ -10,33 +10,37 @@ import (
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/migration"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
-	_ "modernc.org/sqlite"
+	_ "github.com/lib/pq"
 )
 
-type SQLiteStore struct {
-	path string
-	db   *sql.DB
+type PostgresStore struct {
+	connStr string
+	db      *sql.DB
 }
 
-func NewSQLiteStore(path string) *SQLiteStore {
-	return &SQLiteStore{
-		path: path,
+func NewPostgresStore(connStr string) *PostgresStore {
+	return &PostgresStore{
+		connStr: connStr,
 	}
 }
 
-func (s *SQLiteStore) Init() error {
-	// Create config directory if it doesn't exist
-	dir := filepath.Dir(s.path)
-	if err := os.MkdirAll(dir, 0700); err != nil {
-		return fmt.Errorf("failed to create config directory: %w", err)
-	}
-
-	// Open database
-	db, err := sql.Open("sqlite", s.path)
+func (s *PostgresStore) Init() error {
+	// Open database connection
+	db, err := sql.Open("postgres", s.connStr)
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
 	s.db = db
+
+	// Configure connection pool parameters to avoid connection exhaustion
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(25)
+	db.SetConnMaxLifetime(5 * time.Minute)
+
+	// Test connection
+	if err := s.db.Ping(); err != nil {
+		return fmt.Errorf("failed to connect to database: %w", err)
+	}
 
 	// Run migrations
 	if err := s.runMigrations(); err != nil {
@@ -64,76 +68,63 @@ func (s *SQLiteStore) Init() error {
 	return nil
 }
 
-func (s *SQLiteStore) Load() error {
+func (s *PostgresStore) Load() error {
 	if s.db != nil {
 		return nil
 	}
 
-	if _, err := os.Stat(s.path); os.IsNotExist(err) {
-		return fmt.Errorf("storage not initialized, run 'daylit init' first")
-	}
-
-	db, err := sql.Open("sqlite", s.path)
+	db, err := sql.Open("postgres", s.connStr)
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
 	s.db = db
 
-	// Validate schema version if migrations directory is available.
-	// If the migrations directory is missing (e.g. not shipped in production),
-	// skip validation but still allow using the already-initialized database.
+	// Configure connection pool parameters to avoid connection exhaustion
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(25)
+	db.SetConnMaxLifetime(5 * time.Minute)
+
+	// Test connection
+	if err := s.db.Ping(); err != nil {
+		return fmt.Errorf("failed to connect to database: %w", err)
+	}
+
+	// Validate schema version if migrations directory is available
 	migrationsPath := s.getMigrationsPath()
-	if infoErr := func() error {
-		_, statErr := os.Stat(migrationsPath)
-		if statErr == nil {
-			return nil
-		}
-		if os.IsNotExist(statErr) {
-			// Migrations directory is not present; skip schema validation.
-			return nil
-		}
-		// Any other error accessing the directory is treated as fatal.
-		return fmt.Errorf("failed to access migrations directory %q: %w", migrationsPath, statErr)
-	}(); infoErr != nil {
-		return infoErr
-	} else if migrationsPath != "" {
-		// Only attempt validation when migrations are accessible.
-		if err := s.validateSchemaVersion(); err != nil {
-			return err
+	if migrationsPath != "" {
+		if _, err := os.Stat(migrationsPath); err == nil {
+			if err := s.validateSchemaVersion(); err != nil {
+				return err
+			}
 		}
 	}
 
 	return nil
 }
 
-func (s *SQLiteStore) Close() error {
+func (s *PostgresStore) Close() error {
 	if s.db != nil {
 		return s.db.Close()
 	}
 	return nil
 }
 
-func (s *SQLiteStore) runMigrations() error {
-	// Get the migrations directory path (relative to the binary or in the repository)
+func (s *PostgresStore) runMigrations() error {
 	migrationsPath := s.getMigrationsPath()
-
-	// Create migration runner
 	runner := migration.NewRunner(s.db, migrationsPath)
-
-	// Apply all pending migrations
 	_, err := runner.ApplyMigrations(func(msg string) {
 		fmt.Println(msg)
 	})
 	return err
 }
 
-func (s *SQLiteStore) validateSchemaVersion() error {
+func (s *PostgresStore) validateSchemaVersion() error {
 	migrationsPath := s.getMigrationsPath()
 	runner := migration.NewRunner(s.db, migrationsPath)
 	return runner.ValidateVersion()
 }
 
-func (s *SQLiteStore) getMigrationsPath() string {
+func (s *PostgresStore) getMigrationsPath() string {
 	// Check if environment variable is set
 	if envPath := os.Getenv("DAYLIT_MIGRATIONS_PATH"); envPath != "" {
 		if absPath, err := filepath.Abs(envPath); err == nil {
@@ -145,14 +136,14 @@ func (s *SQLiteStore) getMigrationsPath() string {
 
 	// Try to find migrations directory relative to the executable or in common paths
 	paths := []string{
-		"migrations/sqlite",
-		"./migrations/sqlite",
-		"../migrations/sqlite",
-		"../../migrations/sqlite",
-		"../../../migrations/sqlite",
-		"../../../../migrations/sqlite",
-		filepath.Join(filepath.Dir(os.Args[0]), "migrations", "sqlite"),
-		filepath.Join(filepath.Dir(os.Args[0]), "..", "migrations", "sqlite"),
+		"migrations/postgres",
+		"./migrations/postgres",
+		"../migrations/postgres",
+		"../../migrations/postgres",
+		"../../../migrations/postgres",
+		"../../../../migrations/postgres",
+		filepath.Join(filepath.Dir(os.Args[0]), "migrations", "postgres"),
+		filepath.Join(filepath.Dir(os.Args[0]), "..", "migrations", "postgres"),
 	}
 
 	for _, path := range paths {
@@ -163,11 +154,11 @@ func (s *SQLiteStore) getMigrationsPath() string {
 		}
 	}
 
-	// Default to "migrations/sqlite" in current directory (will fail gracefully if not found)
-	return "migrations/sqlite"
+	// Default to "migrations/postgres" in current directory (will fail gracefully if not found)
+	return "migrations/postgres"
 }
 
-func (s *SQLiteStore) GetSettings() (Settings, error) {
+func (s *PostgresStore) GetSettings() (Settings, error) {
 	rows, err := s.db.Query("SELECT key, value FROM settings")
 	if err != nil {
 		return Settings{}, err
@@ -219,14 +210,18 @@ func (s *SQLiteStore) GetSettings() (Settings, error) {
 	return settings, nil
 }
 
-func (s *SQLiteStore) SaveSettings(settings Settings) error {
+func (s *PostgresStore) SaveSettings(settings Settings) error {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	stmt, err := tx.Prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+	// PostgreSQL uses INSERT ... ON CONFLICT for upsert
+	stmt, err := tx.Prepare(`
+		INSERT INTO settings (key, value) VALUES ($1, $2)
+		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+	`)
 	if err != nil {
 		return err
 	}
@@ -263,16 +258,23 @@ func (s *SQLiteStore) SaveSettings(settings Settings) error {
 	return tx.Commit()
 }
 
-func (s *SQLiteStore) AddTask(task models.Task) error {
+func (s *PostgresStore) GetConfigPath() string {
+	// Return a non-sensitive identifier instead of the full connection string
+	return "postgresql"
+}
+
+// Task methods
+
+func (s *PostgresStore) AddTask(task models.Task) error {
 	return s.UpdateTask(task)
 }
 
-func (s *SQLiteStore) GetTask(id string) (models.Task, error) {
+func (s *PostgresStore) GetTask(id string) (models.Task, error) {
 	row := s.db.QueryRow(`
-		SELECT id, name, kind, duration_min, earliest_start, latest_end, fixed_start, fixed_end,
-		       recurrence_type, recurrence_interval, recurrence_weekdays, priority, energy_band,
-		       active, last_done, success_streak, avg_actual_duration, deleted_at
-		FROM tasks WHERE id = ? AND deleted_at IS NULL`, id)
+SELECT id, name, kind, duration_min, earliest_start, latest_end, fixed_start, fixed_end,
+       recurrence_type, recurrence_interval, recurrence_weekdays, priority, energy_band,
+       active, last_done, success_streak, avg_actual_duration, deleted_at
+FROM tasks WHERE id = $1 AND deleted_at IS NULL`, id)
 
 	var t models.Task
 	var recType, recWeekdays, energyBand string
@@ -308,12 +310,12 @@ func (s *SQLiteStore) GetTask(id string) (models.Task, error) {
 	return t, nil
 }
 
-func (s *SQLiteStore) GetAllTasks() ([]models.Task, error) {
+func (s *PostgresStore) GetAllTasks() ([]models.Task, error) {
 	rows, err := s.db.Query(`
-		SELECT id, name, kind, duration_min, earliest_start, latest_end, fixed_start, fixed_end,
-		       recurrence_type, recurrence_interval, recurrence_weekdays, priority, energy_band,
-		       active, last_done, success_streak, avg_actual_duration, deleted_at
-		FROM tasks WHERE deleted_at IS NULL`)
+SELECT id, name, kind, duration_min, earliest_start, latest_end, fixed_start, fixed_end,
+       recurrence_type, recurrence_interval, recurrence_weekdays, priority, energy_band,
+       active, last_done, success_streak, avg_actual_duration, deleted_at
+FROM tasks WHERE deleted_at IS NULL`)
 	if err != nil {
 		return nil, err
 	}
@@ -357,12 +359,12 @@ func (s *SQLiteStore) GetAllTasks() ([]models.Task, error) {
 	return tasks, nil
 }
 
-func (s *SQLiteStore) GetAllTasksIncludingDeleted() ([]models.Task, error) {
+func (s *PostgresStore) GetAllTasksIncludingDeleted() ([]models.Task, error) {
 	rows, err := s.db.Query(`
-		SELECT id, name, kind, duration_min, earliest_start, latest_end, fixed_start, fixed_end,
-		       recurrence_type, recurrence_interval, recurrence_weekdays, priority, energy_band,
-		       active, last_done, success_streak, avg_actual_duration, deleted_at
-		FROM tasks`)
+SELECT id, name, kind, duration_min, earliest_start, latest_end, fixed_start, fixed_end,
+       recurrence_type, recurrence_interval, recurrence_weekdays, priority, energy_band,
+       active, last_done, success_streak, avg_actual_duration, deleted_at
+FROM tasks`)
 	if err != nil {
 		return nil, err
 	}
@@ -406,7 +408,7 @@ func (s *SQLiteStore) GetAllTasksIncludingDeleted() ([]models.Task, error) {
 	return tasks, nil
 }
 
-func (s *SQLiteStore) UpdateTask(task models.Task) error {
+func (s *PostgresStore) UpdateTask(task models.Task) error {
 	weekdaysJSON, err := json.Marshal(task.Recurrence.WeekdayMask)
 	if err != nil {
 		return fmt.Errorf("failed to marshal recurrence weekday mask: %w", err)
@@ -417,12 +419,31 @@ func (s *SQLiteStore) UpdateTask(task models.Task) error {
 		deletedAt = sql.NullString{String: *task.DeletedAt, Valid: true}
 	}
 
+	// PostgreSQL uses INSERT ... ON CONFLICT for upsert
 	_, err = s.db.Exec(`
-		INSERT OR REPLACE INTO tasks (
-			id, name, kind, duration_min, earliest_start, latest_end, fixed_start, fixed_end,
-			recurrence_type, recurrence_interval, recurrence_weekdays, priority, energy_band,
-			active, last_done, success_streak, avg_actual_duration, deleted_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+INSERT INTO tasks (
+id, name, kind, duration_min, earliest_start, latest_end, fixed_start, fixed_end,
+recurrence_type, recurrence_interval, recurrence_weekdays, priority, energy_band,
+active, last_done, success_streak, avg_actual_duration, deleted_at
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+ON CONFLICT (id) DO UPDATE SET
+name = EXCLUDED.name,
+kind = EXCLUDED.kind,
+duration_min = EXCLUDED.duration_min,
+earliest_start = EXCLUDED.earliest_start,
+latest_end = EXCLUDED.latest_end,
+fixed_start = EXCLUDED.fixed_start,
+fixed_end = EXCLUDED.fixed_end,
+recurrence_type = EXCLUDED.recurrence_type,
+recurrence_interval = EXCLUDED.recurrence_interval,
+recurrence_weekdays = EXCLUDED.recurrence_weekdays,
+priority = EXCLUDED.priority,
+energy_band = EXCLUDED.energy_band,
+active = EXCLUDED.active,
+last_done = EXCLUDED.last_done,
+success_streak = EXCLUDED.success_streak,
+avg_actual_duration = EXCLUDED.avg_actual_duration,
+deleted_at = EXCLUDED.deleted_at`,
 		task.ID, task.Name, task.Kind, task.DurationMin, task.EarliestStart, task.LatestEnd, task.FixedStart, task.FixedEnd,
 		task.Recurrence.Type, task.Recurrence.IntervalDays, string(weekdaysJSON), task.Priority, task.EnergyBand,
 		task.Active, task.LastDone, task.SuccessStreak, task.AvgActualDurationMin, deletedAt,
@@ -430,10 +451,9 @@ func (s *SQLiteStore) UpdateTask(task models.Task) error {
 	return err
 }
 
-func (s *SQLiteStore) DeleteTask(id string) error {
-	// Soft delete: set deleted_at timestamp instead of removing the record
+func (s *PostgresStore) DeleteTask(id string) error {
 	var deletedAt sql.NullString
-	err := s.db.QueryRow("SELECT deleted_at FROM tasks WHERE id = ?", id).Scan(&deletedAt)
+	err := s.db.QueryRow("SELECT deleted_at FROM tasks WHERE id = $1", id).Scan(&deletedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return fmt.Errorf("task with id %s not found", id)
@@ -446,14 +466,13 @@ func (s *SQLiteStore) DeleteTask(id string) error {
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	_, err = s.db.Exec("UPDATE tasks SET deleted_at = ? WHERE id = ?", now, id)
+	_, err = s.db.Exec("UPDATE tasks SET deleted_at = $1 WHERE id = $2", now, id)
 	return err
 }
 
-func (s *SQLiteStore) RestoreTask(id string) error {
-	// Restore a soft-deleted task by clearing deleted_at
+func (s *PostgresStore) RestoreTask(id string) error {
 	var deletedAt sql.NullString
-	err := s.db.QueryRow("SELECT deleted_at FROM tasks WHERE id = ?", id).Scan(&deletedAt)
+	err := s.db.QueryRow("SELECT deleted_at FROM tasks WHERE id = $1", id).Scan(&deletedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return fmt.Errorf("task with id %s not found", id)
@@ -465,11 +484,10 @@ func (s *SQLiteStore) RestoreTask(id string) error {
 		return fmt.Errorf("cannot restore a task that is not deleted: %s", id)
 	}
 
-	_, err = s.db.Exec("UPDATE tasks SET deleted_at = NULL WHERE id = ?", id)
+	_, err = s.db.Exec("UPDATE tasks SET deleted_at = NULL WHERE id = $1", id)
 	return err
 }
-
-func (s *SQLiteStore) SavePlan(plan models.DayPlan) error {
+func (s *PostgresStore) SavePlan(plan models.DayPlan) error {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return err
@@ -489,7 +507,7 @@ func (s *SQLiteStore) SavePlan(plan models.DayPlan) error {
 		var existingRevision int
 		var acceptedAt sql.NullString
 		err = tx.QueryRow(
-			"SELECT revision, accepted_at FROM plans WHERE date = ? AND deleted_at IS NULL ORDER BY revision DESC LIMIT 1",
+			"SELECT revision, accepted_at FROM plans WHERE date = $1 AND deleted_at IS NULL ORDER BY revision DESC LIMIT 1",
 			plan.Date,
 		).Scan(&existingRevision, &acceptedAt)
 
@@ -507,11 +525,11 @@ func (s *SQLiteStore) SavePlan(plan models.DayPlan) error {
 				// Plan exists but not accepted - can overwrite
 				plan.Revision = existingRevision
 				// Delete the old plan and its slots first
-				_, err = tx.Exec("DELETE FROM slots WHERE plan_date = ? AND plan_revision = ? AND deleted_at IS NULL", plan.Date, plan.Revision)
+				_, err = tx.Exec("DELETE FROM slots WHERE plan_date = $1 AND plan_revision = $2 AND deleted_at IS NULL", plan.Date, plan.Revision)
 				if err != nil {
 					return err
 				}
-				_, err = tx.Exec("DELETE FROM plans WHERE date = ? AND revision = ?", plan.Date, plan.Revision)
+				_, err = tx.Exec("DELETE FROM plans WHERE date = $1 AND revision = $2", plan.Date, plan.Revision)
 				if err != nil {
 					return err
 				}
@@ -521,7 +539,7 @@ func (s *SQLiteStore) SavePlan(plan models.DayPlan) error {
 		// If revision is manually set, validate that it doesn't overwrite an accepted plan
 		// unless it's the same plan being updated (same accepted_at timestamp)
 		var existingAcceptedAt sql.NullString
-		err = tx.QueryRow("SELECT accepted_at FROM plans WHERE date = ? AND revision = ? AND deleted_at IS NULL", plan.Date, plan.Revision).Scan(&existingAcceptedAt)
+		err = tx.QueryRow("SELECT accepted_at FROM plans WHERE date = $1 AND revision = $2 AND deleted_at IS NULL", plan.Date, plan.Revision).Scan(&existingAcceptedAt)
 		if err == nil && existingAcceptedAt.Valid {
 			// Check if we're updating the same plan (same accepted_at timestamp)
 			planAcceptedAtStr := ""
@@ -537,7 +555,7 @@ func (s *SQLiteStore) SavePlan(plan models.DayPlan) error {
 
 	// Check if plan is deleted - forbid adding slots to deleted plans
 	var deletedAt sql.NullString
-	err = tx.QueryRow("SELECT deleted_at FROM plans WHERE date = ? AND revision = ?", plan.Date, plan.Revision).Scan(&deletedAt)
+	err = tx.QueryRow("SELECT deleted_at FROM plans WHERE date = $1 AND revision = $2", plan.Date, plan.Revision).Scan(&deletedAt)
 	if err == nil && deletedAt.Valid {
 		return fmt.Errorf("cannot save slots to a deleted plan: %s revision %d", plan.Date, plan.Revision)
 	}
@@ -549,8 +567,11 @@ func (s *SQLiteStore) SavePlan(plan models.DayPlan) error {
 	}
 
 	// Insert or replace plan
-	_, err = tx.Exec(
-		"INSERT OR REPLACE INTO plans (date, revision, accepted_at, deleted_at) VALUES (?, ?, ?, NULL)",
+	_, err = tx.Exec(`
+		INSERT INTO plans (date, revision, accepted_at, deleted_at) VALUES ($1, $2, $3, NULL)
+		ON CONFLICT (date, revision) DO UPDATE SET
+			accepted_at = EXCLUDED.accepted_at,
+			deleted_at = EXCLUDED.deleted_at`,
 		plan.Date, plan.Revision, acceptedAtVal,
 	)
 	if err != nil {
@@ -558,7 +579,7 @@ func (s *SQLiteStore) SavePlan(plan models.DayPlan) error {
 	}
 
 	// Delete existing non-soft-deleted slots for this plan revision
-	_, err = tx.Exec("DELETE FROM slots WHERE plan_date = ? AND plan_revision = ? AND deleted_at IS NULL", plan.Date, plan.Revision)
+	_, err = tx.Exec("DELETE FROM slots WHERE plan_date = $1 AND plan_revision = $2 AND deleted_at IS NULL", plan.Date, plan.Revision)
 	if err != nil {
 		return err
 	}
@@ -567,7 +588,7 @@ func (s *SQLiteStore) SavePlan(plan models.DayPlan) error {
 	stmt, err := tx.Prepare(`
 		INSERT INTO slots (
 			plan_date, plan_revision, start_time, end_time, task_id, status, feedback_rating, feedback_note, deleted_at, last_notified_start, last_notified_end
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`)
 	if err != nil {
 		return err
 	}
@@ -601,17 +622,17 @@ func (s *SQLiteStore) SavePlan(plan models.DayPlan) error {
 	return tx.Commit()
 }
 
-func (s *SQLiteStore) GetPlan(date string) (models.DayPlan, error) {
+func (s *PostgresStore) GetPlan(date string) (models.DayPlan, error) {
 	// Get latest revision by default
 	return s.GetLatestPlanRevision(date)
 }
 
-func (s *SQLiteStore) GetLatestPlanRevision(date string) (models.DayPlan, error) {
+func (s *PostgresStore) GetLatestPlanRevision(date string) (models.DayPlan, error) {
 	// Get the latest non-deleted revision for this date
 	var revision int
 	var acceptedAt sql.NullString
 	err := s.db.QueryRow(
-		"SELECT revision, accepted_at FROM plans WHERE date = ? AND deleted_at IS NULL ORDER BY revision DESC LIMIT 1",
+		"SELECT revision, accepted_at FROM plans WHERE date = $1 AND deleted_at IS NULL ORDER BY revision DESC LIMIT 1",
 		date,
 	).Scan(&revision, &acceptedAt)
 
@@ -625,11 +646,11 @@ func (s *SQLiteStore) GetLatestPlanRevision(date string) (models.DayPlan, error)
 	return s.getPlanByRevision(date, revision, acceptedAt, sql.NullString{})
 }
 
-func (s *SQLiteStore) GetPlanRevision(date string, revision int) (models.DayPlan, error) {
+func (s *PostgresStore) GetPlanRevision(date string, revision int) (models.DayPlan, error) {
 	// Get a specific revision
 	var acceptedAt, deletedAt sql.NullString
 	err := s.db.QueryRow(
-		"SELECT accepted_at, deleted_at FROM plans WHERE date = ? AND revision = ?",
+		"SELECT accepted_at, deleted_at FROM plans WHERE date = $1 AND revision = $2",
 		date, revision,
 	).Scan(&acceptedAt, &deletedAt)
 
@@ -647,7 +668,7 @@ func (s *SQLiteStore) GetPlanRevision(date string, revision int) (models.DayPlan
 	return s.getPlanByRevision(date, revision, acceptedAt, deletedAt)
 }
 
-func (s *SQLiteStore) getPlanByRevision(date string, revision int, acceptedAt, deletedAt sql.NullString) (models.DayPlan, error) {
+func (s *PostgresStore) getPlanByRevision(date string, revision int, acceptedAt, deletedAt sql.NullString) (models.DayPlan, error) {
 	plan := models.DayPlan{
 		Date:     date,
 		Revision: revision,
@@ -660,7 +681,7 @@ func (s *SQLiteStore) getPlanByRevision(date string, revision int, acceptedAt, d
 	// Get slots (exclude soft-deleted slots)
 	rows, err := s.db.Query(`
 		SELECT start_time, end_time, task_id, status, feedback_rating, feedback_note, last_notified_start, last_notified_end
-		FROM slots WHERE plan_date = ? AND plan_revision = ? AND deleted_at IS NULL ORDER BY start_time`,
+		FROM slots WHERE plan_date = $1 AND plan_revision = $2 AND deleted_at IS NULL ORDER BY start_time`,
 		date, revision)
 	if err != nil {
 		return models.DayPlan{}, err
@@ -696,7 +717,7 @@ func (s *SQLiteStore) getPlanByRevision(date string, revision int, acceptedAt, d
 	return plan, nil
 }
 
-func (s *SQLiteStore) DeletePlan(date string) error {
+func (s *PostgresStore) DeletePlan(date string) error {
 	// Soft delete: set deleted_at timestamp for all revisions of the plan and their slots
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -706,7 +727,7 @@ func (s *SQLiteStore) DeletePlan(date string) error {
 
 	// Check if any non-deleted plans exist for this date
 	var count int
-	err = tx.QueryRow("SELECT COUNT(*) FROM plans WHERE date = ? AND deleted_at IS NULL", date).Scan(&count)
+	err = tx.QueryRow("SELECT COUNT(*) FROM plans WHERE date = $1 AND deleted_at IS NULL", date).Scan(&count)
 	if err != nil {
 		return err
 	}
@@ -718,19 +739,19 @@ func (s *SQLiteStore) DeletePlan(date string) error {
 	now := time.Now().UTC().Format(time.RFC3339)
 
 	// Soft delete all revisions of the plan
-	if _, err := tx.Exec("UPDATE plans SET deleted_at = ? WHERE date = ? AND deleted_at IS NULL", now, date); err != nil {
+	if _, err := tx.Exec("UPDATE plans SET deleted_at = $1 WHERE date = $2 AND deleted_at IS NULL", now, date); err != nil {
 		return err
 	}
 
 	// Soft delete associated slots that are not already soft-deleted
-	if _, err := tx.Exec("UPDATE slots SET deleted_at = ? WHERE plan_date = ? AND deleted_at IS NULL", now, date); err != nil {
+	if _, err := tx.Exec("UPDATE slots SET deleted_at = $1 WHERE plan_date = $2 AND deleted_at IS NULL", now, date); err != nil {
 		return err
 	}
 
 	return tx.Commit()
 }
 
-func (s *SQLiteStore) RestorePlan(date string) error {
+func (s *PostgresStore) RestorePlan(date string) error {
 	// Restore soft-deleted plans (all revisions and their slots) by clearing deleted_at
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -741,7 +762,7 @@ func (s *SQLiteStore) RestorePlan(date string) error {
 	// Get the most recent deleted_at timestamp for plans on this date
 	var planDeletedAt sql.NullString
 	err = tx.QueryRow(
-		"SELECT deleted_at FROM plans WHERE date = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC LIMIT 1",
+		"SELECT deleted_at FROM plans WHERE date = $1 AND deleted_at IS NOT NULL ORDER BY deleted_at DESC LIMIT 1",
 		date,
 	).Scan(&planDeletedAt)
 	if err != nil {
@@ -752,13 +773,13 @@ func (s *SQLiteStore) RestorePlan(date string) error {
 	}
 
 	// Restore all plan revisions that were deleted at the same time
-	if _, err := tx.Exec("UPDATE plans SET deleted_at = NULL WHERE date = ? AND deleted_at = ?", date, planDeletedAt.String); err != nil {
+	if _, err := tx.Exec("UPDATE plans SET deleted_at = NULL WHERE date = $1 AND deleted_at = $2", date, planDeletedAt.String); err != nil {
 		return err
 	}
 
 	// Restore only slots that share the same deleted_at timestamp as the plans
 	if _, err := tx.Exec(
-		"UPDATE slots SET deleted_at = NULL WHERE plan_date = ? AND deleted_at = ?",
+		"UPDATE slots SET deleted_at = NULL WHERE plan_date = $1 AND deleted_at = $2",
 		date, planDeletedAt.String,
 	); err != nil {
 		return err
@@ -769,14 +790,14 @@ func (s *SQLiteStore) RestorePlan(date string) error {
 
 // Habits
 
-func (s *SQLiteStore) AddHabit(habit models.Habit) error {
+func (s *PostgresStore) AddHabit(habit models.Habit) error {
 	return s.UpdateHabit(habit)
 }
 
-func (s *SQLiteStore) GetHabit(id string) (models.Habit, error) {
+func (s *PostgresStore) GetHabit(id string) (models.Habit, error) {
 	row := s.db.QueryRow(`
 		SELECT id, name, created_at, archived_at, deleted_at
-		FROM habits WHERE id = ? AND deleted_at IS NULL`, id)
+		FROM habits WHERE id = $1 AND deleted_at IS NULL`, id)
 
 	var h models.Habit
 	var createdAt string
@@ -809,10 +830,10 @@ func (s *SQLiteStore) GetHabit(id string) (models.Habit, error) {
 	return h, nil
 }
 
-func (s *SQLiteStore) GetHabitByName(name string) (models.Habit, error) {
+func (s *PostgresStore) GetHabitByName(name string) (models.Habit, error) {
 	row := s.db.QueryRow(`
 		SELECT id, name, created_at, archived_at, deleted_at
-		FROM habits WHERE name = ? AND deleted_at IS NULL`, name)
+		FROM habits WHERE name = $1 AND deleted_at IS NULL`, name)
 
 	var h models.Habit
 	var createdAt string
@@ -845,7 +866,7 @@ func (s *SQLiteStore) GetHabitByName(name string) (models.Habit, error) {
 	return h, nil
 }
 
-func (s *SQLiteStore) GetAllHabits(includeArchived, includeDeleted bool) ([]models.Habit, error) {
+func (s *PostgresStore) GetAllHabits(includeArchived, includeDeleted bool) ([]models.Habit, error) {
 	query := "SELECT id, name, created_at, archived_at, deleted_at FROM habits WHERE 1=1"
 	if !includeDeleted {
 		query += " AND deleted_at IS NULL"
@@ -897,7 +918,7 @@ func (s *SQLiteStore) GetAllHabits(includeArchived, includeDeleted bool) ([]mode
 	return habits, nil
 }
 
-func (s *SQLiteStore) UpdateHabit(habit models.Habit) error {
+func (s *PostgresStore) UpdateHabit(habit models.Habit) error {
 	var archivedAt, deletedAt sql.NullString
 	if habit.ArchivedAt != nil {
 		archivedAt = sql.NullString{String: habit.ArchivedAt.Format(time.RFC3339), Valid: true}
@@ -908,19 +929,19 @@ func (s *SQLiteStore) UpdateHabit(habit models.Habit) error {
 
 	_, err := s.db.Exec(`
 		INSERT INTO habits (id, name, created_at, archived_at, deleted_at)
-		VALUES (?, ?, ?, ?, ?)
+		VALUES ($1, $2, $3, $4, $5)
 		ON CONFLICT(id) DO UPDATE SET
-			name = excluded.name,
-			archived_at = excluded.archived_at,
-			deleted_at = excluded.deleted_at`,
+			name = EXCLUDED.name,
+			archived_at = EXCLUDED.archived_at,
+			deleted_at = EXCLUDED.deleted_at`,
 		habit.ID, habit.Name, habit.CreatedAt.Format(time.RFC3339), archivedAt, deletedAt)
 
 	return err
 }
 
-func (s *SQLiteStore) ArchiveHabit(id string) error {
+func (s *PostgresStore) ArchiveHabit(id string) error {
 	result, err := s.db.Exec(`
-		UPDATE habits SET archived_at = ? WHERE id = ? AND deleted_at IS NULL AND archived_at IS NULL`,
+		UPDATE habits SET archived_at = $1 WHERE id = $2 AND deleted_at IS NULL AND archived_at IS NULL`,
 		time.Now().Format(time.RFC3339), id)
 	if err != nil {
 		return err
@@ -937,9 +958,9 @@ func (s *SQLiteStore) ArchiveHabit(id string) error {
 	return nil
 }
 
-func (s *SQLiteStore) UnarchiveHabit(id string) error {
+func (s *PostgresStore) UnarchiveHabit(id string) error {
 	result, err := s.db.Exec(`
-		UPDATE habits SET archived_at = NULL WHERE id = ? AND deleted_at IS NULL AND archived_at IS NOT NULL`,
+		UPDATE habits SET archived_at = NULL WHERE id = $1 AND deleted_at IS NULL AND archived_at IS NOT NULL`,
 		id)
 	if err != nil {
 		return err
@@ -956,9 +977,9 @@ func (s *SQLiteStore) UnarchiveHabit(id string) error {
 	return nil
 }
 
-func (s *SQLiteStore) DeleteHabit(id string) error {
+func (s *PostgresStore) DeleteHabit(id string) error {
 	result, err := s.db.Exec(`
-		UPDATE habits SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL`,
+		UPDATE habits SET deleted_at = $1 WHERE id = $2 AND deleted_at IS NULL`,
 		time.Now().Format(time.RFC3339), id)
 	if err != nil {
 		return err
@@ -975,9 +996,9 @@ func (s *SQLiteStore) DeleteHabit(id string) error {
 	return nil
 }
 
-func (s *SQLiteStore) RestoreHabit(id string) error {
+func (s *PostgresStore) RestoreHabit(id string) error {
 	result, err := s.db.Exec(`
-		UPDATE habits SET deleted_at = NULL WHERE id = ? AND deleted_at IS NOT NULL`,
+		UPDATE habits SET deleted_at = NULL WHERE id = $1 AND deleted_at IS NOT NULL`,
 		id)
 	if err != nil {
 		return err
@@ -996,14 +1017,14 @@ func (s *SQLiteStore) RestoreHabit(id string) error {
 
 // Habit Entries
 
-func (s *SQLiteStore) AddHabitEntry(entry models.HabitEntry) error {
+func (s *PostgresStore) AddHabitEntry(entry models.HabitEntry) error {
 	return s.UpdateHabitEntry(entry)
 }
 
-func (s *SQLiteStore) GetHabitEntry(habitID, day string) (models.HabitEntry, error) {
+func (s *PostgresStore) GetHabitEntry(habitID, day string) (models.HabitEntry, error) {
 	row := s.db.QueryRow(`
 		SELECT id, habit_id, day, note, created_at, updated_at, deleted_at
-		FROM habit_entries WHERE habit_id = ? AND day = ? AND deleted_at IS NULL`,
+		FROM habit_entries WHERE habit_id = $1 AND day = $2 AND deleted_at IS NULL`,
 		habitID, day)
 
 	var e models.HabitEntry
@@ -1034,10 +1055,10 @@ func (s *SQLiteStore) GetHabitEntry(habitID, day string) (models.HabitEntry, err
 	return e, nil
 }
 
-func (s *SQLiteStore) GetHabitEntriesForDay(day string) ([]models.HabitEntry, error) {
+func (s *PostgresStore) GetHabitEntriesForDay(day string) ([]models.HabitEntry, error) {
 	rows, err := s.db.Query(`
 		SELECT id, habit_id, day, note, created_at, updated_at, deleted_at
-		FROM habit_entries WHERE day = ? AND deleted_at IS NULL
+		FROM habit_entries WHERE day = $1 AND deleted_at IS NULL
 		ORDER BY created_at`, day)
 	if err != nil {
 		return nil, err
@@ -1077,11 +1098,11 @@ func (s *SQLiteStore) GetHabitEntriesForDay(day string) ([]models.HabitEntry, er
 	return entries, nil
 }
 
-func (s *SQLiteStore) GetHabitEntriesForHabit(habitID string, startDay, endDay string) ([]models.HabitEntry, error) {
+func (s *PostgresStore) GetHabitEntriesForHabit(habitID string, startDay, endDay string) ([]models.HabitEntry, error) {
 	rows, err := s.db.Query(`
 		SELECT id, habit_id, day, note, created_at, updated_at, deleted_at
 		FROM habit_entries
-		WHERE habit_id = ? AND day >= ? AND day <= ? AND deleted_at IS NULL
+		WHERE habit_id = $1 AND day >= $2 AND day <= $3 AND deleted_at IS NULL
 		ORDER BY day DESC`, habitID, startDay, endDay)
 	if err != nil {
 		return nil, err
@@ -1121,7 +1142,7 @@ func (s *SQLiteStore) GetHabitEntriesForHabit(habitID string, startDay, endDay s
 	return entries, nil
 }
 
-func (s *SQLiteStore) UpdateHabitEntry(entry models.HabitEntry) error {
+func (s *PostgresStore) UpdateHabitEntry(entry models.HabitEntry) error {
 	var deletedAt sql.NullString
 	if entry.DeletedAt != nil {
 		deletedAt = sql.NullString{String: entry.DeletedAt.Format(time.RFC3339), Valid: true}
@@ -1129,20 +1150,20 @@ func (s *SQLiteStore) UpdateHabitEntry(entry models.HabitEntry) error {
 
 	_, err := s.db.Exec(`
 		INSERT INTO habit_entries (id, habit_id, day, note, created_at, updated_at, deleted_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT(habit_id, day) DO UPDATE SET
-			note = excluded.note,
-			updated_at = excluded.updated_at,
-			deleted_at = excluded.deleted_at`,
+			note = EXCLUDED.note,
+			updated_at = EXCLUDED.updated_at,
+			deleted_at = EXCLUDED.deleted_at`,
 		entry.ID, entry.HabitID, entry.Day, entry.Note,
 		entry.CreatedAt.Format(time.RFC3339), entry.UpdatedAt.Format(time.RFC3339), deletedAt)
 
 	return err
 }
 
-func (s *SQLiteStore) DeleteHabitEntry(id string) error {
+func (s *PostgresStore) DeleteHabitEntry(id string) error {
 	result, err := s.db.Exec(`
-		UPDATE habit_entries SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL`,
+		UPDATE habit_entries SET deleted_at = $1 WHERE id = $2 AND deleted_at IS NULL`,
 		time.Now().Format(time.RFC3339), id)
 	if err != nil {
 		return err
@@ -1159,9 +1180,9 @@ func (s *SQLiteStore) DeleteHabitEntry(id string) error {
 	return nil
 }
 
-func (s *SQLiteStore) RestoreHabitEntry(id string) error {
+func (s *PostgresStore) RestoreHabitEntry(id string) error {
 	result, err := s.db.Exec(`
-		UPDATE habit_entries SET deleted_at = NULL WHERE id = ? AND deleted_at IS NOT NULL`,
+		UPDATE habit_entries SET deleted_at = NULL WHERE id = $1 AND deleted_at IS NOT NULL`,
 		id)
 	if err != nil {
 		return err
@@ -1180,52 +1201,44 @@ func (s *SQLiteStore) RestoreHabitEntry(id string) error {
 
 // OT Settings
 
-func (s *SQLiteStore) GetOTSettings() (models.OTSettings, error) {
+func (s *PostgresStore) GetOTSettings() (models.OTSettings, error) {
 	row := s.db.QueryRow(`
 		SELECT id, prompt_on_empty, strict_mode, default_log_days
 		FROM ot_settings WHERE id = 1`)
 
 	var settings models.OTSettings
-	var promptOnEmpty, strictMode int
 
-	err := row.Scan(&settings.ID, &promptOnEmpty, &strictMode, &settings.DefaultLogDays)
+	err := row.Scan(&settings.ID, &settings.PromptOnEmpty, &settings.StrictMode, &settings.DefaultLogDays)
 	if err != nil {
 		return models.OTSettings{}, err
 	}
 
-	settings.PromptOnEmpty = promptOnEmpty == 1
-	settings.StrictMode = strictMode == 1
-
 	return settings, nil
 }
 
-func (s *SQLiteStore) SaveOTSettings(settings models.OTSettings) error {
-	var promptOnEmpty, strictMode int
-	if settings.PromptOnEmpty {
-		promptOnEmpty = 1
-	}
-	if settings.StrictMode {
-		strictMode = 1
-	}
-
+func (s *PostgresStore) SaveOTSettings(settings models.OTSettings) error {
 	_, err := s.db.Exec(`
-		INSERT OR REPLACE INTO ot_settings (id, prompt_on_empty, strict_mode, default_log_days)
-		VALUES (1, ?, ?, ?)`,
-		promptOnEmpty, strictMode, settings.DefaultLogDays)
+		INSERT INTO ot_settings (id, prompt_on_empty, strict_mode, default_log_days)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (id) DO UPDATE SET
+			prompt_on_empty = EXCLUDED.prompt_on_empty,
+			strict_mode = EXCLUDED.strict_mode,
+			default_log_days = EXCLUDED.default_log_days`,
+		1, settings.PromptOnEmpty, settings.StrictMode, settings.DefaultLogDays)
 
 	return err
 }
 
 // OT Entries
 
-func (s *SQLiteStore) AddOTEntry(entry models.OTEntry) error {
+func (s *PostgresStore) AddOTEntry(entry models.OTEntry) error {
 	return s.UpdateOTEntry(entry)
 }
 
-func (s *SQLiteStore) GetOTEntry(day string) (models.OTEntry, error) {
+func (s *PostgresStore) GetOTEntry(day string) (models.OTEntry, error) {
 	row := s.db.QueryRow(`
 		SELECT id, day, title, note, created_at, updated_at, deleted_at
-		FROM ot_entries WHERE day = ? AND deleted_at IS NULL`, day)
+		FROM ot_entries WHERE day = $1 AND deleted_at IS NULL`, day)
 
 	var e models.OTEntry
 	var createdAt, updatedAt string
@@ -1255,10 +1268,10 @@ func (s *SQLiteStore) GetOTEntry(day string) (models.OTEntry, error) {
 	return e, nil
 }
 
-func (s *SQLiteStore) GetOTEntries(startDay, endDay string, includeDeleted bool) ([]models.OTEntry, error) {
+func (s *PostgresStore) GetOTEntries(startDay, endDay string, includeDeleted bool) ([]models.OTEntry, error) {
 	query := `
 		SELECT id, day, title, note, created_at, updated_at, deleted_at
-		FROM ot_entries WHERE day >= ? AND day <= ?`
+		FROM ot_entries WHERE day >= $1 AND day <= $2`
 	if !includeDeleted {
 		query += " AND deleted_at IS NULL"
 	}
@@ -1303,7 +1316,7 @@ func (s *SQLiteStore) GetOTEntries(startDay, endDay string, includeDeleted bool)
 	return entries, nil
 }
 
-func (s *SQLiteStore) UpdateOTEntry(entry models.OTEntry) error {
+func (s *PostgresStore) UpdateOTEntry(entry models.OTEntry) error {
 	var deletedAt sql.NullString
 	if entry.DeletedAt != nil {
 		deletedAt = sql.NullString{String: entry.DeletedAt.Format(time.RFC3339), Valid: true}
@@ -1311,21 +1324,21 @@ func (s *SQLiteStore) UpdateOTEntry(entry models.OTEntry) error {
 
 	_, err := s.db.Exec(`
 		INSERT INTO ot_entries (id, day, title, note, created_at, updated_at, deleted_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT(day) DO UPDATE SET
-			title = excluded.title,
-			note = excluded.note,
-			updated_at = excluded.updated_at,
-			deleted_at = excluded.deleted_at`,
+			title = EXCLUDED.title,
+			note = EXCLUDED.note,
+			updated_at = EXCLUDED.updated_at,
+			deleted_at = EXCLUDED.deleted_at`,
 		entry.ID, entry.Day, entry.Title, entry.Note,
 		entry.CreatedAt.Format(time.RFC3339), entry.UpdatedAt.Format(time.RFC3339), deletedAt)
 
 	return err
 }
 
-func (s *SQLiteStore) DeleteOTEntry(day string) error {
+func (s *PostgresStore) DeleteOTEntry(day string) error {
 	result, err := s.db.Exec(`
-		UPDATE ot_entries SET deleted_at = ? WHERE day = ? AND deleted_at IS NULL`,
+		UPDATE ot_entries SET deleted_at = $1 WHERE day = $2 AND deleted_at IS NULL`,
 		time.Now().Format(time.RFC3339), day)
 	if err != nil {
 		return err
@@ -1342,9 +1355,9 @@ func (s *SQLiteStore) DeleteOTEntry(day string) error {
 	return nil
 }
 
-func (s *SQLiteStore) RestoreOTEntry(day string) error {
+func (s *PostgresStore) RestoreOTEntry(day string) error {
 	result, err := s.db.Exec(`
-		UPDATE ot_entries SET deleted_at = NULL WHERE day = ? AND deleted_at IS NOT NULL`,
+		UPDATE ot_entries SET deleted_at = NULL WHERE day = $1 AND deleted_at IS NOT NULL`,
 		day)
 	if err != nil {
 		return err
@@ -1362,13 +1375,13 @@ func (s *SQLiteStore) RestoreOTEntry(day string) error {
 }
 
 // UpdateSlotNotificationTimestamp updates the notification timestamp for a specific slot
-func (s *SQLiteStore) UpdateSlotNotificationTimestamp(date string, revision int, startTime string, taskID string, notificationType string, timestamp string) error {
+func (s *PostgresStore) UpdateSlotNotificationTimestamp(date string, revision int, startTime string, taskID string, notificationType string, timestamp string) error {
 	var query string
 	switch notificationType {
 	case "start":
-		query = "UPDATE slots SET last_notified_start = ? WHERE plan_date = ? AND plan_revision = ? AND start_time = ? AND task_id = ? AND deleted_at IS NULL"
+		query = "UPDATE slots SET last_notified_start = $1 WHERE plan_date = $2 AND plan_revision = $3 AND start_time = $4 AND task_id = $5 AND deleted_at IS NULL"
 	case "end":
-		query = "UPDATE slots SET last_notified_end = ? WHERE plan_date = ? AND plan_revision = ? AND start_time = ? AND task_id = ? AND deleted_at IS NULL"
+		query = "UPDATE slots SET last_notified_end = $1 WHERE plan_date = $2 AND plan_revision = $3 AND start_time = $4 AND task_id = $5 AND deleted_at IS NULL"
 	default:
 		return fmt.Errorf("invalid notification type: %s", notificationType)
 	}
@@ -1388,20 +1401,4 @@ func (s *SQLiteStore) UpdateSlotNotificationTimestamp(date string, revision int,
 	}
 
 	return nil
-}
-
-func (s *SQLiteStore) GetConfigPath() string {
-	return s.path
-}
-
-// GetDB returns the underlying database connection.
-// Returns nil if the database has not been initialized or loaded.
-// Callers should use Load() before calling this method.
-func (s *SQLiteStore) GetDB() *sql.DB {
-	return s.db
-}
-
-// GetMigrationsPath returns the path to the migrations directory.
-func (s *SQLiteStore) GetMigrationsPath() string {
-	return s.getMigrationsPath()
 }

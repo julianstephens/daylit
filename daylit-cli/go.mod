@@ -9,6 +9,7 @@ require (
 	github.com/charmbracelet/huh v0.8.0
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/google/uuid v1.6.0
+	github.com/lib/pq v1.10.9
 	modernc.org/sqlite v1.42.2
 )
 
