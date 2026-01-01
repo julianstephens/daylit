@@ -70,6 +70,11 @@ type Provider interface {
 	DeleteOTEntry(day string) error
 	RestoreOTEntry(day string) error
 
+	// Bulk Retrieval for Migration
+	GetAllPlans() ([]models.DayPlan, error)
+	GetAllHabitEntries() ([]models.HabitEntry, error)
+	GetAllOTEntries() ([]models.OTEntry, error)
+
 	// Utils
 	GetConfigPath() string
 }
