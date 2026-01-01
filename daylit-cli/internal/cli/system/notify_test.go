@@ -52,7 +52,7 @@ func TestNotifyCmd_Idempotency(t *testing.T) {
 	// Create a plan with a slot that should trigger notification
 	now := time.Now()
 	currentMinutes := now.Hour()*60 + now.Minute()
-	
+
 	// Create a slot that should have triggered 2 minutes ago (within grace period)
 	triggerMinutes := currentMinutes - 2
 	startHour := triggerMinutes / 60
@@ -567,12 +567,12 @@ func TestNotifyCmd_BothStartAndEndNotifications(t *testing.T) {
 	currentMinutes := now.Hour()*60 + now.Minute()
 
 	// Create a slot where both start and end should have triggered
-	triggerMinutes := currentMinutes - 35  // Started 35 minutes ago
+	triggerMinutes := currentMinutes - 35 // Started 35 minutes ago
 	startHour := triggerMinutes / 60
 	startMin := triggerMinutes % 60
 	startTime := fmt.Sprintf("%02d:%02d", startHour, startMin)
-	
-	endTriggerMinutes := currentMinutes - 2  // Ends 2 minutes ago (within grace period)
+
+	endTriggerMinutes := currentMinutes - 2 // Ends 2 minutes ago (within grace period)
 	endHour := endTriggerMinutes / 60
 	endMin := endTriggerMinutes % 60
 	endTime := fmt.Sprintf("%02d:%02d", endHour, endMin)
@@ -613,7 +613,7 @@ func TestNotifyCmd_BothStartAndEndNotifications(t *testing.T) {
 	}
 
 	slot := retrievedPlan.Slots[0]
-	
+
 	// Start notification should have been skipped (outside grace period)
 	if slot.LastNotifiedStart != nil {
 		t.Error("expected start notification to be skipped (outside grace period)")
@@ -652,7 +652,7 @@ func TestNotifyCmd_OnlyAcceptedOrDoneSlots(t *testing.T) {
 		Priority: 1,
 		Active:   true,
 	}
-	
+
 	if err := store.AddTask(task1); err != nil {
 		t.Fatalf("failed to add task1: %v", err)
 	}

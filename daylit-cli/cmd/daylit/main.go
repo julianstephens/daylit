@@ -63,6 +63,10 @@ func main() {
 		kong.Name("daylit"),
 		kong.Description("Daily structure scheduler / time-blocking companion"),
 		kong.UsageOnError(),
+		kong.ConfigureHelp(kong.HelpOptions{
+			Compact:             true,
+			NoExpandSubcommands: true,
+		}),
 		kong.Vars{"version": "v0.4.0"},
 	)
 
@@ -77,6 +81,14 @@ func main() {
 	appCtx := &cli.Context{
 		Store:     store,
 		Scheduler: scheduler.New(),
+	}
+
+	// Load the store before running the command (Init command will handle its own loading)
+	if CLI.Init.Force == false && ctx.Selected() != nil && ctx.Selected().Name != "init" {
+		if err := store.Load(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
 	err := ctx.Run(appCtx)
