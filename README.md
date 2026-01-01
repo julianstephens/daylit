@@ -7,7 +7,9 @@ Daylit is a comprehensive daily structure and time-blocking system designed to h
 The repository is divided into two main components:
 
 ### 1. [Daylit CLI](./daylit-cli)
+
 The core of the system. A command-line interface tool written in Go that handles:
+
 - **Task Management**: Manage recurring and one-off task templates.
 - **Scheduling**: Generate daily time-blocked schedules based on your templates.
 - **Tracking**: Keep track of what you should be doing right now.
@@ -16,7 +18,9 @@ The core of the system. A command-line interface tool written in Go that handles
 [Read the CLI Documentation](./daylit-cli/README.md)
 
 ### 2. [Daylit Tray](./daylit-tray)
+
 A desktop companion application built with Tauri (Rust + React) that:
+
 - **System Tray Integration**: Runs unobtrusively in your system tray.
 - **Notifications**: Displays custom desktop notifications.
 - **Webhook Server**: Listens for notification requests from the CLI.
@@ -37,6 +41,7 @@ Daylit is designed to work as a cohesive system:
 To get the full Daylit experience, you should set up both components.
 
 ### Prerequisites
+
 - **Go** (for building the CLI from source)
 - **Node.js** & **Rust** (for building the Tray app from source)
 
@@ -55,7 +60,9 @@ The easiest way to get started is to download pre-built binaries from the [lates
 If you prefer to build from source:
 
 ##### 1. Build the CLI
+
 Navigate to the `daylit-cli` directory:
+
 ```bash
 cd daylit-cli
 make build
@@ -64,7 +71,9 @@ go install ./cmd/daylit
 ```
 
 ##### 2. Build and Run the Tray App
+
 Navigate to the `daylit-tray` directory:
+
 ```bash
 cd daylit-tray
 npm install

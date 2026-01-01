@@ -5,6 +5,7 @@ A daily structure scheduler and time-blocking companion CLI tool.
 ## Overview
 
 `daylit` helps you structure your day by:
+
 - Managing task templates (recurring and one-off)
 - Generating daily time-blocked schedules
 - Tracking what you should be doing now

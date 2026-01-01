@@ -28,15 +28,15 @@
 
 1. Install dependencies:
 
-    ```bash
-    npm install
-    ```
+   ```bash
+   npm install
+   ```
 
 2. Run in development mode:
 
-    ```bash
-    npm run tauri dev
-    ```
+   ```bash
+   npm run tauri dev
+   ```
 
 ### Build
 
