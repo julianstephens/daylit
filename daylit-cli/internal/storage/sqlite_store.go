@@ -113,6 +113,17 @@ func (s *SQLiteStore) Close() error {
 	return nil
 }
 
+// tableExists checks if a table exists in the SQLite database.
+// Returns false if the table doesn't exist or if there's an error checking.
+func (s *SQLiteStore) tableExists(tableName string) (bool, error) {
+	var count int
+	row := s.db.QueryRow("SELECT count(*) FROM sqlite_master WHERE type='table' AND name=?", tableName)
+	if err := row.Scan(&count); err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
 func (s *SQLiteStore) runMigrations() error {
 	// Get the migrations directory path (relative to the binary or in the repository)
 	migrationsPath := s.getMigrationsPath()
@@ -890,23 +901,10 @@ func (s *SQLiteStore) GetHabitByName(name string) (models.Habit, error) {
 
 func (s *SQLiteStore) GetAllHabits(includeArchived, includeDeleted bool) ([]models.Habit, error) {
 	// Check if table exists (for backward compatibility)
-	var tableExists bool
-	checkRows, err := s.db.Query("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='habits'")
-	if err != nil {
-		// If we can't confirm the table exists, behave as if it does not.
-		return []models.Habit{}, nil
-	}
-	defer checkRows.Close()
-
-	var count int
-	if checkRows.Next() {
-		if err := checkRows.Scan(&count); err != nil {
-			// On scan error, also behave as if the table does not exist.
-			return []models.Habit{}, nil
-		}
-	}
-	tableExists = count > 0
-	if !tableExists {
+	exists, err := s.tableExists("habits")
+	if err != nil || !exists {
+		// If we can't confirm the table exists, or it does not exist,
+		// behave as if it does not.
 		return []models.Habit{}, nil
 	}
 
@@ -1246,21 +1244,9 @@ func (s *SQLiteStore) RestoreHabitEntry(id string) error {
 
 func (s *SQLiteStore) GetOTSettings() (models.OTSettings, error) {
 	// Check if table exists (for backward compatibility)
-	var tableExists bool
-	checkRows, err := s.db.Query("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='ot_settings'")
-	if err != nil {
-		return models.OTSettings{}, fmt.Errorf("failed to check ot_settings table existence: %w", err)
-	}
-	defer checkRows.Close()
-
-	var count int
-	if checkRows.Next() {
-		if err := checkRows.Scan(&count); err != nil {
-			return models.OTSettings{}, err
-		}
-	}
-	tableExists = count > 0
-	if !tableExists {
+	exists, err := s.tableExists("ot_settings")
+	if err != nil || !exists {
+		// For backward compatibility, treat failures here as "table does not exist".
 		return models.OTSettings{}, nil
 	}
 
@@ -1573,20 +1559,10 @@ func (s *SQLiteStore) GetAllPlans() ([]models.DayPlan, error) {
 // GetAllHabitEntries retrieves all habit entries including deleted ones
 func (s *SQLiteStore) GetAllHabitEntries() ([]models.HabitEntry, error) {
 	// Check if table exists (for backward compatibility)
-	var tableExists bool
-	checkRows, err := s.db.Query("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='habit_entries'")
-	if err == nil {
-		defer checkRows.Close()
-
-		var count int
-		if checkRows.Next() {
-			if err := checkRows.Scan(&count); err != nil {
-				return nil, fmt.Errorf("failed to check existence of habit_entries table: %w", err)
-			}
-		}
-		tableExists = count > 0
-	}
-	if !tableExists {
+	exists, err := s.tableExists("habit_entries")
+	if err != nil || !exists {
+		// If we can't confirm the table exists, or it does not exist,
+		// behave as if it does not.
 		return []models.HabitEntry{}, nil
 	}
 
@@ -1636,20 +1612,10 @@ func (s *SQLiteStore) GetAllHabitEntries() ([]models.HabitEntry, error) {
 // GetAllOTEntries retrieves all OT entries including deleted ones
 func (s *SQLiteStore) GetAllOTEntries() ([]models.OTEntry, error) {
 	// Check if table exists (for backward compatibility)
-	var tableExists bool
-	checkRows, err := s.db.Query("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='ot_entries'")
-	if err == nil {
-		var count int
-		if checkRows.Next() {
-			if err := checkRows.Scan(&count); err != nil {
-				checkRows.Close()
-				return nil, fmt.Errorf("failed to scan ot_entries table existence: %w", err)
-			}
-		}
-		checkRows.Close()
-		tableExists = count > 0
-	}
-	if !tableExists {
+	exists, err := s.tableExists("ot_entries")
+	if err != nil || !exists {
+		// If we can't confirm the table exists, or it does not exist,
+		// behave as if it does not.
 		return []models.OTEntry{}, nil
 	}
 
