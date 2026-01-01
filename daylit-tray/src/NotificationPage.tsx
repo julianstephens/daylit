@@ -45,7 +45,7 @@ function NotificationPage() {
       }
     };
     fetchPayload();
-  }, []);
+  }, [handleClose, setupNotification]);
 
   useEffect(() => {
     let unlistenFn: (() => void) | null = null;
@@ -57,7 +57,7 @@ function NotificationPage() {
           console.log("Received live update:", event.payload);
           setupNotification(event.payload);
         });
-        
+
         if (isMounted) {
           unlistenFn = unlisten;
         } else {
