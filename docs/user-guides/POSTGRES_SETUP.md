@@ -175,7 +175,7 @@ daylit --config "postgres://daylit_user@172.20.240.1:5432/daylit?sslmode=disable
 
 ## Usage
 
-### Command Line (Not Recommended - Use Secure Methods Below)
+### Command Line Restrictions (What is NOT Allowed)
 
 ⚠️ **SECURITY WARNING:** Passing connection strings with embedded passwords via command line is **NOT ALLOWED** as it exposes credentials in shell history and process lists.
 
