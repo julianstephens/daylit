@@ -2,7 +2,6 @@ package storage
 
 import (
 	"database/sql"
-	"os"
 	"path/filepath"
 	"testing"
 )
@@ -23,7 +22,6 @@ func setupMinimalTestStore(t *testing.T) (*SQLiteStore, func()) {
 
 	cleanup := func() {
 		store.Close()
-		os.RemoveAll(tempDir)
 	}
 
 	return store, cleanup
@@ -106,7 +104,7 @@ func TestTableExists(t *testing.T) {
 			t.Fatalf("failed to create test table: %v", err)
 		}
 
-		// SQLite table names are case-sensitive in queries
+		// SQLite table names are case-insensitive
 		exists, err := store.tableExists("lowercase_table")
 		if err != nil {
 			t.Errorf("tableExists() returned unexpected error: %v", err)
@@ -115,13 +113,13 @@ func TestTableExists(t *testing.T) {
 			t.Error("tableExists('lowercase_table') = false, want true")
 		}
 
-		// Check with different case - should not exist
+		// Check with different case - should exist
 		exists, err = store.tableExists("LOWERCASE_TABLE")
 		if err != nil {
 			t.Errorf("tableExists() returned unexpected error: %v", err)
 		}
-		if exists {
-			t.Error("tableExists('LOWERCASE_TABLE') = true, want false (case-sensitive)")
+		if !exists {
+			t.Error("tableExists('LOWERCASE_TABLE') = false, want true (case-insensitive)")
 		}
 	})
 
@@ -178,7 +176,6 @@ func TestTableExists(t *testing.T) {
 		}
 		defer func() {
 			store.Close()
-			os.RemoveAll(tempDir)
 		}()
 
 		// After initialization with migrations, habits table should exist

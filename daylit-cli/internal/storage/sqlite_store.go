@@ -99,9 +99,10 @@ func (s *SQLiteStore) Close() error {
 
 // tableExists checks if a table exists in the SQLite database.
 // Returns true if the table exists, false otherwise. Returns an error if the check itself fails.
+// The check is case-insensitive to match SQLite's behavior.
 func (s *SQLiteStore) tableExists(tableName string) (bool, error) {
 	var count int
-	row := s.db.QueryRow("SELECT count(*) FROM sqlite_master WHERE type='table' AND name=?", tableName)
+	row := s.db.QueryRow("SELECT count(*) FROM sqlite_master WHERE type='table' AND name COLLATE NOCASE = ?", tableName)
 	if err := row.Scan(&count); err != nil {
 		return false, err
 	}
