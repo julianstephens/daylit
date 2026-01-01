@@ -29,6 +29,14 @@ func setupTestStore(t *testing.T) (*storage.SQLiteStore, func()) {
 	return store, cleanup
 }
 
+// Helper function to calculate end time correctly handling hour overflow
+func calculateEndTime(startMinutes, durationMin int) string {
+	endMinutes := startMinutes + durationMin
+	endHour := endMinutes / 60
+	endMin := endMinutes % 60
+	return fmt.Sprintf("%02d:%02d", endHour, endMin)
+}
+
 func TestNotifyCmd_Idempotency(t *testing.T) {
 	store, cleanup := setupTestStore(t)
 	defer cleanup()
@@ -58,7 +66,7 @@ func TestNotifyCmd_Idempotency(t *testing.T) {
 	startHour := triggerMinutes / 60
 	startMin := triggerMinutes % 60
 	startTime := fmt.Sprintf("%02d:%02d", startHour, startMin)
-	endTime := fmt.Sprintf("%02d:%02d", startHour, (startMin+30)%60)
+	endTime := calculateEndTime(triggerMinutes, 30)
 
 	nowStr := time.Now().UTC().Format(time.RFC3339)
 	plan := models.DayPlan{
@@ -178,7 +186,7 @@ func TestNotifyCmd_GracePeriod(t *testing.T) {
 		startHour := triggerMinutes / 60
 		startMin := triggerMinutes % 60
 		startTime := fmt.Sprintf("%02d:%02d", startHour, startMin)
-		endTime := fmt.Sprintf("%02d:%02d", startHour, (startMin+30)%60)
+		endTime := calculateEndTime(triggerMinutes, 30)
 
 		nowStr := time.Now().UTC().Format(time.RFC3339)
 		plan := models.DayPlan{
@@ -228,7 +236,7 @@ func TestNotifyCmd_GracePeriod(t *testing.T) {
 		startHour := triggerMinutes / 60
 		startMin := triggerMinutes % 60
 		startTime := fmt.Sprintf("%02d:%02d", startHour, startMin)
-		endTime := fmt.Sprintf("%02d:%02d", startHour, (startMin+30)%60)
+		endTime := calculateEndTime(triggerMinutes, 30)
 
 		nowStr := time.Now().UTC().Format(time.RFC3339)
 		plan := models.DayPlan{
@@ -299,7 +307,7 @@ func TestNotifyCmd_NoNotificationBeforeTime(t *testing.T) {
 	startHour := triggerMinutes / 60
 	startMin := triggerMinutes % 60
 	startTime := fmt.Sprintf("%02d:%02d", startHour, startMin)
-	endTime := fmt.Sprintf("%02d:%02d", startHour, (startMin+30)%60)
+	endTime := calculateEndTime(triggerMinutes, 30)
 
 	nowStr := time.Now().UTC().Format(time.RFC3339)
 	plan := models.DayPlan{
@@ -377,7 +385,7 @@ func TestNotifyCmd_DisabledNotifications(t *testing.T) {
 	startHour := triggerMinutes / 60
 	startMin := triggerMinutes % 60
 	startTime := fmt.Sprintf("%02d:%02d", startHour, startMin)
-	endTime := fmt.Sprintf("%02d:%02d", startHour, (startMin+30)%60)
+	endTime := calculateEndTime(triggerMinutes, 30)
 
 	nowStr := time.Now().UTC().Format(time.RFC3339)
 	plan := models.DayPlan{
@@ -666,7 +674,7 @@ func TestNotifyCmd_OnlyAcceptedOrDoneSlots(t *testing.T) {
 	startHour := triggerMinutes / 60
 	startMin := triggerMinutes % 60
 	startTime := fmt.Sprintf("%02d:%02d", startHour, startMin)
-	endTime := fmt.Sprintf("%02d:%02d", startHour, (startMin+30)%60)
+	endTime := calculateEndTime(triggerMinutes, 30)
 
 	nowStr := time.Now().UTC().Format(time.RFC3339)
 	plan := models.DayPlan{

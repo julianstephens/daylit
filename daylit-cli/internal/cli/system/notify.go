@@ -2,6 +2,7 @@ package system
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
@@ -38,17 +39,10 @@ func isDatabaseBusyError(err error) bool {
 		return false
 	}
 	errStr := err.Error()
-	// Check for SQLite busy/locked errors
-	if len(errStr) >= 16 && errStr[:16] == "database is lock" {
-		return true // "database is locked"
-	}
-	if len(errStr) >= 13 && errStr[:13] == "database busy" {
-		return true
-	}
-	if len(errStr) >= 20 && errStr[:20] == "database table is lo" {
-		return true // "database table is locked"
-	}
-	return false
+	// Check for SQLite busy/locked errors using strings.Contains for more robust matching
+	return strings.Contains(errStr, "database is locked") ||
+		strings.Contains(errStr, "database busy") ||
+		strings.Contains(errStr, "database table is locked")
 }
 
 func (c *NotifyCmd) runWithRetry(ctx *cli.Context) error {
@@ -177,15 +171,22 @@ func (c *NotifyCmd) checkAndSendStartNotification(
 		if offsetMin == 0 {
 			msg = fmt.Sprintf("Started %d min ago: %s (%s)", minutesLate, taskName, slot.Start)
 		} else {
-			actualMinutesAgo := minutesLate - offsetMin
-			if actualMinutesAgo > 0 {
-				msg = fmt.Sprintf("Started %d min ago: %s (%s)", actualMinutesAgo, taskName, slot.Start)
+			// minutesRelativeToStart > 0: minutes after start; < 0: minutes until start
+			minutesRelativeToStart := minutesLate - offsetMin
+			if minutesRelativeToStart > 0 {
+				msg = fmt.Sprintf("Started %d min ago: %s (%s)", minutesRelativeToStart, taskName, slot.Start)
 			} else {
 				// Still in the "upcoming" window
-				minutesUntilStart := -actualMinutesAgo
+				minutesUntilStart := -minutesRelativeToStart
 				msg = fmt.Sprintf("Upcoming: %s starts in %d min (%s)", taskName, minutesUntilStart, slot.Start)
 			}
 		}
+	}
+
+	// Update notification timestamp BEFORE sending to avoid duplicates if send succeeds but update fails
+	timestamp := now.Format(time.RFC3339)
+	if err := ctx.Store.UpdateSlotNotificationTimestamp(planDate, planRevision, slot.Start, slot.TaskID, "start", timestamp); err != nil {
+		return fmt.Errorf("failed to update notification timestamp: %w", err)
 	}
 
 	// Send notification
@@ -196,12 +197,6 @@ func (c *NotifyCmd) checkAndSendStartNotification(
 			// Log error but continue
 			fmt.Printf("Failed to send notification: %v\n", err)
 		}
-	}
-
-	// Update notification timestamp
-	timestamp := now.Format(time.RFC3339)
-	if err := ctx.Store.UpdateSlotNotificationTimestamp(planDate, planRevision, slot.Start, slot.TaskID, "start", timestamp); err != nil {
-		return fmt.Errorf("failed to update notification timestamp: %w", err)
 	}
 
 	return nil
@@ -254,15 +249,22 @@ func (c *NotifyCmd) checkAndSendEndNotification(
 		if offsetMin == 0 {
 			msg = fmt.Sprintf("Ended %d min ago: %s (%s)", minutesLate, taskName, slot.End)
 		} else {
-			actualMinutesAgo := minutesLate - offsetMin
-			if actualMinutesAgo > 0 {
-				msg = fmt.Sprintf("Ended %d min ago: %s (%s)", actualMinutesAgo, taskName, slot.End)
+			// minutesRelativeToEnd > 0: minutes after end; < 0: minutes until end
+			minutesRelativeToEnd := minutesLate - offsetMin
+			if minutesRelativeToEnd > 0 {
+				msg = fmt.Sprintf("Ended %d min ago: %s (%s)", minutesRelativeToEnd, taskName, slot.End)
 			} else {
 				// Still in the "ending soon" window
-				minutesUntilEnd := -actualMinutesAgo
+				minutesUntilEnd := -minutesRelativeToEnd
 				msg = fmt.Sprintf("Ending soon: %s ends in %d min (%s)", taskName, minutesUntilEnd, slot.End)
 			}
 		}
+	}
+
+	// Update notification timestamp BEFORE sending to avoid duplicates if send succeeds but update fails
+	timestamp := now.Format(time.RFC3339)
+	if err := ctx.Store.UpdateSlotNotificationTimestamp(planDate, planRevision, slot.Start, slot.TaskID, "end", timestamp); err != nil {
+		return fmt.Errorf("failed to update notification timestamp: %w", err)
 	}
 
 	// Send notification
@@ -273,12 +275,6 @@ func (c *NotifyCmd) checkAndSendEndNotification(
 			// Log error but continue
 			fmt.Printf("Failed to send notification: %v\n", err)
 		}
-	}
-
-	// Update notification timestamp
-	timestamp := now.Format(time.RFC3339)
-	if err := ctx.Store.UpdateSlotNotificationTimestamp(planDate, planRevision, slot.Start, slot.TaskID, "end", timestamp); err != nil {
-		return fmt.Errorf("failed to update notification timestamp: %w", err)
 	}
 
 	return nil
