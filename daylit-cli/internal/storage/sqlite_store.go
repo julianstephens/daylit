@@ -1248,17 +1248,18 @@ func (s *SQLiteStore) GetOTSettings() (models.OTSettings, error) {
 	// Check if table exists (for backward compatibility)
 	var tableExists bool
 	checkRows, err := s.db.Query("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='ot_settings'")
-	if err == nil {
-		defer checkRows.Close()
-
-		var count int
-		if checkRows.Next() {
-			if err := checkRows.Scan(&count); err != nil {
-				return models.OTSettings{}, err
-			}
-		}
-		tableExists = count > 0
+	if err != nil {
+		return models.OTSettings{}, fmt.Errorf("checking ot_settings table existence: %w", err)
 	}
+	defer checkRows.Close()
+
+	var count int
+	if checkRows.Next() {
+		if err := checkRows.Scan(&count); err != nil {
+			return models.OTSettings{}, err
+		}
+	}
+	tableExists = count > 0
 	if !tableExists {
 		return models.OTSettings{}, nil
 	}
@@ -1478,13 +1479,13 @@ func (s *SQLiteStore) GetAllPlans() ([]models.DayPlan, error) {
 	var hasNotificationCols bool
 	checkRows, err := s.db.Query("SELECT count(*) FROM pragma_table_info('slots') WHERE name='last_notified_start'")
 	if err == nil {
+		defer checkRows.Close()
 		var count int
 		if checkRows.Next() {
 			if err := checkRows.Scan(&count); err == nil {
 				hasNotificationCols = count > 0
 			}
 		}
-		checkRows.Close()
 	}
 
 	rows, err := s.db.Query(`
