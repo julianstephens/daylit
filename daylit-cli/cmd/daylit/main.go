@@ -22,7 +22,7 @@ import (
 
 var CLI struct {
 	Version kong.VersionFlag
-	Config  string `help:"Config file path or PostgreSQL connection string (postgres://...)." type:"string" default:"~/.config/daylit/daylit.db"`
+	Config  string `help:"Config file path or PostgreSQL connection string. For PostgreSQL, credentials must NOT be embedded in the connection string. Use environment variables, .pgpass, or OS keyring instead." type:"string" default:"~/.config/daylit/daylit.db"`
 
 	Init     system.InitCmd     `cmd:"" help:"Initialize daylit storage."`
 	Migrate  system.MigrateCmd  `cmd:"" help:"Run database migrations."`
@@ -73,7 +73,16 @@ func main() {
 	// Initialize storage based on config format
 	var store storage.Provider
 	if strings.HasPrefix(CLI.Config, "postgres://") || strings.HasPrefix(CLI.Config, "postgresql://") {
-		// PostgreSQL connection string detected
+		// PostgreSQL connection string detected - validate for embedded credentials
+		if storage.HasEmbeddedCredentials(CLI.Config) {
+			fmt.Fprintf(os.Stderr, "❌ Error: PostgreSQL connection strings with embedded credentials are NOT allowed.\n")
+			fmt.Fprintf(os.Stderr, "       Use one of these secure alternatives:\n")
+			fmt.Fprintf(os.Stderr, "       1. OS keyring:    daylit config set connection-string \"postgresql://user:password@host:5432/daylit\"\n")
+			fmt.Fprintf(os.Stderr, "       2. Environment:   export DAYLIT_DB_CONNECTION=\"postgresql://user:password@host:5432/daylit\"\n")
+			fmt.Fprintf(os.Stderr, "       3. .pgpass file:  Use connection string without password: \"postgresql://user@host:5432/daylit\"\n")
+			fmt.Fprintf(os.Stderr, "\n       For more information, see docs/POSTGRES_SETUP.md\n")
+			os.Exit(1)
+		}
 		store = storage.NewPostgresStore(CLI.Config)
 	} else {
 		// Default to SQLite

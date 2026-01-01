@@ -136,16 +136,29 @@ daylit task list
 ```
 
 ### PostgreSQL (New)
-```bash
-# Use PostgreSQL connection string
-daylit --config "postgres://user:pass@localhost:5432/daylit?sslmode=disable" init
-daylit --config "postgres://user:pass@localhost:5432/daylit?sslmode=disable" task list
 
-# Or with environment variable
-export DAYLIT_CONFIG="postgres://user:pass@localhost:5432/daylit?sslmode=disable"
-daylit init
-daylit task list
+⚠️ **SECURITY UPDATE**: As of the latest version, embedded passwords in connection strings are blocked for security. Use secure alternatives:
+
+```bash
+# Setup .pgpass for secure credential storage
+echo "localhost:5432:daylit:user:pass" > ~/.pgpass
+chmod 0600 ~/.pgpass
+
+# Use connection string WITHOUT password
+daylit --config "postgres://user@localhost:5432/daylit?sslmode=disable" init
+daylit --config "postgres://user@localhost:5432/daylit?sslmode=disable" task list
+
+# Or with environment variable for password
+export PGPASSWORD="pass"
+daylit --config "postgres://user@localhost:5432/daylit?sslmode=disable" init
+
+# Or store full connection in environment (not exposed via CLI)
+export DAYLIT_DB_CONNECTION="postgres://user:pass@localhost:5432/daylit?sslmode=disable"
+# Then use without password in command line
+daylit --config "postgres://user@localhost:5432/daylit?sslmode=disable" task list
 ```
+
+See [POSTGRES_SETUP.md](POSTGRES_SETUP.md) for detailed secure configuration instructions.
 
 ## Benefits
 

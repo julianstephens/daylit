@@ -61,122 +61,208 @@ Exit psql with `\q`.
 PostgreSQL connection strings follow this format:
 
 ```
-postgres://username:password@hostname:port/database?options
+postgres://username@hostname:port/database?options
 ```
 
 or
 
 ```
-postgresql://username:password@hostname:port/database?options
+postgresql://username@hostname:port/database?options
 ```
+
+**IMPORTANT SECURITY NOTE:** As of the latest version, daylit enforces secure credential handling. Connection strings with embedded passwords (e.g., `postgres://user:password@host/db`) are **NOT ALLOWED** via the `--config` flag. You must use one of the secure alternatives described below.
+
+### Secure Credential Management
+
+daylit supports three secure methods for providing database credentials:
+
+#### 1. Environment Variable (Recommended for Automation)
+
+Set the connection string with credentials in an environment variable:
+
+**Bash/Zsh:**
+```bash
+export DAYLIT_DB_CONNECTION="postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"
+
+# Then use daylit with a connection string without password
+daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" init
+```
+
+**Windows PowerShell:**
+```powershell
+$env:DAYLIT_DB_CONNECTION="postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"
+
+# For persistence:
+[System.Environment]::SetEnvironmentVariable('DAYLIT_DB_CONNECTION', 'postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable', 'User')
+```
+
+#### 2. .pgpass File (Recommended for Interactive Use)
+
+PostgreSQL's standard password file provides secure, automatic credential management.
+
+Create `~/.pgpass` (Linux/macOS) or `%APPDATA%\postgresql\pgpass.conf` (Windows) with permissions `0600`:
+
+```
+localhost:5432:daylit:daylit_user:your_password
+```
+
+**Set permissions (Linux/macOS):**
+```bash
+chmod 0600 ~/.pgpass
+```
+
+Then use connection string without password:
+```bash
+daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" init
+```
+
+#### 3. OS Keyring (Future Enhancement)
+
+Support for OS keyring storage is planned for a future release. Use `.pgpass` or environment variables in the meantime.
 
 ### Examples
 
-**Local database:**
+**Local database with .pgpass:**
 ```bash
-postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable
+# Password stored in ~/.pgpass
+daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" init
 ```
 
-**Remote database with SSL:**
+**Remote database with environment variable:**
 ```bash
-postgres://daylit_user:password@db.example.com:5432/daylit?sslmode=require
+export DAYLIT_DB_CONNECTION="postgres://daylit_user:secure_password@db.example.com:5432/daylit?sslmode=require"
+daylit --config "postgres://daylit_user@db.example.com:5432/daylit?sslmode=require" task list
 ```
 
-**WSL2 accessing Windows PostgreSQL:**
+**WSL2 accessing Windows PostgreSQL with .pgpass:**
 ```bash
 # Find your Windows host IP from WSL2
 ip route | grep default | awk '{print $3}'
 # Usually something like 172.x.x.x
 
-postgres://daylit_user:password@172.20.240.1:5432/daylit?sslmode=disable
+# Add to ~/.pgpass:
+# 172.20.240.1:5432:daylit:daylit_user:your_password
+
+daylit --config "postgres://daylit_user@172.20.240.1:5432/daylit?sslmode=disable" plan
 ```
 
 ## Usage
 
-### Method 1: Command Line (Explicit)
+### Command Line (Not Recommended - Use Secure Methods Below)
 
-Pass the connection string with the `--config` flag:
+⚠️ **SECURITY WARNING:** Passing connection strings with embedded passwords via command line is **NOT ALLOWED** as it exposes credentials in shell history and process lists.
 
+Use the secure methods described below instead.
+
+### Secure Method 1: .pgpass File (Recommended for Interactive Use)
+
+Create a `.pgpass` file with your credentials and use a connection string without password:
+
+**Setup:**
 ```bash
-daylit --config "postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable" init
+# Create ~/.pgpass with secure permissions
+echo "localhost:5432:daylit:daylit_user:your_password" > ~/.pgpass
+chmod 0600 ~/.pgpass
 
-daylit --config "postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable" task list
-
-daylit --config "postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable" plan
+# Use connection string without password
+daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" init
+daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" task list
 ```
 
-### Method 2: Environment Variable (Recommended)
+### Secure Method 2: Environment Variable (Recommended for Automation)
 
-Set the `DAYLIT_CONFIG` environment variable:
+Set the connection credentials in an environment variable:
 
 **Bash/Zsh:**
 ```bash
-export DAYLIT_CONFIG="postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"
+# Set for current session
+export DAYLIT_DB_CONNECTION="postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"
 
-# Add to ~/.bashrc or ~/.zshrc for persistence
-echo 'export DAYLIT_CONFIG="postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"' >> ~/.bashrc
+# Or add to ~/.bashrc or ~/.zshrc for persistence
+echo 'export DAYLIT_DB_CONNECTION="postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"' >> ~/.bashrc
+
+# Use with connection string (credentials pulled from environment)
+daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" init
 ```
 
 **Windows PowerShell:**
 ```powershell
-$env:DAYLIT_CONFIG="postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"
+$env:DAYLIT_DB_CONNECTION="postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"
 
 # For persistence:
-[System.Environment]::SetEnvironmentVariable('DAYLIT_CONFIG', 'postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable', 'User')
+[System.Environment]::SetEnvironmentVariable('DAYLIT_DB_CONNECTION', 'postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable', 'User')
 ```
 
-Then use daylit normally:
+### Secure Method 3: Shell Alias with .pgpass
+
+Create an alias for convenience (requires .pgpass setup):
 
 ```bash
+# In ~/.bashrc or ~/.zshrc
+alias daylit='daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable"'
+
+# Then use normally
 daylit init
 daylit task add "My Task"
 daylit plan
 ```
 
-### Method 3: Shell Alias
-
-Create an alias for convenience:
-
-```bash
-# In ~/.bashrc or ~/.zshrc
-alias daylit='daylit --config "postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"'
-```
-
 ## Initialization
 
-Before first use, initialize the database:
+Before first use, initialize the database. Make sure you're using a secure credential method:
 
+**With .pgpass file (recommended):**
 ```bash
-daylit --config "postgres://your-connection-string" init
+# Ensure ~/.pgpass contains your credentials
+daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" init
+```
+
+**With environment variable:**
+```bash
+export DAYLIT_DB_CONNECTION="postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"
+daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" init
 ```
 
 This will:
 1. Connect to the PostgreSQL database
-2. Run all necessary migrations to create tables
-3. Initialize default settings
+2. Create the `daylit` schema if it doesn't exist
+3. Run all necessary migrations to create tables
+4. Initialize default settings
+
+**Note:** The connection string you provide via `--config` should NOT contain a password. Credentials should be provided through `.pgpass` or the `PGPASSWORD` environment variable.
 
 ## Security Considerations
 
 ### Connection String Security
 
-**DO NOT** commit connection strings with passwords to version control!
+**CRITICAL:** daylit enforces secure credential handling. Connection strings with embedded passwords are blocked at runtime.
 
-**Safe options:**
+**What is NOT allowed:**
+```bash
+# ❌ BLOCKED - Password in connection string
+daylit --config "postgres://user:password@host:5432/daylit" init
+
+# ❌ BLOCKED - Password in DSN format
+daylit --config "host=localhost password=secret dbname=daylit" init
+```
+
+**What IS allowed:**
 
 1. **Use environment variables:**
    ```bash
-   export POSTGRES_PASSWORD="your_password"
-   export DAYLIT_CONFIG="postgres://daylit_user:${POSTGRES_PASSWORD}@localhost:5432/daylit?sslmode=disable"
+   export DAYLIT_DB_PASSWORD="your_password"
+   # Connection string used by libpq will read from environment
+   daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" init
    ```
 
-2. **Use a `.pgpass` file:**
+2. **Use a `.pgpass` file (RECOMMENDED):**
    Create `~/.pgpass` with permissions `0600`:
    ```
    localhost:5432:daylit:daylit_user:your_password
    ```
    Then use connection string without password:
-   ```
-   postgres://daylit_user@localhost:5432/daylit?sslmode=disable
+   ```bash
+   daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" init
    ```
 
 3. **Use PostgreSQL service file:**
@@ -191,8 +277,21 @@ This will:
    ```
    Then use:
    ```bash
-   daylit --config "postgres:///?service=daylit"
+   daylit --config "postgres:///?service=daylit" init
    ```
+
+### Why This Matters
+
+Embedding passwords in command-line arguments is insecure because:
+- **Shell History**: Commands are saved in `.bash_history`, `.zsh_history`, etc.
+- **Process Lists**: Passwords visible in `ps`, `/proc`, Task Manager
+- **Logging**: CI/CD systems and debugging tools may log commands
+- **Scripts**: Encourages committing credentials to version control
+
+The secure methods above avoid these issues by:
+- Storing credentials in files with restricted permissions
+- Using PostgreSQL's built-in credential mechanisms
+- Keeping credentials out of command-line arguments
 
 ### SSL/TLS
 

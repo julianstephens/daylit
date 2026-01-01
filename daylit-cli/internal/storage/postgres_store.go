@@ -98,6 +98,42 @@ func hasSSLMode(connStr string) bool {
 	return false
 }
 
+// HasEmbeddedCredentials checks if a PostgreSQL connection string contains embedded credentials.
+// This includes checking for passwords in both URL format (postgres://user:pass@host/db) and
+// DSN format (user=user password=pass host=host).
+func HasEmbeddedCredentials(connStr string) bool {
+	// Try parsing as URL first (postgres:// or postgresql://)
+	if strings.HasPrefix(connStr, "postgres://") || strings.HasPrefix(connStr, "postgresql://") {
+		u, err := url.Parse(connStr)
+		if err != nil {
+			// If parsing fails, be conservative and assume credentials might be present
+			return true
+		}
+		// Check if password is present in the User info
+		if u.User != nil {
+			password, hasPassword := u.User.Password()
+			// Only return true if password is both present and non-empty
+			return hasPassword && password != ""
+		}
+		return false
+	}
+
+	// Check DSN format (space-separated key=value pairs)
+	parts := strings.Fields(connStr)
+	for _, part := range parts {
+		kv := strings.SplitN(part, "=", 2)
+		if len(kv) != 2 {
+			continue
+		}
+		// Check for password parameter (case-insensitive)
+		if strings.EqualFold(kv[0], "password") && kv[1] != "" {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (s *PostgresStore) Init() error {
 	// Open database connection
 	db, err := sql.Open("postgres", s.connStr)

@@ -69,6 +69,10 @@ func (c *InitCmd) migrateData(ctx *cli.Context, sourcePath string) error {
 	// Determine source store type and instantiate it
 	var sourceStore storage.Provider
 	if strings.HasPrefix(sourcePath, "postgres://") || strings.HasPrefix(sourcePath, "postgresql://") {
+		// Validate source connection string for embedded credentials
+		if storage.HasEmbeddedCredentials(sourcePath) {
+			return fmt.Errorf("PostgreSQL source connection string contains embedded credentials. Use environment variables, .pgpass, or OS keyring instead")
+		}
 		sourceStore = storage.NewPostgresStore(sourcePath)
 	} else {
 		// Default to SQLite for file paths

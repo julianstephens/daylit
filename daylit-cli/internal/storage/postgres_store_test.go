@@ -180,3 +180,114 @@ func TestEnsureSearchPath(t *testing.T) {
 		})
 	}
 }
+
+func TestHasEmbeddedCredentials(t *testing.T) {
+	tests := []struct {
+		name     string
+		connStr  string
+		expected bool
+	}{
+		// URL format tests
+		{
+			name:     "URL with username and password",
+			connStr:  "postgres://user:pass@localhost:5432/daylit",
+			expected: true,
+		},
+		{
+			name:     "URL with username but no password",
+			connStr:  "postgres://user@localhost:5432/daylit",
+			expected: false,
+		},
+		{
+			name:     "URL with no user info",
+			connStr:  "postgres://localhost:5432/daylit",
+			expected: false,
+		},
+		{
+			name:     "URL with empty password",
+			connStr:  "postgres://user:@localhost:5432/daylit",
+			expected: false,
+		},
+		{
+			name:     "URL with password and query params",
+			connStr:  "postgres://user:pass@localhost:5432/daylit?sslmode=disable",
+			expected: true,
+		},
+		{
+			name:     "postgresql:// prefix with password",
+			connStr:  "postgresql://user:secret@localhost/db",
+			expected: true,
+		},
+		{
+			name:     "postgresql:// prefix without password",
+			connStr:  "postgresql://user@localhost/db",
+			expected: false,
+		},
+		{
+			name:     "URL with special characters in password",
+			connStr:  "postgres://user:p@ssw0rd!@localhost:5432/daylit",
+			expected: true,
+		},
+		{
+			name:     "URL with encoded password",
+			connStr:  "postgres://user:p%40ss@localhost:5432/daylit",
+			expected: true,
+		},
+		// DSN format tests
+		{
+			name:     "DSN with password parameter",
+			connStr:  "host=localhost port=5432 dbname=daylit user=postgres password=secret",
+			expected: true,
+		},
+		{
+			name:     "DSN with empty password parameter",
+			connStr:  "host=localhost port=5432 dbname=daylit user=postgres password=",
+			expected: false,
+		},
+		{
+			name:     "DSN without password parameter",
+			connStr:  "host=localhost port=5432 dbname=daylit user=postgres",
+			expected: false,
+		},
+		{
+			name:     "DSN with PASSWORD uppercase",
+			connStr:  "host=localhost PASSWORD=secret dbname=daylit",
+			expected: true,
+		},
+		{
+			name:     "DSN with Password mixed case",
+			connStr:  "host=localhost Password=secret dbname=daylit",
+			expected: true,
+		},
+		{
+			name:     "DSN with service name (no password)",
+			connStr:  "service=daylit",
+			expected: false,
+		},
+		// Edge cases
+		{
+			name:     "Empty string",
+			connStr:  "",
+			expected: false,
+		},
+		{
+			name:     "Invalid URL format",
+			connStr:  "postgres://invalid@@@url",
+			expected: false, // url.Parse succeeds but doesn't find valid password
+		},
+		{
+			name:     "Plain text (not URL or DSN)",
+			connStr:  "some random text password=hidden",
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := HasEmbeddedCredentials(tt.connStr)
+			if result != tt.expected {
+				t.Errorf("HasEmbeddedCredentials(%q) = %v, want %v", tt.connStr, result, tt.expected)
+			}
+		})
+	}
+}
