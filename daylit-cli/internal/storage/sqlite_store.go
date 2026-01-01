@@ -4,12 +4,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/migration"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
+	"github.com/julianstephens/daylit/daylit-cli/migrations"
 	_ "modernc.org/sqlite"
 )
 
@@ -79,28 +81,9 @@ func (s *SQLiteStore) Load() error {
 	}
 	s.db = db
 
-	// Validate schema version if migrations directory is available.
-	// If the migrations directory is missing (e.g. not shipped in production),
-	// skip validation but still allow using the already-initialized database.
-	migrationsPath := s.getMigrationsPath()
-	if infoErr := func() error {
-		_, statErr := os.Stat(migrationsPath)
-		if statErr == nil {
-			return nil
-		}
-		if os.IsNotExist(statErr) {
-			// Migrations directory is not present; skip schema validation.
-			return nil
-		}
-		// Any other error accessing the directory is treated as fatal.
-		return fmt.Errorf("failed to access migrations directory %q: %w", migrationsPath, statErr)
-	}(); infoErr != nil {
-		return infoErr
-	} else if migrationsPath != "" {
-		// Only attempt validation when migrations are accessible.
-		if err := s.validateSchemaVersion(); err != nil {
-			return err
-		}
+	// Validate schema version using embedded migrations
+	if err := s.validateSchemaVersion(); err != nil {
+		return err
 	}
 
 	return nil
@@ -114,57 +97,30 @@ func (s *SQLiteStore) Close() error {
 }
 
 func (s *SQLiteStore) runMigrations() error {
-	// Get the migrations directory path (relative to the binary or in the repository)
-	migrationsPath := s.getMigrationsPath()
+	// Get the embedded SQLite migrations sub-filesystem
+	subFS, err := fs.Sub(migrations.FS, "sqlite")
+	if err != nil {
+		return fmt.Errorf("failed to access sqlite migrations: %w", err)
+	}
 
 	// Create migration runner
-	runner := migration.NewRunner(s.db, migrationsPath)
+	runner := migration.NewRunner(s.db, subFS)
 
 	// Apply all pending migrations
-	_, err := runner.ApplyMigrations(func(msg string) {
+	_, err = runner.ApplyMigrations(func(msg string) {
 		fmt.Println(msg)
 	})
 	return err
 }
 
 func (s *SQLiteStore) validateSchemaVersion() error {
-	migrationsPath := s.getMigrationsPath()
-	runner := migration.NewRunner(s.db, migrationsPath)
+	subFS, err := fs.Sub(migrations.FS, "sqlite")
+	if err != nil {
+		return fmt.Errorf("failed to access sqlite migrations: %w", err)
+	}
+	
+	runner := migration.NewRunner(s.db, subFS)
 	return runner.ValidateVersion()
-}
-
-func (s *SQLiteStore) getMigrationsPath() string {
-	// Check if environment variable is set
-	if envPath := os.Getenv("DAYLIT_MIGRATIONS_PATH"); envPath != "" {
-		if absPath, err := filepath.Abs(envPath); err == nil {
-			if _, err := os.Stat(absPath); err == nil {
-				return absPath
-			}
-		}
-	}
-
-	// Try to find migrations directory relative to the executable or in common paths
-	paths := []string{
-		"migrations/sqlite",
-		"./migrations/sqlite",
-		"../migrations/sqlite",
-		"../../migrations/sqlite",
-		"../../../migrations/sqlite",
-		"../../../../migrations/sqlite",
-		filepath.Join(filepath.Dir(os.Args[0]), "migrations", "sqlite"),
-		filepath.Join(filepath.Dir(os.Args[0]), "..", "migrations", "sqlite"),
-	}
-
-	for _, path := range paths {
-		if absPath, err := filepath.Abs(path); err == nil {
-			if _, err := os.Stat(absPath); err == nil {
-				return absPath
-			}
-		}
-	}
-
-	// Default to "migrations/sqlite" in current directory (will fail gracefully if not found)
-	return "migrations/sqlite"
 }
 
 func (s *SQLiteStore) GetSettings() (Settings, error) {
@@ -1602,9 +1558,4 @@ func (s *SQLiteStore) GetConfigPath() string {
 // Callers should use Load() before calling this method.
 func (s *SQLiteStore) GetDB() *sql.DB {
 	return s.db
-}
-
-// GetMigrationsPath returns the path to the migrations directory.
-func (s *SQLiteStore) GetMigrationsPath() string {
-	return s.getMigrationsPath()
 }

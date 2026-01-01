@@ -2,10 +2,11 @@ package migration
 
 import (
 	"database/sql"
-	"os"
+	"io/fs"
 	"path/filepath"
 	"strings"
 	"testing"
+	"testing/fstest"
 
 	_ "modernc.org/sqlite"
 )
@@ -28,18 +29,18 @@ func setupTestDB(t *testing.T) (*sql.DB, string, func()) {
 	return db, dbPath, cleanup
 }
 
-func setupTestMigrations(t *testing.T, migrations map[string]string) string {
-	// Create a temporary directory for migrations
-	tempDir := t.TempDir()
-
+func setupTestMigrations(t *testing.T, migrations map[string]string) fs.FS {
+	// Create a map-based filesystem for testing
+	mapFS := fstest.MapFS{}
+	
 	for filename, content := range migrations {
-		path := filepath.Join(tempDir, filename)
-		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
-			t.Fatalf("failed to write test migration %s: %v", filename, err)
+		mapFS[filename] = &fstest.MapFile{
+			Data: []byte(content),
+			Mode: 0644,
 		}
 	}
-
-	return tempDir
+	
+	return mapFS
 }
 
 func TestGetCurrentVersion(t *testing.T) {
@@ -160,13 +161,15 @@ func TestApplyMigrationsIncremental(t *testing.T) {
 	db, _, cleanup := setupTestDB(t)
 	defer cleanup()
 
-	migrationsPath := setupTestMigrations(t, map[string]string{
-		"001_init.sql": `
-			CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);
-		`,
-	})
+	// Create initial MapFS
+	mapFS := fstest.MapFS{
+		"001_init.sql": &fstest.MapFile{
+			Data: []byte(`CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);`),
+			Mode: 0644,
+		},
+	}
 
-	runner := NewRunner(db, migrationsPath)
+	runner := NewRunner(db, mapFS)
 
 	// Apply first migration
 	count, err := runner.ApplyMigrations(nil)
@@ -177,11 +180,14 @@ func TestApplyMigrationsIncremental(t *testing.T) {
 		t.Errorf("expected 1 migration applied, got %d", count)
 	}
 
-	// Add a new migration file
-	newMigration := `CREATE TABLE posts (id INTEGER PRIMARY KEY, user_id INTEGER);`
-	if err := os.WriteFile(filepath.Join(migrationsPath, "002_posts.sql"), []byte(newMigration), 0644); err != nil {
-		t.Fatalf("failed to write new migration: %v", err)
+	// Create a new MapFS with the second migration added
+	mapFS["002_posts.sql"] = &fstest.MapFile{
+		Data: []byte(`CREATE TABLE posts (id INTEGER PRIMARY KEY, user_id INTEGER);`),
+		Mode: 0644,
 	}
+
+	// Create new runner with updated filesystem
+	runner = NewRunner(db, mapFS)
 
 	// Apply second migration
 	count, err = runner.ApplyMigrations(nil)
