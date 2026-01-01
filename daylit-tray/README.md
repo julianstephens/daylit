@@ -1,16 +1,10 @@
-# daylit-tray
+# daylit-tray (Developer Guide)
 
-`daylit-tray` is a lightweight system tray application designed to accompany the `daylit` CLI tool. It runs in the background and provides desktop notifications triggered via webhooks.
+This document contains technical details for developers working on the `daylit-tray` component. For user documentation, see the [root README](../README.md).
 
-## Features
+## Technical Architecture
 
-- **System Tray Integration**: Runs unobtrusively in your system tray.
-- **Webhook Server**: Listens on a local port for notification requests.
-- **Desktop Notifications**: Displays custom notification windows when triggered.
-- **Auto-Discovery**: Writes its listening port to a lock file (`daylit-tray.lock`) for the CLI to find.
-- **Secure Authentication**: Uses a per-session secret token to authenticate notification requests.
-
-## How it Works
+### How it Works
 
 1. **Startup**: When launched, the application starts a local HTTP server on an available port.
 2. **Registration**: The port number, process ID, and a secure random secret are written to `daylit-tray.lock` in the application's configuration directory.
@@ -18,9 +12,9 @@
 4. **Authentication**: Each request must include an `X-Daylit-Secret` header with the secret from the lock file. Requests without a valid secret are rejected with a 401 Unauthorized response.
 5. **Notification**: Upon receiving a valid authenticated request, it opens a notification window displaying the message.
 
-## Security
+### Security Implementation
 
-The tray application implements a secret-in-lockfile authentication mechanism to ensure only authorized clients (specifically the daylit CLI) can trigger notifications:
+The tray application implements a secret-in-lockfile authentication mechanism:
 
 - **Secret Generation**: On startup, a secure 32-character random alphanumeric string is generated using a cryptographically secure random number generator.
 - **Lockfile Format**: The lock file contains three pipe-separated values: `PORT|PID|SECRET`

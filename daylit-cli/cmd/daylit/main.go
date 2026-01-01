@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -22,7 +23,7 @@ import (
 
 var CLI struct {
 	Version kong.VersionFlag
-	Config  string `help:"Config file path or PostgreSQL connection string (postgres://...)." type:"string" default:"~/.config/daylit/daylit.db"`
+	Config  string `help:"Config file path or PostgreSQL connection string. For PostgreSQL, credentials must NOT be embedded in the connection string. Use environment variables or a .pgpass file instead." type:"string" default:"~/.config/daylit/daylit.db" env:"DAYLIT_CONFIG"`
 
 	Init     system.InitCmd     `cmd:"" help:"Initialize daylit storage."`
 	Migrate  system.MigrateCmd  `cmd:"" help:"Run database migrations."`
@@ -72,8 +73,39 @@ func main() {
 
 	// Initialize storage based on config format
 	var store storage.Provider
-	if strings.HasPrefix(CLI.Config, "postgres://") || strings.HasPrefix(CLI.Config, "postgresql://") {
-		// PostgreSQL connection string detected
+
+	// Check for Postgres URL or DSN format
+	isPostgres := strings.HasPrefix(CLI.Config, "postgres://") ||
+		strings.HasPrefix(CLI.Config, "postgresql://") ||
+		// Simple DSN heuristic: contains space and common keys
+		(strings.Contains(CLI.Config, " ") &&
+			(strings.Contains(CLI.Config, "host=") ||
+				strings.Contains(CLI.Config, "dbname=") ||
+				strings.Contains(CLI.Config, "user=") ||
+				strings.Contains(CLI.Config, "sslmode=")))
+
+	if isPostgres {
+		// PostgreSQL connection string detected - validate for embedded credentials
+		// We only enforce this check if the config was NOT sourced from the environment
+		// (e.g. came from command line flags, which are visible in the process list).
+		envConfig := os.Getenv("DAYLIT_CONFIG")
+		configFromEnv := envConfig != "" && envConfig == CLI.Config
+
+		_, err := storage.ValidatePostgresConnString(CLI.Config)
+		hasPasswordError := err != nil && errors.Is(err, storage.ErrEmbeddedCredentials)
+
+		if !configFromEnv && hasPasswordError {
+			fmt.Fprintf(os.Stderr, "❌ Error: PostgreSQL connection strings with embedded credentials are NOT allowed via command line flags.\n")
+			fmt.Fprintf(os.Stderr, "       Use one of these secure alternatives:\n")
+			fmt.Fprintf(os.Stderr, "       1. Environment:   export DAYLIT_CONFIG=\"postgresql://user:your_password@host:5432/daylit\"\n")
+			fmt.Fprintf(os.Stderr, "       2. .pgpass file:  Create ~/.pgpass with credentials\n")
+			fmt.Fprintf(os.Stderr, "\n       For more information, see docs/user-guides/POSTGRES_SETUP.md\n")
+			os.Exit(1)
+		} else if configFromEnv && hasPasswordError {
+			// Warn user about embedded credentials in environment variable
+			fmt.Fprintf(os.Stderr, "⚠️  Warning: Using embedded credentials in DAYLIT_CONFIG environment variable.\n")
+			fmt.Fprintf(os.Stderr, "            Consider using a .pgpass file for better security.\n")
+		}
 		store = storage.NewPostgresStore(CLI.Config)
 	} else {
 		// Default to SQLite

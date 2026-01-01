@@ -180,3 +180,145 @@ func TestEnsureSearchPath(t *testing.T) {
 		})
 	}
 }
+
+func TestValidatePostgresConnString(t *testing.T) {
+	tests := []struct {
+		name     string
+		connStr  string
+		expected bool // true = valid (no password), false = invalid or has password
+	}{
+		// URL format tests
+		{
+			name:     "URL with username and password",
+			connStr:  "postgres://user:pass@localhost:5432/daylit",
+			expected: false,
+		},
+		{
+			name:     "URL with username but no password",
+			connStr:  "postgres://user@localhost:5432/daylit",
+			expected: true,
+		},
+		{
+			name:     "URL with no user info",
+			connStr:  "postgres://localhost:5432/daylit",
+			expected: true,
+		},
+		{
+			name:     "URL with empty password",
+			connStr:  "postgres://user:@localhost:5432/daylit",
+			expected: false,
+		},
+		{
+			name:     "URL with password and query params",
+			connStr:  "postgres://user:pass@localhost:5432/daylit?sslmode=disable",
+			expected: false,
+		},
+		{
+			name:     "postgresql:// prefix with password",
+			connStr:  "postgresql://user:secret@localhost/db",
+			expected: false,
+		},
+		{
+			name:     "postgresql:// prefix without password",
+			connStr:  "postgresql://user@localhost/db",
+			expected: true,
+		},
+		{
+			name:     "URL with special characters in password",
+			connStr:  "postgres://user:p@ssw0rd!@localhost:5432/daylit",
+			expected: false,
+		},
+		{
+			name:     "URL with encoded password",
+			connStr:  "postgres://user:p%40ss@localhost:5432/daylit",
+			expected: false,
+		},
+		// DSN format tests
+		{
+			name:     "DSN with password parameter",
+			connStr:  "host=localhost port=5432 dbname=daylit user=postgres password=secret",
+			expected: false,
+		},
+		{
+			name:     "DSN with empty password parameter",
+			connStr:  "host=localhost port=5432 dbname=daylit user=postgres password=",
+			expected: false,
+		},
+		{
+			name:     "DSN without password parameter",
+			connStr:  "host=localhost port=5432 dbname=daylit user=postgres",
+			expected: true,
+		},
+		{
+			name:     "DSN with PASSWORD uppercase",
+			connStr:  "host=localhost PASSWORD=secret dbname=daylit",
+			expected: false,
+		},
+		{
+			name:     "DSN with Password mixed case",
+			connStr:  "host=localhost Password=secret dbname=daylit",
+			expected: false,
+		},
+		{
+			name:     "DSN with service name (no password)",
+			connStr:  "service=daylit",
+			expected: true,
+		},
+		// Edge cases
+		{
+			name:     "Empty string",
+			connStr:  "",
+			expected: false,
+		},
+		{
+			name:     "Unparseable URL",
+			connStr:  "postgres://user:pass\n@host/db",
+			expected: false,
+		},
+		{
+			name:     "Plain text with password param",
+			connStr:  "some random text password=hidden",
+			expected: false,
+		},
+		{
+			name:     "DSN with only password",
+			connStr:  "password=secret123",
+			expected: false,
+		},
+		{
+			name:     "Plain text (not URL or DSN)",
+			connStr:  "this is just plain text",
+			expected: false,
+		},
+		// SQLite file path tests
+		{
+			name:     "SQLite default path",
+			connStr:  "~/.config/daylit/daylit.db",
+			expected: false, // Invalid postgres format
+		},
+		{
+			name:     "SQLite absolute path",
+			connStr:  "/home/user/daylit.db",
+			expected: false,
+		},
+		{
+			name:     "SQLite relative path",
+			connStr:  "./daylit.db",
+			expected: false,
+		},
+		{
+			name:     "SQLite path with 'password' in name",
+			connStr:  "/home/user/password_manager/daylit.db",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			valid, _ := ValidatePostgresConnString(tt.connStr)
+			if valid != tt.expected {
+				t.Errorf("ValidatePostgresConnString(%q) = %v, want %v", tt.connStr, valid, tt.expected)
+			}
+		})
+	}
+}

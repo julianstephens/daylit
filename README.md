@@ -2,32 +2,30 @@
 
 Daylit is a comprehensive daily structure and time-blocking system designed to help you manage your day effectively. It consists of a powerful CLI for scheduling and a lightweight system tray application for desktop integration.
 
+## Documentation
+
+- **[Quick Start Guide](docs/user-guides/QUICK_START.md)**: Get up and running in minutes.
+- **[Storage Configuration](docs/user-guides/STORAGE.md)**: Configure SQLite or PostgreSQL backends.
+- **[Core Concepts](docs/CONCEPTS.md)**: Understand the scheduling algorithm, data models, and feedback loop.
+- **[CLI Reference](docs/CLI_REFERENCE.md)**: Detailed command reference.
+
 ## Components
 
-The repository is divided into two main components:
+The repository is divided into two main components. **See their respective READMEs for technical details and development instructions.**
 
 ### 1. [Daylit CLI](./daylit-cli)
 
-The core of the system. A command-line interface tool written in Go that handles:
+The core of the system. A command-line interface tool written in Go that handles task management, scheduling, and tracking.
 
-- **Task Management**: Manage recurring and one-off task templates.
-- **Scheduling**: Generate daily time-blocked schedules based on your templates.
-- **Tracking**: Keep track of what you should be doing right now.
-- **Feedback**: Collect feedback on your day to improve future schedules.
-
-[Read the CLI Documentation](./daylit-cli/README.md)
+[🛠️ Developer Documentation](./daylit-cli/README.md)
 
 ### 2. [Daylit Tray](./daylit-tray)
 
-A desktop companion application built with Tauri (Rust + React) that:
+A desktop companion application built with Tauri (Rust + React) that handles system tray integration and notifications.
 
-- **System Tray Integration**: Runs unobtrusively in your system tray.
-- **Notifications**: Displays custom desktop notifications.
-- **Webhook Server**: Listens for notification requests from the CLI.
+[🛠️ Developer Documentation](./daylit-tray/README.md)
 
-[Read the Tray Documentation](./daylit-tray/README.md)
-
-## How They Work Together
+## System Overview
 
 Daylit is designed to work as a cohesive system:
 
@@ -38,64 +36,25 @@ Daylit is designed to work as a cohesive system:
 
 ### Security
 
-The system uses a secret-in-lockfile authentication mechanism to ensure secure communication:
+The system uses a secret-in-lockfile authentication mechanism to ensure secure communication. The tray app generates a session-specific secret on startup, which the CLI reads to authenticate notification requests. This ensures that only authorized processes running as the same user can trigger notifications.
 
-- When the tray app starts, it generates a secure random secret and writes it to the lock file along with its port and process ID in the format: `PORT|PID|SECRET`
-- The CLI reads this lock file to discover how to connect to the tray app
-- All notification requests from the CLI include an `X-Daylit-Secret` header with this secret
-- The tray app validates the secret before processing any notification request, rejecting unauthorized requests with a 401 response
-- The secret is session-specific and changes each time the tray app restarts
+## Installation
 
-This approach ensures that only authorized processes running as the same user can trigger notifications, preventing unauthorized access from other users or malicious applications on the system.
+### Pre-built Binaries
 
-## Getting Started
+The easiest way to get started is to download pre-built binaries from the [latest release](https://github.com/julianstephens/daylit/releases/latest).
 
-To get the full Daylit experience, you should set up both components.
+### Building from Source
 
-### Prerequisites
-
-- **Go** (for building the CLI from source)
-- **Node.js** & **Rust** (for building the Tray app from source)
-
-### Installation
-
-#### Quick Start: Use Pre-built Artifacts
-
-The easiest way to get started is to download pre-built binaries from the [latest release](https://github.com/julianstephens/daylit/releases/latest):
-
-1. **Download the CLI binary** for your operating system and architecture
-2. **Download the Tray app** for your platform (macOS, Linux, or Windows)
-3. Extract and run the applications
-
-#### Building from Source
-
-If you prefer to build from source:
-
-##### 1. Build the CLI
-
-Navigate to the `daylit-cli` directory:
+To build the entire system from source, you will need Go, Node.js, and Rust installed.
 
 ```bash
+# Build CLI
 cd daylit-cli
 make build
-# Or install directly
-go install ./cmd/daylit
-```
 
-##### 2. Build and Run the Tray App
-
-Navigate to the `daylit-tray` directory:
-
-```bash
-cd daylit-tray
+# Build Tray App
+cd ../daylit-tray
 npm install
-npm run tauri dev # For development
-# OR build for production
 npm run tauri build
 ```
-
-Once the Tray app is running, it will automatically write its connection details to a lock file that the CLI can read. You can then use the CLI normally, and notifications will be routed to your desktop.
-
-## Development
-
-Please refer to the individual `README.md` files in each subdirectory for specific development instructions, contribution guidelines, and architectural details.
