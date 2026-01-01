@@ -257,13 +257,15 @@ export DAYLIT_CONFIG="postgres://daylit_user:password@localhost:5432/daylit?sslm
 daylit init
 ```
 
+This usage is allowed because `DAYLIT_CONFIG` is read from the environment and is **not** exposed via process listings (for example, `ps` output), unlike `--config` command-line arguments. However, embedding passwords in environment variables can still be risky if they end up in shell history, crash dumps, logs, or other debug tooling. Prefer the `.pgpass` file or the `PGPASSWORD` environment variable for credentials whenever possible, and only use an embedded password in `DAYLIT_CONFIG` in controlled environments (for example, systemd unit files or a secrets-managed runtime configuration).
+
 This will:
 1. Connect to the PostgreSQL database
 2. Create the `daylit` schema if it doesn't exist
 3. Run all necessary migrations to create tables
 4. Initialize default settings
 
-**Note:** The connection string you provide via `--config` should NOT contain a password. Credentials should currently be provided through `.pgpass` or the `PGPASSWORD` environment variable. OS keyring integration is planned for a future release and is not yet available.
+**Note:** The restriction on embedding passwords applies specifically to the `--config` command-line flag because command-line arguments are visible in process listings. The connection string you provide via `--config` should **not** contain a password. Credentials should currently be provided through `.pgpass`, the `PGPASSWORD` environment variable, or (if necessary) a carefully managed `DAYLIT_CONFIG` environment variable. OS keyring integration is planned for a future release and is not yet available.
 
 ## Security Considerations
 
