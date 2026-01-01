@@ -22,7 +22,7 @@ import (
 
 var CLI struct {
 	Version kong.VersionFlag
-	Config  string `help:"Config file path or PostgreSQL connection string. For PostgreSQL, credentials must NOT be embedded in the connection string. Use environment variables, .pgpass, or OS keyring instead." type:"string" default:"~/.config/daylit/daylit.db" env:"DAYLIT_CONFIG"`
+	Config  string `help:"Config file path or PostgreSQL connection string. For PostgreSQL, credentials must NOT be embedded in the connection string. Use environment variables or a .pgpass file instead." type:"string" default:"~/.config/daylit/daylit.db" env:"DAYLIT_CONFIG"`
 
 	Init     system.InitCmd     `cmd:"" help:"Initialize daylit storage."`
 	Migrate  system.MigrateCmd  `cmd:"" help:"Run database migrations."`
