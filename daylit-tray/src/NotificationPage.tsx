@@ -48,13 +48,34 @@ function NotificationPage() {
   }, []);
 
   useEffect(() => {
-    const unlisten = listen<WebhookPayload>("update_notification", (event) => {
-      console.log("Received live update:", event.payload);
-      setupNotification(event.payload);
-    });
+    let unlistenFn: (() => void) | null = null;
+    let isMounted = true;
+
+    const setupListener = async () => {
+      try {
+        const unlisten = await listen<WebhookPayload>("update_notification", (event) => {
+          console.log("Received live update:", event.payload);
+          setupNotification(event.payload);
+        });
+        
+        if (isMounted) {
+          unlistenFn = unlisten;
+        } else {
+          // Component unmounted before listener was set up, clean it up immediately
+          unlisten();
+        }
+      } catch (error) {
+        console.error("Failed to set up notification listener:", error);
+      }
+    };
+
+    setupListener();
 
     return () => {
-      unlisten.then((f) => f());
+      isMounted = false;
+      if (unlistenFn) {
+        unlistenFn();
+      }
     };
   }, []);
 
