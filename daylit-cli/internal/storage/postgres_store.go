@@ -1195,32 +1195,24 @@ func (s *PostgresStore) GetOTSettings() (models.OTSettings, error) {
 		FROM ot_settings WHERE id = 1`)
 
 	var settings models.OTSettings
-	var promptOnEmpty, strictMode int
 
-	err := row.Scan(&settings.ID, &promptOnEmpty, &strictMode, &settings.DefaultLogDays)
+	err := row.Scan(&settings.ID, &settings.PromptOnEmpty, &settings.StrictMode, &settings.DefaultLogDays)
 	if err != nil {
 		return models.OTSettings{}, err
 	}
-
-	settings.PromptOnEmpty = promptOnEmpty == 1
-	settings.StrictMode = strictMode == 1
 
 	return settings, nil
 }
 
 func (s *PostgresStore) SaveOTSettings(settings models.OTSettings) error {
-	var promptOnEmpty, strictMode int
-	if settings.PromptOnEmpty {
-		promptOnEmpty = 1
-	}
-	if settings.StrictMode {
-		strictMode = 1
-	}
-
 	_, err := s.db.Exec(`
 		INSERT INTO ot_settings (id, prompt_on_empty, strict_mode, default_log_days)
-		VALUES (1, $1, $2, $3)`,
-		promptOnEmpty, strictMode, settings.DefaultLogDays)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (id) DO UPDATE SET
+			prompt_on_empty = EXCLUDED.prompt_on_empty,
+			strict_mode = EXCLUDED.strict_mode,
+			default_log_days = EXCLUDED.default_log_days`,
+		1, settings.PromptOnEmpty, settings.StrictMode, settings.DefaultLogDays)
 
 	return err
 }
