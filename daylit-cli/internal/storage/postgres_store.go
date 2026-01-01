@@ -149,7 +149,7 @@ func (s *PostgresStore) Close() error {
 
 func (s *PostgresStore) runMigrations() error {
 	migrationsPath := s.getMigrationsPath()
-	runner := migration.NewRunner(s.db, migrationsPath)
+	runner := migration.NewRunner(s.db, migrationsPath, "postgres")
 	_, err := runner.ApplyMigrations(func(msg string) {
 		fmt.Println(msg)
 	})
@@ -158,7 +158,7 @@ func (s *PostgresStore) runMigrations() error {
 
 func (s *PostgresStore) validateSchemaVersion() error {
 	migrationsPath := s.getMigrationsPath()
-	runner := migration.NewRunner(s.db, migrationsPath)
+	runner := migration.NewRunner(s.db, migrationsPath, "postgres")
 	return runner.ValidateVersion()
 }
 

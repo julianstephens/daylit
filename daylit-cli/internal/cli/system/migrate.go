@@ -33,7 +33,7 @@ func (c *MigrateCmd) Run(ctx *cli.Context) error {
 	}
 
 	// Create migration runner
-	runner := migration.NewRunner(db, migrationsPath)
+	runner := migration.NewRunner(db, migrationsPath, "sqlite")
 
 	// Apply migrations
 	count, err := runner.ApplyMigrations(func(msg string) {

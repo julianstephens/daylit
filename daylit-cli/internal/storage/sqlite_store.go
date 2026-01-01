@@ -118,7 +118,7 @@ func (s *SQLiteStore) runMigrations() error {
 	migrationsPath := s.getMigrationsPath()
 
 	// Create migration runner
-	runner := migration.NewRunner(s.db, migrationsPath)
+	runner := migration.NewRunner(s.db, migrationsPath, "sqlite")
 
 	// Apply all pending migrations
 	_, err := runner.ApplyMigrations(func(msg string) {
@@ -129,7 +129,7 @@ func (s *SQLiteStore) runMigrations() error {
 
 func (s *SQLiteStore) validateSchemaVersion() error {
 	migrationsPath := s.getMigrationsPath()
-	runner := migration.NewRunner(s.db, migrationsPath)
+	runner := migration.NewRunner(s.db, migrationsPath, "sqlite")
 	return runner.ValidateVersion()
 }
 

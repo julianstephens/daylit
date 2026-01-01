@@ -194,7 +194,7 @@ func checkSchemaVersion(ctx *cli.Context) error {
 	}
 
 	migrationsPath := sqliteStore.GetMigrationsPath()
-	runner := migration.NewRunner(db, migrationsPath)
+	runner := migration.NewRunner(db, migrationsPath, "sqlite")
 
 	currentVersion, err := runner.GetCurrentVersion()
 	if err != nil {
@@ -226,7 +226,7 @@ func checkMigrationsComplete(ctx *cli.Context) error {
 	}
 
 	migrationsPath := sqliteStore.GetMigrationsPath()
-	runner := migration.NewRunner(db, migrationsPath)
+	runner := migration.NewRunner(db, migrationsPath, "sqlite")
 
 	currentVersion, err := runner.GetCurrentVersion()
 	if err != nil {

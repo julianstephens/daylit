@@ -25,14 +25,27 @@ type Migration struct {
 type Runner struct {
 	db             *sql.DB
 	migrationsPath string
+	driverName     string
 }
 
 // NewRunner creates a new migration runner
-func NewRunner(db *sql.DB, migrationsPath string) *Runner {
+// driverName should be "sqlite" or "postgres" to determine the correct SQL placeholder syntax
+func NewRunner(db *sql.DB, migrationsPath string, driverName string) *Runner {
 	return &Runner{
 		db:             db,
 		migrationsPath: migrationsPath,
+		driverName:     driverName,
 	}
+}
+
+// placeholder returns the appropriate SQL placeholder for the given parameter index
+// For SQLite: returns "?"
+// For PostgreSQL: returns "$1", "$2", etc.
+func (r *Runner) placeholder(index int) string {
+	if r.driverName == "postgres" {
+		return fmt.Sprintf("$%d", index)
+	}
+	return "?"
 }
 
 // EnsureSchemaVersionTable creates the schema_version table if it doesn't exist
@@ -76,7 +89,7 @@ func (r *Runner) SetVersion(version int) error {
 		return fmt.Errorf("failed to clear version: %w", err)
 	}
 
-	_, err = r.db.Exec("INSERT INTO schema_version (version) VALUES (?)", version)
+	_, err = r.db.Exec(fmt.Sprintf("INSERT INTO schema_version (version) VALUES (%s)", r.placeholder(1)), version)
 	if err != nil {
 		return fmt.Errorf("failed to set version: %w", err)
 	}
@@ -223,13 +236,7 @@ func (r *Runner) ApplyMigrations(logFn func(string)) (int, error) {
 			return appliedCount, fmt.Errorf("failed to clear version in migration %d: %w", migration.Version, err)
 		}
 
-		// Use $1 for Postgres compatibility (SQLite supports it too in recent versions, or we can use a simpler query)
-		// Since we don't know the driver here easily without more refactoring, let's try a generic approach or check the error.
-		// Actually, the issue is likely that the `?` placeholder is not supported by the Postgres driver (lib/pq).
-		// We should use a placeholder-agnostic way or detect the driver.
-		// Given the constraints, let's just construct the query string safely since version is an int.
-		query := fmt.Sprintf("INSERT INTO schema_version (version) VALUES (%d)", migration.Version)
-		if _, err := tx.Exec(query); err != nil {
+		if _, err := tx.Exec(fmt.Sprintf("INSERT INTO schema_version (version) VALUES (%s)", r.placeholder(1)), migration.Version); err != nil {
 			_ = tx.Rollback()
 			return appliedCount, fmt.Errorf("failed to set version in migration %d: %w", migration.Version, err)
 		}
