@@ -48,13 +48,21 @@ function NotificationPage() {
   }, []);
 
   useEffect(() => {
-    const unlisten = listen<WebhookPayload>("update_notification", (event) => {
-      console.log("Received live update:", event.payload);
-      setupNotification(event.payload);
-    });
+    let unlistenFn: (() => void) | null = null;
+
+    const setupListener = async () => {
+      unlistenFn = await listen<WebhookPayload>("update_notification", (event) => {
+        console.log("Received live update:", event.payload);
+        setupNotification(event.payload);
+      });
+    };
+
+    setupListener();
 
     return () => {
-      unlisten.then((f) => f());
+      if (unlistenFn) {
+        unlistenFn();
+      }
     };
   }, []);
 

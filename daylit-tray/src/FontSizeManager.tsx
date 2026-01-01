@@ -29,14 +29,22 @@ export const FontSizeManager = () => {
 
     loadSettings();
 
-    const unlisten = listen<Settings>("settings-updated", (event) => {
-      if (event.payload && event.payload.font_size) {
-        applyFontSize(event.payload.font_size);
-      }
-    });
+    let unlistenFn: (() => void) | null = null;
+
+    const setupListener = async () => {
+      unlistenFn = await listen<Settings>("settings-updated", (event) => {
+        if (event.payload && event.payload.font_size) {
+          applyFontSize(event.payload.font_size);
+        }
+      });
+    };
+
+    setupListener();
 
     return () => {
-      unlisten.then((f) => f());
+      if (unlistenFn) {
+        unlistenFn();
+      }
     };
   }, []);
 
