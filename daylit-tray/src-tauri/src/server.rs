@@ -107,6 +107,5 @@ pub fn start_webhook_server(app_handle: AppHandle) {
                 request.respond(response).unwrap();
             }
         }
-        port
     });
 }
