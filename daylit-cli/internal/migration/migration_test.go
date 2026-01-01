@@ -50,7 +50,7 @@ func TestGetCurrentVersion(t *testing.T) {
 		"001_test.sql": "CREATE TABLE test (id INTEGER);",
 	})
 
-	runner := NewRunner(db, migrationsPath, "sqlite")
+	runner := NewRunner(db, migrationsPath, DriverSQLite)
 
 	// Initially, version should be 0
 	version, err := runner.GetCurrentVersion()
@@ -86,7 +86,7 @@ func TestReadMigrationFiles(t *testing.T) {
 		"003_another.sql": "CREATE TABLE test2 (id INTEGER);",
 	})
 
-	runner := NewRunner(db, migrationsPath, "sqlite")
+	runner := NewRunner(db, migrationsPath, DriverSQLite)
 
 	migrations, err := runner.ReadMigrationFiles()
 	if err != nil {
@@ -122,7 +122,7 @@ func TestApplyMigrationsFromScratch(t *testing.T) {
 		`,
 	})
 
-	runner := NewRunner(db, migrationsPath, "sqlite")
+	runner := NewRunner(db, migrationsPath, DriverSQLite)
 
 	// Apply migrations
 	count, err := runner.ApplyMigrations(nil)
@@ -166,7 +166,7 @@ func TestApplyMigrationsIncremental(t *testing.T) {
 		`,
 	})
 
-	runner := NewRunner(db, migrationsPath, "sqlite")
+	runner := NewRunner(db, migrationsPath, DriverSQLite)
 
 	// Apply first migration
 	count, err := runner.ApplyMigrations(nil)
@@ -210,7 +210,7 @@ func TestApplyMigrationsNoOp(t *testing.T) {
 		"001_init.sql": `CREATE TABLE users (id INTEGER PRIMARY KEY);`,
 	})
 
-	runner := NewRunner(db, migrationsPath, "sqlite")
+	runner := NewRunner(db, migrationsPath, DriverSQLite)
 
 	// Apply migrations first time
 	_, err := runner.ApplyMigrations(nil)
@@ -240,7 +240,7 @@ func TestMigrationRollbackOnError(t *testing.T) {
 		`,
 	})
 
-	runner := NewRunner(db, migrationsPath, "sqlite")
+	runner := NewRunner(db, migrationsPath, DriverSQLite)
 
 	// Apply migrations (should fail)
 	_, err := runner.ApplyMigrations(nil)
@@ -276,7 +276,7 @@ func TestValidateVersionNewerDatabase(t *testing.T) {
 		"001_init.sql": `CREATE TABLE users (id INTEGER PRIMARY KEY);`,
 	})
 
-	runner := NewRunner(db, migrationsPath, "sqlite")
+	runner := NewRunner(db, migrationsPath, DriverSQLite)
 
 	// Ensure schema_version table exists
 	if err := runner.EnsureSchemaVersionTable(); err != nil {
@@ -311,7 +311,7 @@ func TestGetLatestVersion(t *testing.T) {
 		"002_update.sql": `ALTER TABLE users ADD COLUMN name TEXT;`,
 	})
 
-	runner := NewRunner(db, migrationsPath, "sqlite")
+	runner := NewRunner(db, migrationsPath, DriverSQLite)
 
 	latestVersion, err := runner.GetLatestVersion()
 	if err != nil {
@@ -333,7 +333,7 @@ func TestMigrationFilenameValidation(t *testing.T) {
 		"001init.sql": `CREATE TABLE users (id INTEGER);`,
 	})
 
-	runner := NewRunner(db, migrationsPath, "sqlite")
+	runner := NewRunner(db, migrationsPath, DriverSQLite)
 
 	_, err := runner.ReadMigrationFiles()
 	if err == nil {
@@ -350,7 +350,7 @@ func TestMigrationVersionValidation(t *testing.T) {
 		"000_init.sql": `CREATE TABLE users (id INTEGER);`,
 	})
 
-	runner := NewRunner(db, migrationsPath, "sqlite")
+	runner := NewRunner(db, migrationsPath, DriverSQLite)
 
 	_, err := runner.ReadMigrationFiles()
 	if err == nil {
@@ -371,7 +371,7 @@ func TestDuplicateVersionDetection(t *testing.T) {
 		"001_other.sql": `CREATE TABLE posts (id INTEGER);`,
 	})
 
-	runner := NewRunner(db, migrationsPath, "sqlite")
+	runner := NewRunner(db, migrationsPath, DriverSQLite)
 
 	_, err := runner.ReadMigrationFiles()
 	if err == nil {
@@ -392,11 +392,11 @@ func TestPlaceholder(t *testing.T) {
 		index      int
 		want       string
 	}{
-		{"SQLite placeholder 1", "sqlite", 1, "?"},
-		{"SQLite placeholder 2", "sqlite", 2, "?"},
-		{"Postgres placeholder 1", "postgres", 1, "$1"},
-		{"Postgres placeholder 2", "postgres", 2, "$2"},
-		{"Postgres placeholder 10", "postgres", 10, "$10"},
+		{"SQLite placeholder 1", DriverSQLite, 1, "?"},
+		{"SQLite placeholder 2", DriverSQLite, 2, "?"},
+		{"Postgres placeholder 1", DriverPostgres, 1, "$1"},
+		{"Postgres placeholder 2", DriverPostgres, 2, "$2"},
+		{"Postgres placeholder 10", DriverPostgres, 10, "$10"},
 	}
 
 	for _, tt := range tests {
@@ -408,4 +408,20 @@ func TestPlaceholder(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPlaceholder_UnsupportedDriver(t *testing.T) {
+	db, _, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	runner := NewRunner(db, "", "unsupported")
+	
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("Expected panic for unsupported driver, but didn't panic")
+		}
+	}()
+	
+	// This should panic
+	runner.placeholder(1)
 }

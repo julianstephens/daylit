@@ -14,6 +14,12 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+// Supported database drivers
+const (
+	DriverSQLite   = "sqlite"
+	DriverPostgres = "postgres"
+)
+
 // Migration represents a single database migration
 type Migration struct {
 	Version int
@@ -29,7 +35,7 @@ type Runner struct {
 }
 
 // NewRunner creates a new migration runner
-// driverName should be "sqlite" or "postgres" to determine the correct SQL placeholder syntax
+// driverName should be DriverSQLite or DriverPostgres to determine the correct SQL placeholder syntax
 func NewRunner(db *sql.DB, migrationsPath string, driverName string) *Runner {
 	return &Runner{
 		db:             db,
@@ -41,11 +47,16 @@ func NewRunner(db *sql.DB, migrationsPath string, driverName string) *Runner {
 // placeholder returns the appropriate SQL placeholder for the given parameter index
 // For SQLite: returns "?"
 // For PostgreSQL: returns "$1", "$2", etc.
+// Panics if the driver name is not supported.
 func (r *Runner) placeholder(index int) string {
-	if r.driverName == "postgres" {
+	switch r.driverName {
+	case DriverPostgres:
 		return fmt.Sprintf("$%d", index)
+	case DriverSQLite:
+		return "?"
+	default:
+		panic(fmt.Sprintf("unsupported database driver: %s (must be %s or %s)", r.driverName, DriverSQLite, DriverPostgres))
 	}
-	return "?"
 }
 
 // EnsureSchemaVersionTable creates the schema_version table if it doesn't exist

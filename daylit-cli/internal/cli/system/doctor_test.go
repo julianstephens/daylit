@@ -124,7 +124,7 @@ func TestCheckMigrationsComplete_Incomplete(t *testing.T) {
 
 	db := sqliteStore.GetDB()
 	migrationsPath := sqliteStore.GetMigrationsPath()
-	runner := migration.NewRunner(db, migrationsPath, "sqlite")
+	runner := migration.NewRunner(db, migrationsPath, migration.DriverSQLite)
 
 	currentVersion, err := runner.GetCurrentVersion()
 	if err != nil {
