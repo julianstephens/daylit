@@ -32,6 +32,11 @@ func (s *PostgresStore) Init() error {
 	}
 	s.db = db
 
+	// Configure connection pool parameters to avoid connection exhaustion
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(25)
+	db.SetConnMaxLifetime(5 * time.Minute)
+
 	// Test connection
 	if err := s.db.Ping(); err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
@@ -249,7 +254,8 @@ func (s *PostgresStore) SaveSettings(settings Settings) error {
 }
 
 func (s *PostgresStore) GetConfigPath() string {
-	return s.connStr
+	// Return a non-sensitive identifier instead of the full connection string
+	return "postgresql"
 }
 
 // Task methods
@@ -917,11 +923,11 @@ func (s *PostgresStore) UpdateHabit(habit models.Habit) error {
 
 	_, err := s.db.Exec(`
 		INSERT INTO habits (id, name, created_at, archived_at, deleted_at)
-VALUES ($1, $2, $3, $4, $5)
-ON CONFLICT(id) DO UPDATE SET
-			name = excluded.name,
-			archived_at = excluded.archived_at,
-			deleted_at = excluded.deleted_at`,
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT(id) DO UPDATE SET
+			name = EXCLUDED.name,
+			archived_at = EXCLUDED.archived_at,
+			deleted_at = EXCLUDED.deleted_at`,
 		habit.ID, habit.Name, habit.CreatedAt.Format(time.RFC3339), archivedAt, deletedAt)
 
 	return err
@@ -1140,9 +1146,9 @@ func (s *PostgresStore) UpdateHabitEntry(entry models.HabitEntry) error {
 		INSERT INTO habit_entries (id, habit_id, day, note, created_at, updated_at, deleted_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT(habit_id, day) DO UPDATE SET
-			note = excluded.note,
-			updated_at = excluded.updated_at,
-			deleted_at = excluded.deleted_at`,
+			note = EXCLUDED.note,
+			updated_at = EXCLUDED.updated_at,
+			deleted_at = EXCLUDED.deleted_at`,
 		entry.ID, entry.HabitID, entry.Day, entry.Note,
 		entry.CreatedAt.Format(time.RFC3339), entry.UpdatedAt.Format(time.RFC3339), deletedAt)
 
@@ -1314,10 +1320,10 @@ func (s *PostgresStore) UpdateOTEntry(entry models.OTEntry) error {
 		INSERT INTO ot_entries (id, day, title, note, created_at, updated_at, deleted_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT(day) DO UPDATE SET
-			title = excluded.title,
-			note = excluded.note,
-			updated_at = excluded.updated_at,
-			deleted_at = excluded.deleted_at`,
+			title = EXCLUDED.title,
+			note = EXCLUDED.note,
+			updated_at = EXCLUDED.updated_at,
+			deleted_at = EXCLUDED.deleted_at`,
 		entry.ID, entry.Day, entry.Title, entry.Note,
 		entry.CreatedAt.Format(time.RFC3339), entry.UpdatedAt.Format(time.RFC3339), deletedAt)
 

@@ -32,12 +32,19 @@ CREATE TABLE slots_new (
     FOREIGN KEY(task_id) REFERENCES tasks(id)
 );
 
--- Copy existing slots data, assigning revision 1
-INSERT INTO slots_new (plan_date, plan_revision, start_time, end_time, task_id, status, feedback_rating, feedback_note, deleted_at)
-SELECT plan_date, 1, start_time, end_time, task_id, status, feedback_rating, feedback_note, deleted_at FROM slots;
+-- Copy existing slots data, preserving id and assigning revision 1
+INSERT INTO slots_new (id, plan_date, plan_revision, start_time, end_time, task_id, status, feedback_rating, feedback_note, deleted_at)
+SELECT id, plan_date, 1, start_time, end_time, task_id, status, feedback_rating, feedback_note, deleted_at FROM slots;
 
 -- Drop old tables and rename new ones
 DROP TABLE slots;
 DROP TABLE plans;
 ALTER TABLE plans_new RENAME TO plans;
 ALTER TABLE slots_new RENAME TO slots;
+
+-- Ensure the slots.id sequence continues from the current maximum id
+SELECT setval(
+    pg_get_serial_sequence('slots', 'id'),
+    COALESCE(MAX(id), 0) + 1,
+    false
+) FROM slots;
