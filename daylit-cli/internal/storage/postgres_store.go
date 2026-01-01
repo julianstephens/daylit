@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -33,20 +34,68 @@ func (s *PostgresStore) ensureSearchPath() {
 	// Ensure search_path is set to daylit in the connection string
 	if strings.HasPrefix(s.connStr, "postgres://") || strings.HasPrefix(s.connStr, "postgresql://") {
 		u, err := url.Parse(s.connStr)
-		if err == nil {
-			q := u.Query()
-			if q.Get("search_path") == "" {
-				q.Set("search_path", "daylit")
-				u.RawQuery = q.Encode()
-				s.connStr = u.String()
-			}
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to parse Postgres connection string %q: %v\n", s.connStr, err)
+			return
+		}
+		q := u.Query()
+		// Only set search_path if it's not already present
+		if q.Get("search_path") == "" {
+			q.Set("search_path", "daylit")
+			u.RawQuery = q.Encode()
+			s.connStr = u.String()
 		}
 	} else {
-		// Assume DSN format
-		if !strings.Contains(s.connStr, "search_path") {
+		// Assume DSN format - only append if search_path is not already present
+		if !hasSearchPathParam(s.connStr) {
 			s.connStr = strings.TrimSpace(s.connStr) + " search_path=daylit"
 		}
 	}
+}
+
+// hasSearchPathParam returns true if the given DSN-style connection string
+// contains a search_path parameter key (case-insensitive).
+func hasSearchPathParam(connStr string) bool {
+	// DSN format is typically space-separated key=value pairs.
+	parts := strings.Fields(connStr)
+	for _, part := range parts {
+		kv := strings.SplitN(part, "=", 2)
+		if len(kv) != 2 {
+			continue
+		}
+		if strings.EqualFold(kv[0], "search_path") {
+			return true
+		}
+	}
+	return false
+}
+
+// hasSSLMode checks if the connection string contains an sslmode parameter key (case-insensitive).
+// It supports both URL-style and DSN-style connection strings.
+func hasSSLMode(connStr string) bool {
+	// First, try to interpret the connection string as a URL (e.g. postgres://...?sslmode=disable).
+	if u, err := url.Parse(connStr); err == nil && u.Scheme != "" {
+		q := u.Query()
+		for key := range q {
+			if strings.EqualFold(key, "sslmode") {
+				return true
+			}
+		}
+	}
+
+	// Fallback: treat the connection string as DSN-style space-separated key=value pairs.
+	parts := strings.Fields(connStr)
+	for _, part := range parts {
+		kv := strings.SplitN(part, "=", 2)
+		if len(kv) != 2 {
+			continue
+		}
+		if strings.EqualFold(kv[0], "sslmode") {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (s *PostgresStore) Init() error {
@@ -55,21 +104,24 @@ func (s *PostgresStore) Init() error {
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
-	s.db = db
 
 	// Configure connection pool parameters to avoid connection exhaustion
 	db.SetMaxOpenConns(25)
 	db.SetMaxIdleConns(25)
 	db.SetConnMaxLifetime(5 * time.Minute)
 
-	// Create schema if it doesn't exist
-	if _, err := s.db.Exec("CREATE SCHEMA IF NOT EXISTS daylit"); err != nil {
+	// Create schema if it doesn't exist (before assigning to s.db to maintain consistency)
+	if _, err := db.Exec("CREATE SCHEMA IF NOT EXISTS daylit"); err != nil {
+		db.Close()
 		return fmt.Errorf("failed to create schema: %w", err)
 	}
 
+	// Assign to s.db only after schema creation succeeds
+	s.db = db
+
 	// Test connection
 	if err := s.db.Ping(); err != nil {
-		if strings.Contains(err.Error(), "SSL is not enabled on the server") {
+		if strings.Contains(err.Error(), "SSL is not enabled on the server") && !hasSSLMode(s.connStr) {
 			return fmt.Errorf("failed to connect to database: %w (hint: try adding ?sslmode=disable to your connection string)", err)
 		}
 		return fmt.Errorf("failed to connect to database: %w", err)
@@ -119,7 +171,7 @@ func (s *PostgresStore) Load() error {
 
 	// Test connection
 	if err := s.db.Ping(); err != nil {
-		if strings.Contains(err.Error(), "SSL is not enabled on the server") {
+		if strings.Contains(err.Error(), "SSL is not enabled on the server") && !hasSSLMode(s.connStr) {
 			return fmt.Errorf("failed to connect to database: %w (hint: try adding ?sslmode=disable to your connection string)", err)
 		}
 		return fmt.Errorf("failed to connect to database: %w", err)
