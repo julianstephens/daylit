@@ -1,17 +1,18 @@
-package cli
+package system
 
 import (
 	"fmt"
 	"time"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/backup"
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/migration"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
 )
 
 type DoctorCmd struct{}
 
-func (cmd *DoctorCmd) Run(ctx *Context) error {
+func (cmd *DoctorCmd) Run(ctx *cli.Context) error {
 	fmt.Println("Running diagnostics...")
 	fmt.Println()
 
@@ -159,7 +160,7 @@ func (cmd *DoctorCmd) Run(ctx *Context) error {
 	return nil
 }
 
-func checkDBReachable(ctx *Context) error {
+func checkDBReachable(ctx *cli.Context) error {
 	// Try to load the database
 	if err := ctx.Store.Load(); err != nil {
 		return fmt.Errorf("failed to load database: %w", err)
@@ -180,7 +181,7 @@ func checkDBReachable(ctx *Context) error {
 	return nil
 }
 
-func checkSchemaVersion(ctx *Context) error {
+func checkSchemaVersion(ctx *cli.Context) error {
 	sqliteStore, ok := ctx.Store.(*storage.SQLiteStore)
 	if !ok {
 		// JSON store doesn't have schema version
@@ -212,7 +213,7 @@ func checkSchemaVersion(ctx *Context) error {
 	return nil
 }
 
-func checkMigrationsComplete(ctx *Context) error {
+func checkMigrationsComplete(ctx *cli.Context) error {
 	sqliteStore, ok := ctx.Store.(*storage.SQLiteStore)
 	if !ok {
 		// JSON store doesn't have migrations
@@ -244,7 +245,7 @@ func checkMigrationsComplete(ctx *Context) error {
 	return nil
 }
 
-func checkBackupsPresent(ctx *Context) error {
+func checkBackupsPresent(ctx *cli.Context) error {
 	mgr := backup.NewManager(ctx.Store.GetConfigPath())
 	backups, err := mgr.ListBackups()
 	if err != nil {
@@ -258,7 +259,7 @@ func checkBackupsPresent(ctx *Context) error {
 	return nil
 }
 
-func checkValidation(ctx *Context) error {
+func checkValidation(ctx *cli.Context) error {
 	// Try to get settings
 	if _, err := ctx.Store.GetSettings(); err != nil {
 		return fmt.Errorf("failed to get settings: %w", err)
@@ -294,7 +295,7 @@ func checkClockTimezone() error {
 	return nil
 }
 
-func checkHabitsIntegrity(ctx *Context) error {
+func checkHabitsIntegrity(ctx *cli.Context) error {
 	sqliteStore, ok := ctx.Store.(*storage.SQLiteStore)
 	if !ok {
 		return nil // Not SQLite, skip
@@ -323,7 +324,7 @@ func checkHabitsIntegrity(ctx *Context) error {
 	return nil
 }
 
-func checkHabitEntriesDuplicates(ctx *Context) error {
+func checkHabitEntriesDuplicates(ctx *cli.Context) error {
 	sqliteStore, ok := ctx.Store.(*storage.SQLiteStore)
 	if !ok {
 		return nil // Not SQLite, skip
@@ -356,7 +357,7 @@ func checkHabitEntriesDuplicates(ctx *Context) error {
 	return nil
 }
 
-func checkOTSettings(ctx *Context) error {
+func checkOTSettings(ctx *cli.Context) error {
 	sqliteStore, ok := ctx.Store.(*storage.SQLiteStore)
 	if !ok {
 		return nil // Not SQLite, skip
@@ -380,7 +381,7 @@ func checkOTSettings(ctx *Context) error {
 	return nil
 }
 
-func checkOTEntriesDates(ctx *Context) error {
+func checkOTEntriesDates(ctx *cli.Context) error {
 	sqliteStore, ok := ctx.Store.(*storage.SQLiteStore)
 	if !ok {
 		return nil // Not SQLite, skip
@@ -421,7 +422,7 @@ func checkOTEntriesDates(ctx *Context) error {
 	return nil
 }
 
-func checkTimestampIntegrity(ctx *Context) error {
+func checkTimestampIntegrity(ctx *cli.Context) error {
 	sqliteStore, ok := ctx.Store.(*storage.SQLiteStore)
 	if !ok {
 		return nil // Not SQLite, skip

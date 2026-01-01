@@ -1,8 +1,9 @@
-package cli
+package tasks
 
 import (
 	"fmt"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 )
 
@@ -11,7 +12,7 @@ type TaskListCmd struct {
 	ShowIDs    bool `help:"Show task IDs." name:"show-ids"`
 }
 
-func (c *TaskListCmd) Run(ctx *Context) error {
+func (c *TaskListCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}
@@ -41,7 +42,7 @@ func (c *TaskListCmd) Run(ctx *Context) error {
 			idStr = fmt.Sprintf(" (ID: %s)", task.ID)
 		}
 
-		recStr := formatRecurrence(task.Recurrence)
+		recStr := cli.FormatRecurrence(task.Recurrence)
 		fmt.Printf("  [%s] %s%s - %dm (%s, priority %d)\n",
 			status, task.Name, idStr, task.DurationMin, recStr, task.Priority)
 

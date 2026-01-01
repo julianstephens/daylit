@@ -1,4 +1,4 @@
-package cli
+package habits
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
 )
@@ -26,7 +26,7 @@ type HabitAddCmd struct {
 	Name string `arg:"" help:"Habit name."`
 }
 
-func (c *HabitAddCmd) Run(ctx *Context) error {
+func (c *HabitAddCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}
@@ -56,7 +56,7 @@ type HabitListCmd struct {
 	Deleted  bool `help:"Include deleted habits."`
 }
 
-func (c *HabitListCmd) Run(ctx *Context) error {
+func (c *HabitListCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ type HabitMarkCmd struct {
 	Note string `help:"Optional note for this entry." default:""`
 }
 
-func (c *HabitMarkCmd) Run(ctx *Context) error {
+func (c *HabitMarkCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}
@@ -143,7 +143,7 @@ func (c *HabitMarkCmd) Run(ctx *Context) error {
 
 type HabitTodayCmd struct{}
 
-func (c *HabitTodayCmd) Run(ctx *Context) error {
+func (c *HabitTodayCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}
@@ -200,7 +200,7 @@ type HabitLogCmd struct {
 	Habit string `help:"Show log for specific habit only."`
 }
 
-func (c *HabitLogCmd) Run(ctx *Context) error {
+func (c *HabitLogCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}
@@ -313,7 +313,7 @@ type HabitArchiveCmd struct {
 	Unarchive bool   `help:"Unarchive the habit instead."`
 }
 
-func (c *HabitArchiveCmd) Run(ctx *Context) error {
+func (c *HabitArchiveCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}
@@ -342,7 +342,7 @@ type HabitDeleteCmd struct {
 	Name string `arg:"" help:"Habit name to delete."`
 }
 
-func (c *HabitDeleteCmd) Run(ctx *Context) error {
+func (c *HabitDeleteCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}
@@ -365,7 +365,7 @@ type HabitRestoreCmd struct {
 	Name string `arg:"" help:"Habit name to restore."`
 }
 
-func (c *HabitRestoreCmd) Run(ctx *Context) error {
+func (c *HabitRestoreCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}
@@ -403,7 +403,7 @@ func isSQLiteStore(store storage.Provider) bool {
 }
 
 // Ensure storage is SQLite for habit commands
-func ensureSQLiteStore(ctx *Context) error {
+func ensureSQLiteStore(ctx *cli.Context) error {
 	if !isSQLiteStore(ctx.Store) {
 		return fmt.Errorf("habits are only supported with SQLite storage (not JSON)")
 	}
@@ -411,34 +411,34 @@ func ensureSQLiteStore(ctx *Context) error {
 }
 
 // Add validation to all habit commands
-func (c *HabitAddCmd) Validate(ctx *Context) error {
+func (c *HabitAddCmd) Validate(ctx *cli.Context) error {
 	return ensureSQLiteStore(ctx)
 }
 
-func (c *HabitListCmd) Validate(ctx *Context) error {
+func (c *HabitListCmd) Validate(ctx *cli.Context) error {
 	return ensureSQLiteStore(ctx)
 }
 
-func (c *HabitMarkCmd) Validate(ctx *Context) error {
+func (c *HabitMarkCmd) Validate(ctx *cli.Context) error {
 	return ensureSQLiteStore(ctx)
 }
 
-func (c *HabitTodayCmd) Validate(ctx *Context) error {
+func (c *HabitTodayCmd) Validate(ctx *cli.Context) error {
 	return ensureSQLiteStore(ctx)
 }
 
-func (c *HabitLogCmd) Validate(ctx *Context) error {
+func (c *HabitLogCmd) Validate(ctx *cli.Context) error {
 	return ensureSQLiteStore(ctx)
 }
 
-func (c *HabitArchiveCmd) Validate(ctx *Context) error {
+func (c *HabitArchiveCmd) Validate(ctx *cli.Context) error {
 	return ensureSQLiteStore(ctx)
 }
 
-func (c *HabitDeleteCmd) Validate(ctx *Context) error {
+func (c *HabitDeleteCmd) Validate(ctx *cli.Context) error {
 	return ensureSQLiteStore(ctx)
 }
 
-func (c *HabitRestoreCmd) Validate(ctx *Context) error {
+func (c *HabitRestoreCmd) Validate(ctx *cli.Context) error {
 	return ensureSQLiteStore(ctx)
 }

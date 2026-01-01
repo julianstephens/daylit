@@ -46,9 +46,14 @@ func (s *SQLiteStore) Init() error {
 	// Initialize default settings if not present
 	if _, err := s.GetSettings(); err != nil {
 		defaultSettings := Settings{
-			DayStart:        "07:00",
-			DayEnd:          "22:00",
-			DefaultBlockMin: 30,
+			DayStart:             "07:00",
+			DayEnd:               "22:00",
+			DefaultBlockMin:      30,
+			NotificationsEnabled: true,
+			NotifyBlockStart:     true,
+			NotifyBlockEnd:       true,
+			BlockStartOffsetMin:  5,
+			BlockEndOffsetMin:    5,
 		}
 		if err := s.SaveSettings(defaultSettings); err != nil {
 			return fmt.Errorf("failed to save default settings: %w", err)
@@ -143,6 +148,8 @@ func (s *SQLiteStore) getMigrationsPath() string {
 		"./migrations",
 		"../migrations",
 		"../../migrations",
+		"../../../migrations",
+		"../../../../migrations",
 		filepath.Join(filepath.Dir(os.Args[0]), "migrations"),
 		filepath.Join(filepath.Dir(os.Args[0]), "..", "migrations"),
 	}
@@ -182,6 +189,20 @@ func (s *SQLiteStore) GetSettings() (Settings, error) {
 			if _, err := fmt.Sscanf(value, "%d", &settings.DefaultBlockMin); err != nil {
 				return Settings{}, fmt.Errorf("parsing default_block_min: %w", err)
 			}
+		case "notifications_enabled":
+			settings.NotificationsEnabled = value == "true"
+		case "notify_block_start":
+			settings.NotifyBlockStart = value == "true"
+		case "notify_block_end":
+			settings.NotifyBlockEnd = value == "true"
+		case "block_start_offset_min":
+			if _, err := fmt.Sscanf(value, "%d", &settings.BlockStartOffsetMin); err != nil {
+				return Settings{}, fmt.Errorf("parsing block_start_offset_min: %w", err)
+			}
+		case "block_end_offset_min":
+			if _, err := fmt.Sscanf(value, "%d", &settings.BlockEndOffsetMin); err != nil {
+				return Settings{}, fmt.Errorf("parsing block_end_offset_min: %w", err)
+			}
 		}
 		count++
 	}
@@ -213,6 +234,21 @@ func (s *SQLiteStore) SaveSettings(settings Settings) error {
 		return err
 	}
 	if _, err := stmt.Exec("default_block_min", fmt.Sprintf("%d", settings.DefaultBlockMin)); err != nil {
+		return err
+	}
+	if _, err := stmt.Exec("notifications_enabled", fmt.Sprintf("%v", settings.NotificationsEnabled)); err != nil {
+		return err
+	}
+	if _, err := stmt.Exec("notify_block_start", fmt.Sprintf("%v", settings.NotifyBlockStart)); err != nil {
+		return err
+	}
+	if _, err := stmt.Exec("notify_block_end", fmt.Sprintf("%v", settings.NotifyBlockEnd)); err != nil {
+		return err
+	}
+	if _, err := stmt.Exec("block_start_offset_min", fmt.Sprintf("%d", settings.BlockStartOffsetMin)); err != nil {
+		return err
+	}
+	if _, err := stmt.Exec("block_end_offset_min", fmt.Sprintf("%d", settings.BlockEndOffsetMin)); err != nil {
 		return err
 	}
 

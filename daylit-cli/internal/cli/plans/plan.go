@@ -1,4 +1,4 @@
-package cli
+package plans
 
 import (
 	"bufio"
@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/validation"
 )
@@ -16,7 +17,7 @@ type PlanCmd struct {
 	NewRevision bool   `help:"Create a new revision instead of being blocked when an accepted plan exists." name:"new-revision"`
 }
 
-func (c *PlanCmd) Run(ctx *Context) error {
+func (c *PlanCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}

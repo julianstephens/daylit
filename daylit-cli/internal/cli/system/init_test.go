@@ -1,21 +1,22 @@
-package cli
+package system
 
 import (
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/scheduler"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
 )
 
-func setupTestInitDB(t *testing.T) (*Context, string, func()) {
+func setupTestInitDB(t *testing.T) (*cli.Context, string, func()) {
 	tempDir := t.TempDir()
 	dbPath := filepath.Join(tempDir, "test.db")
 
 	store := storage.NewSQLiteStore(dbPath)
 
-	ctx := &Context{
+	ctx := &cli.Context{
 		Store:     store,
 		Scheduler: scheduler.New(),
 	}

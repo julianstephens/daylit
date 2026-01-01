@@ -1,15 +1,16 @@
-package cli
+package plans
 
 import (
 	"fmt"
 	"time"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 )
 
 type NowCmd struct{}
 
-func (c *NowCmd) Run(ctx *Context) error {
+func (c *NowCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}
@@ -28,11 +29,11 @@ func (c *NowCmd) Run(ctx *Context) error {
 	var currentSlot *models.Slot
 	for i := range plan.Slots {
 		if plan.Slots[i].Status == models.SlotStatusAccepted || plan.Slots[i].Status == models.SlotStatusDone {
-			startMinutes, err := parseTimeToMinutes(plan.Slots[i].Start)
+			startMinutes, err := cli.ParseTimeToMinutes(plan.Slots[i].Start)
 			if err != nil {
 				continue
 			}
-			endMinutes, err := parseTimeToMinutes(plan.Slots[i].End)
+			endMinutes, err := cli.ParseTimeToMinutes(plan.Slots[i].End)
 			if err != nil {
 				continue
 			}

@@ -1,9 +1,10 @@
-package cli
+package tasks
 
 import (
 	"fmt"
 	"time"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 )
 
@@ -22,7 +23,7 @@ type TaskEditCmd struct {
 	Active     *bool   `help:"Set active status."`
 }
 
-func (c *TaskEditCmd) Run(ctx *Context) error {
+func (c *TaskEditCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}
@@ -75,7 +76,7 @@ func (c *TaskEditCmd) Run(ctx *Context) error {
 	}
 
 	if c.Weekdays != nil {
-		weekdays, err := parseWeekdays(*c.Weekdays)
+		weekdays, err := cli.ParseWeekdays(*c.Weekdays)
 		if err != nil {
 			return err
 		}

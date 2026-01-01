@@ -1,4 +1,4 @@
-package cli
+package system
 
 import (
 	"encoding/json"
@@ -6,12 +6,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/scheduler"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
 )
 
-func setupTestDebugDB(t *testing.T) (*Context, func()) {
+func setupTestDebugDB(t *testing.T) (*cli.Context, func()) {
 	tempDir := t.TempDir()
 	dbPath := filepath.Join(tempDir, "test.db")
 
@@ -20,7 +21,7 @@ func setupTestDebugDB(t *testing.T) (*Context, func()) {
 		t.Fatalf("failed to initialize store: %v", err)
 	}
 
-	ctx := &Context{
+	ctx := &cli.Context{
 		Store:     store,
 		Scheduler: scheduler.New(),
 	}

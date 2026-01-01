@@ -1,9 +1,10 @@
-package cli
+package plans
 
 import (
 	"fmt"
 	"time"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 )
 
@@ -11,7 +12,7 @@ type DayCmd struct {
 	Date string `arg:"" help:"Date to show (YYYY-MM-DD or 'today')." default:"today"`
 }
 
-func (c *DayCmd) Run(ctx *Context) error {
+func (c *DayCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}

@@ -1,4 +1,4 @@
-package cli
+package backups
 
 import (
 	"bufio"
@@ -8,11 +8,12 @@ import (
 	"strings"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/backup"
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 )
 
 type BackupCreateCmd struct{}
 
-func (c *BackupCreateCmd) Run(ctx *Context) error {
+func (c *BackupCreateCmd) Run(ctx *cli.Context) error {
 	// Perform a manual backup
 	if err := ctx.Store.Load(); err != nil {
 		return err
@@ -30,7 +31,7 @@ func (c *BackupCreateCmd) Run(ctx *Context) error {
 
 type BackupListCmd struct{}
 
-func (c *BackupListCmd) Run(ctx *Context) error {
+func (c *BackupListCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}
@@ -63,7 +64,7 @@ type BackupRestoreCmd struct {
 	BackupFile string `arg:"" help:"Path or filename of the backup to restore."`
 }
 
-func (c *BackupRestoreCmd) Run(ctx *Context) error {
+func (c *BackupRestoreCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}

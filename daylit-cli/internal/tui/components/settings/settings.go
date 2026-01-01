@@ -94,6 +94,18 @@ func (m Model) View() string {
 	)
 	sections = append(sections, sectionStyle.Render(otTitle+"\n"+otContent))
 
+	// Notification Settings
+	notifTitle := titleStyle.Render("Notification Settings")
+	notifContent := lipgloss.JoinVertical(
+		lipgloss.Left,
+		fmt.Sprintf("%s %s", labelStyle.Render("Enabled:"), valueStyle.Render(fmt.Sprintf("%t", m.settings.NotificationsEnabled))),
+		fmt.Sprintf("%s %s", labelStyle.Render("Notify Block Start:"), valueStyle.Render(fmt.Sprintf("%t", m.settings.NotifyBlockStart))),
+		fmt.Sprintf("%s %s", labelStyle.Render("Start Offset (min):"), valueStyle.Render(fmt.Sprintf("%d", m.settings.BlockStartOffsetMin))),
+		fmt.Sprintf("%s %s", labelStyle.Render("Notify Block End:"), valueStyle.Render(fmt.Sprintf("%t", m.settings.NotifyBlockEnd))),
+		fmt.Sprintf("%s %s", labelStyle.Render("End Offset (min):"), valueStyle.Render(fmt.Sprintf("%d", m.settings.BlockEndOffsetMin))),
+	)
+	sections = append(sections, sectionStyle.Render(notifTitle+"\n"+notifContent))
+
 	// Help text
 	helpText := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("240")).

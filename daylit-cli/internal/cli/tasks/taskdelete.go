@@ -1,14 +1,16 @@
-package cli
+package tasks
 
 import (
 	"fmt"
+
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 )
 
 type TaskDeleteCmd struct {
 	ID string `arg:"" help:"Task ID to delete."`
 }
 
-func (c *TaskDeleteCmd) Run(ctx *Context) error {
+func (c *TaskDeleteCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}

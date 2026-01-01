@@ -1,9 +1,10 @@
-package cli
+package system
 
 import (
 	"fmt"
 	"time"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/validation"
 )
 
@@ -11,7 +12,7 @@ type ValidateCmd struct {
 	Fix bool `help:"Automatically fix conflicts where possible (e.g., remove duplicate tasks)." default:"false"`
 }
 
-func (cmd *ValidateCmd) Run(ctx *Context) error {
+func (cmd *ValidateCmd) Run(ctx *cli.Context) error {
 	// Load storage
 	if err := ctx.Store.Load(); err != nil {
 		return fmt.Errorf("failed to load storage: %w", err)

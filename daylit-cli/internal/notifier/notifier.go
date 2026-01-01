@@ -38,7 +38,7 @@ func New() *Notifier {
 }
 
 func (n *Notifier) Notify(text string) error {
-	trayAppConfigPath, err := getTrayAppConfigDir()
+	trayAppConfigPath, err := GetTrayAppConfigDir()
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,8 @@ func (n *Notifier) Notify(text string) error {
 	return nil
 }
 
-func getTrayAppConfigDir() (string, error) {
+// GetTrayAppConfigDir returns the configuration directory used by the tray application.
+func GetTrayAppConfigDir() (string, error) {
 	configDir, err := userConfigDirFunc()
 	if err != nil {
 		return "", fmt.Errorf("failed to get user config dir: %w", err)

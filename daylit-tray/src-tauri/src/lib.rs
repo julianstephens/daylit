@@ -1,236 +1,30 @@
-use serde::{Deserialize, Serialize};
-use std::sync::Arc;
-use std::thread;
-use std::{fs, sync::Mutex};
-use tauri::Emitter;
-use tauri::Listener;
+use std::fs;
+use std::sync::Mutex;
 use tauri::{
-    AppHandle, LogicalPosition, LogicalSize, Manager, State, WebviewWindow, Wry,
+    Listener, LogicalPosition, LogicalSize, Manager, State,
     image::Image,
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
 };
-use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
+use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_log::log::info;
-use tauri_plugin_store::{Store, StoreExt};
-use tiny_http::{Response, Server};
+use tauri_plugin_store::StoreExt;
+
+mod commands;
+mod scheduler;
+mod server;
+mod state;
+
+use commands::*;
+use server::start_webhook_server;
+use state::{AppState, Settings};
+
+use crate::scheduler::start_scheduler_thread;
 
 const WINDOW_WIDTH: f64 = 560.0;
 const WINDOW_HEIGHT: f64 = 600.0;
 const WINDOW_X: f64 = 400.0;
 const WINDOW_Y: f64 = 400.0;
-
-// --- Struct Definitions for State and Payloads ---
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(default)]
-pub struct Settings {
-    font_size: String,
-    launch_at_login: bool,
-    lockfile_dir: Option<String>,
-}
-
-impl Default for Settings {
-    fn default() -> Self {
-        Self {
-            font_size: "medium".into(),
-            launch_at_login: false,
-            lockfile_dir: None,
-        }
-    }
-}
-
-impl Settings {
-    pub fn load(store: &Store<Wry>) -> Self {
-        store
-            .get("settings")
-            .and_then(|v| serde_json::from_value(v).ok())
-            .unwrap_or_default()
-    }
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug, Default)]
-pub struct WebhookPayload {
-    text: String,
-    duration_ms: u32,
-}
-
-// Event payload for when we re-use an existing window
-#[derive(Clone, serde::Serialize)]
-struct UpdatePayload {
-    text: String,
-    duration_ms: u32,
-}
-
-// Main application state, holds settings store and last payload
-pub struct AppState {
-    pub settings: Arc<Store<Wry>>,
-    pub payload: Mutex<Option<WebhookPayload>>,
-    pub lockfile_path: Mutex<Option<std::path::PathBuf>>,
-}
-
-// --- Tauri Commands ---
-
-#[tauri::command]
-fn get_settings(state: State<AppState>) -> Result<Settings, String> {
-    Ok(Settings::load(&state.settings))
-}
-
-#[tauri::command]
-async fn save_settings(settings: Settings, app: AppHandle) -> Result<(), String> {
-    let state: State<AppState> = app.state();
-
-    // Handle side effects
-    let autostart_manager = app.autolaunch();
-    if settings.launch_at_login {
-        autostart_manager.enable().map_err(|e| e.to_string())?;
-    } else {
-        autostart_manager.disable().map_err(|e| e.to_string())?;
-    }
-
-    // Handle lockfile location change
-    {
-        let mut lockfile_guard = state.lockfile_path.lock().unwrap();
-        let new_config_dir = if let Some(dir) = &settings.lockfile_dir {
-            std::path::PathBuf::from(dir)
-        } else {
-            app.path().app_config_dir().unwrap()
-        };
-        let new_path = new_config_dir.join("daylit-tray.lock");
-
-        if let Some(old_path) = lockfile_guard.as_ref() {
-            if *old_path != new_path {
-                if old_path.exists() {
-                    let content = fs::read_to_string(old_path).map_err(|e| e.to_string())?;
-                    fs::remove_file(old_path).map_err(|e| e.to_string())?;
-
-                    fs::create_dir_all(&new_config_dir).map_err(|e| e.to_string())?;
-                    fs::write(&new_path, content).map_err(|e| e.to_string())?;
-                }
-                *lockfile_guard = Some(new_path);
-            }
-        }
-    }
-
-    // Save to store
-    state.settings.set(
-        "settings",
-        serde_json::to_value(&settings).map_err(|e| e.to_string())?,
-    );
-    state.settings.save().map_err(|e| e.to_string())?;
-
-    app.emit("settings-updated", &settings)
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-fn get_notification_payload(state: State<AppState>) -> Option<WebhookPayload> {
-    state.payload.lock().unwrap().clone()
-}
-
-#[tauri::command]
-fn close_notification_window(window: WebviewWindow) {
-    if window.label() == "notification_dialog" {
-        window.close().unwrap();
-    }
-}
-
-// --- Core Application Logic ---
-
-fn start_webhook_server(app_handle: AppHandle) {
-    thread::spawn(move || {
-        // Bind to port 0 to let the OS choose an available port
-        let server = Server::http("127.0.0.1:0").unwrap();
-        let port = server.server_addr().to_ip().unwrap().port();
-
-        // --- Create Lock File ---
-        let state: State<AppState> = app_handle.state();
-        let settings = Settings::load(&state.settings);
-
-        let config_dir = if let Some(dir) = settings.lockfile_dir {
-            std::path::PathBuf::from(dir)
-        } else {
-            app_handle.path().app_config_dir().unwrap()
-        };
-
-        fs::create_dir_all(&config_dir).unwrap();
-        let lock_file_path = config_dir.join("daylit-tray.lock");
-        let pid = std::process::id();
-        let lock_content = format!("{}|{}", port, pid);
-        fs::write(&lock_file_path, lock_content).expect("Failed to write lock file");
-
-        // Store the path so we can delete it later
-        *state.lockfile_path.lock().unwrap() = Some(lock_file_path);
-
-        info!("Webhook server started on port: {}", port);
-
-        for mut request in server.incoming_requests() {
-            if request.method().as_str() != "POST" {
-                continue;
-            }
-
-            let mut content = String::new();
-            request.as_reader().read_to_string(&mut content).unwrap();
-
-            if let Ok(payload) = serde_json::from_str::<WebhookPayload>(&content) {
-                let state: State<AppState> = app_handle.state();
-                *state.payload.lock().unwrap() = Some(payload.clone());
-
-                let app_handle_clone = app_handle.clone();
-                app_handle
-                    .run_on_main_thread(move || {
-                        // --- Re-use or Create Window Logic ---
-                        if let Some(existing_window) =
-                            app_handle_clone.get_webview_window("notification_dialog")
-                        {
-                            info!("Dialog exists. Re-using and sending new data.");
-                            existing_window.set_focus().unwrap();
-                            existing_window
-                                .emit(
-                                    "update_notification",
-                                    &UpdatePayload {
-                                        text: payload.text,
-                                        duration_ms: payload.duration_ms,
-                                    },
-                                )
-                                .unwrap();
-                        } else {
-                            info!("Dialog does not exist. Creating a new one.");
-                            if let Ok(Some(monitor)) = app_handle_clone
-                                .get_webview_window("main")
-                                .unwrap()
-                                .primary_monitor()
-                            {
-                                let monitor_size = monitor.size();
-                                let dialog_width = 1000.0;
-                                let dialog_height = 100.0;
-                                let pos_x = (monitor_size.width as f64 - dialog_width) / 2.0;
-                                let pos_y = 60.0;
-
-                                tauri::WebviewWindowBuilder::new(
-                                    &app_handle_clone,
-                                    "notification_dialog",
-                                    tauri::WebviewUrl::App("/notification".into()),
-                                )
-                                .inner_size(dialog_width, dialog_height)
-                                .position(pos_x, pos_y)
-                                .always_on_top(true)
-                                .decorations(false)
-                                .transparent(true)
-                                .build()
-                                .unwrap();
-                            }
-                        }
-                    })
-                    .unwrap();
-
-                let response = Response::from_string("Dialog triggered");
-                request.respond(response).unwrap();
-            }
-        }
-        port
-    });
-}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -340,7 +134,9 @@ pub fn run() {
                 .set_position(LogicalPosition::new(WINDOW_X, WINDOW_Y))
                 .unwrap();
             main_window.hide().unwrap();
+
             start_webhook_server(app.handle().clone());
+            start_scheduler_thread(app.handle().clone());
 
             // --- Lock File Cleanup on Exit ---
             let app_handle = app.handle().clone();

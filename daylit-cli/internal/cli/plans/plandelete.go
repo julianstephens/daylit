@@ -1,14 +1,16 @@
-package cli
+package plans
 
 import (
 	"fmt"
+
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 )
 
 type PlanDeleteCmd struct {
 	Date string `arg:"" help:"Date of the plan to delete (YYYY-MM-DD)."`
 }
 
-func (c *PlanDeleteCmd) Run(ctx *Context) error {
+func (c *PlanDeleteCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}

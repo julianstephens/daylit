@@ -44,9 +44,14 @@ func (s *JSONStore) Init() error {
 	s.store = &Store{
 		Version: 1,
 		Settings: Settings{
-			DayStart:        "07:00",
-			DayEnd:          "22:00",
-			DefaultBlockMin: 30,
+			DayStart:             "07:00",
+			DayEnd:               "22:00",
+			DefaultBlockMin:      30,
+			NotificationsEnabled: true,
+			NotifyBlockStart:     true,
+			NotifyBlockEnd:       true,
+			BlockStartOffsetMin:  5,
+			BlockEndOffsetMin:    5,
 		},
 		Tasks: make(map[string]models.Task),
 		Plans: make(map[string]map[int]models.DayPlan),

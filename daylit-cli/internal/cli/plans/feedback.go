@@ -1,9 +1,10 @@
-package cli
+package plans
 
 import (
 	"fmt"
 	"time"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 )
@@ -13,7 +14,7 @@ type FeedbackCmd struct {
 	Note   string `help:"Optional note."`
 }
 
-func (c *FeedbackCmd) Run(ctx *Context) error {
+func (c *FeedbackCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}
@@ -47,7 +48,7 @@ func (c *FeedbackCmd) Run(ctx *Context) error {
 		slot := &plan.Slots[i]
 		if (slot.Status == models.SlotStatusAccepted || slot.Status == models.SlotStatusDone) &&
 			slot.Feedback == nil {
-			endMinutes, err := parseTimeToMinutes(slot.End)
+			endMinutes, err := cli.ParseTimeToMinutes(slot.End)
 			if err != nil {
 				// Skip slots with invalid end time format
 				continue
@@ -76,7 +77,7 @@ func (c *FeedbackCmd) Run(ctx *Context) error {
 		switch rating {
 		case models.FeedbackOnTrack:
 			// Keep duration as is, nudge slightly toward actual
-			slotDuration := calculateSlotDuration(plan.Slots[targetSlotIdx])
+			slotDuration := cli.CalculateSlotDuration(plan.Slots[targetSlotIdx])
 			if slotDuration > 0 {
 				if task.AvgActualDurationMin <= 0 {
 					// Initialize average if it was unset or invalid

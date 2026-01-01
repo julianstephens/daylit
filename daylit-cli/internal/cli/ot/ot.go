@@ -1,4 +1,4 @@
-package cli
+package ot
 
 import (
 	"database/sql"
@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
 )
@@ -24,7 +24,7 @@ type OTCmd struct {
 
 type OTInitCmd struct{}
 
-func (c *OTInitCmd) Run(ctx *Context) error {
+func (c *OTInitCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ type OTSettingsCmd struct {
 	DefaultLogDays *int  `help:"Set default number of days for log view."`
 }
 
-func (c *OTSettingsCmd) Run(ctx *Context) error {
+func (c *OTSettingsCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}
@@ -111,7 +111,7 @@ type OTSetCmd struct {
 	Note  string `help:"Optional note." default:""`
 }
 
-func (c *OTSetCmd) Run(ctx *Context) error {
+func (c *OTSetCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}
@@ -165,7 +165,7 @@ type OTShowCmd struct {
 	Days    int    `help:"Show last N days instead of single day." default:"0"`
 }
 
-func (c *OTShowCmd) Run(ctx *Context) error {
+func (c *OTShowCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}
@@ -243,7 +243,7 @@ func (c *OTShowCmd) Run(ctx *Context) error {
 
 type OTNudgeCmd struct{}
 
-func (c *OTNudgeCmd) Run(ctx *Context) error {
+func (c *OTNudgeCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}
@@ -277,7 +277,7 @@ func (c *OTNudgeCmd) Run(ctx *Context) error {
 
 type OTDoctorCmd struct{}
 
-func (c *OTDoctorCmd) Run(ctx *Context) error {
+func (c *OTDoctorCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}
@@ -383,7 +383,7 @@ type OTDeleteCmd struct {
 	Day string `help:"Date in YYYY-MM-DD format (default: today)." default:""`
 }
 
-func (c *OTDeleteCmd) Run(ctx *Context) error {
+func (c *OTDeleteCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}
@@ -411,7 +411,7 @@ type OTRestoreCmd struct {
 	Day string `help:"Date in YYYY-MM-DD format (default: today)." default:""`
 }
 
-func (c *OTRestoreCmd) Run(ctx *Context) error {
+func (c *OTRestoreCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}
@@ -435,7 +435,7 @@ func (c *OTRestoreCmd) Run(ctx *Context) error {
 }
 
 // Ensure storage is SQLite for OT commands
-func ensureSQLiteStoreOT(ctx *Context) error {
+func ensureSQLiteStoreOT(ctx *cli.Context) error {
 	if _, ok := ctx.Store.(*storage.SQLiteStore); !ok {
 		return fmt.Errorf("OT is only supported with SQLite storage (not JSON)")
 	}
@@ -443,34 +443,34 @@ func ensureSQLiteStoreOT(ctx *Context) error {
 }
 
 // Add validation to all OT commands
-func (c *OTInitCmd) Validate(ctx *Context) error {
+func (c *OTInitCmd) Validate(ctx *cli.Context) error {
 	return ensureSQLiteStoreOT(ctx)
 }
 
-func (c *OTSettingsCmd) Validate(ctx *Context) error {
+func (c *OTSettingsCmd) Validate(ctx *cli.Context) error {
 	return ensureSQLiteStoreOT(ctx)
 }
 
-func (c *OTSetCmd) Validate(ctx *Context) error {
+func (c *OTSetCmd) Validate(ctx *cli.Context) error {
 	return ensureSQLiteStoreOT(ctx)
 }
 
-func (c *OTShowCmd) Validate(ctx *Context) error {
+func (c *OTShowCmd) Validate(ctx *cli.Context) error {
 	return ensureSQLiteStoreOT(ctx)
 }
 
-func (c *OTNudgeCmd) Validate(ctx *Context) error {
+func (c *OTNudgeCmd) Validate(ctx *cli.Context) error {
 	return ensureSQLiteStoreOT(ctx)
 }
 
-func (c *OTDoctorCmd) Validate(ctx *Context) error {
+func (c *OTDoctorCmd) Validate(ctx *cli.Context) error {
 	return ensureSQLiteStoreOT(ctx)
 }
 
-func (c *OTDeleteCmd) Validate(ctx *Context) error {
+func (c *OTDeleteCmd) Validate(ctx *cli.Context) error {
 	return ensureSQLiteStoreOT(ctx)
 }
 
-func (c *OTRestoreCmd) Validate(ctx *Context) error {
+func (c *OTRestoreCmd) Validate(ctx *cli.Context) error {
 	return ensureSQLiteStoreOT(ctx)
 }

@@ -1,14 +1,16 @@
-package cli
+package plans
 
 import (
 	"fmt"
+
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 )
 
 type PlanRestoreCmd struct {
 	Date string `arg:"" help:"Date of the plan to restore (YYYY-MM-DD)."`
 }
 
-func (c *PlanRestoreCmd) Run(ctx *Context) error {
+func (c *PlanRestoreCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}

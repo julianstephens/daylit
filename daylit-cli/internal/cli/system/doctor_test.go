@@ -1,16 +1,17 @@
-package cli
+package system
 
 import (
 	"path/filepath"
 	"testing"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/backup"
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/migration"
 	"github.com/julianstephens/daylit/daylit-cli/internal/scheduler"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
 )
 
-func setupTestDoctorDB(t *testing.T) (*Context, func()) {
+func setupTestDoctorDB(t *testing.T) (*cli.Context, func()) {
 	tempDir := t.TempDir()
 	dbPath := filepath.Join(tempDir, "test.db")
 
@@ -19,7 +20,7 @@ func setupTestDoctorDB(t *testing.T) (*Context, func()) {
 		t.Fatalf("failed to initialize store: %v", err)
 	}
 
-	ctx := &Context{
+	ctx := &cli.Context{
 		Store:     store,
 		Scheduler: scheduler.New(),
 	}

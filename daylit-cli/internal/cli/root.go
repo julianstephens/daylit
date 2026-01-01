@@ -28,7 +28,8 @@ func (c *Context) PerformAutomaticBackup() {
 	}
 }
 
-func parseWeekdays(s string) ([]time.Weekday, error) {
+// ParseWeekdays parses a comma-separated list of weekdays
+func ParseWeekdays(s string) ([]time.Weekday, error) {
 	parts := strings.Split(s, ",")
 	var weekdays []time.Weekday
 
@@ -67,7 +68,8 @@ func parseWeekdays(s string) ([]time.Weekday, error) {
 	return weekdays, nil
 }
 
-func formatRecurrence(rec models.Recurrence) string {
+// FormatRecurrence formats a recurrence rule into a human-readable string
+func FormatRecurrence(rec models.Recurrence) string {
 	switch rec.Type {
 	case models.RecurrenceDaily:
 		return "daily"
@@ -89,7 +91,8 @@ func formatRecurrence(rec models.Recurrence) string {
 	}
 }
 
-func parseTimeToMinutes(timeStr string) (int, error) {
+// ParseTimeToMinutes parses a "HH:MM" string into minutes from midnight
+func ParseTimeToMinutes(timeStr string) (int, error) {
 	parts := strings.Split(timeStr, ":")
 	if len(parts) != 2 {
 		return 0, fmt.Errorf("invalid time format: %q", timeStr)
@@ -105,9 +108,9 @@ func parseTimeToMinutes(timeStr string) (int, error) {
 	return hour*60 + minute, nil
 }
 
-// calculateSlotDuration returns the duration of a slot in minutes.
+// CalculateSlotDuration returns the duration of a slot in minutes.
 // Returns 0 if the time format is invalid (which the caller should check).
-func calculateSlotDuration(slot models.Slot) int {
+func CalculateSlotDuration(slot models.Slot) int {
 	start, err := time.Parse("15:04", slot.Start)
 	if err != nil {
 		return 0

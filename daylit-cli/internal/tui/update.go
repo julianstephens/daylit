@@ -160,6 +160,31 @@ func newSettingsForm(fm *SettingsFormModel) *huh.Form {
 					return nil
 				}),
 		),
+		huh.NewGroup(
+			huh.NewConfirm().
+				Title("Enable Notifications").
+				Value(&fm.NotificationsEnabled),
+			huh.NewConfirm().
+				Title("Notify on Block Start").
+				Value(&fm.NotifyBlockStart),
+			huh.NewInput().
+				Title("Start Offset (minutes)").
+				Value(&fm.BlockStartOffsetMin).
+				Validate(func(s string) error {
+					_, err := strconv.Atoi(s)
+					return err
+				}),
+			huh.NewConfirm().
+				Title("Notify on Block End").
+				Value(&fm.NotifyBlockEnd),
+			huh.NewInput().
+				Title("End Offset (minutes)").
+				Value(&fm.BlockEndOffsetMin).
+				Validate(func(s string) error {
+					_, err := strconv.Atoi(s)
+					return err
+				}),
+		),
 	).WithTheme(huh.ThemeDracula())
 }
 
@@ -320,6 +345,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Batch(cmds...)
 			}
 			settings.DefaultBlockMin = blockMin
+
+			// Notification settings
+			settings.NotificationsEnabled = m.settingsForm.NotificationsEnabled
+			settings.NotifyBlockStart = m.settingsForm.NotifyBlockStart
+			settings.NotifyBlockEnd = m.settingsForm.NotifyBlockEnd
+
+			startOffset, err := strconv.Atoi(m.settingsForm.BlockStartOffsetMin)
+			if err == nil {
+				settings.BlockStartOffsetMin = startOffset
+			}
+
+			endOffset, err := strconv.Atoi(m.settingsForm.BlockEndOffsetMin)
+			if err == nil {
+				settings.BlockEndOffsetMin = endOffset
+			}
 
 			// Apply OT settings changes
 			otSettings, _ := m.store.GetOTSettings()
@@ -712,12 +752,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		currentSettings, _ := m.store.GetSettings()
 		currentOTSettings, _ := m.store.GetOTSettings()
 		m.settingsForm = &SettingsFormModel{
-			DayStart:        currentSettings.DayStart,
-			DayEnd:          currentSettings.DayEnd,
-			DefaultBlockMin: strconv.Itoa(currentSettings.DefaultBlockMin),
-			PromptOnEmpty:   currentOTSettings.PromptOnEmpty,
-			StrictMode:      currentOTSettings.StrictMode,
-			DefaultLogDays:  strconv.Itoa(currentOTSettings.DefaultLogDays),
+			DayStart:             currentSettings.DayStart,
+			DayEnd:               currentSettings.DayEnd,
+			DefaultBlockMin:      strconv.Itoa(currentSettings.DefaultBlockMin),
+			PromptOnEmpty:        currentOTSettings.PromptOnEmpty,
+			StrictMode:           currentOTSettings.StrictMode,
+			DefaultLogDays:       strconv.Itoa(currentOTSettings.DefaultLogDays),
+			NotificationsEnabled: currentSettings.NotificationsEnabled,
+			NotifyBlockStart:     currentSettings.NotifyBlockStart,
+			NotifyBlockEnd:       currentSettings.NotifyBlockEnd,
+			BlockStartOffsetMin:  strconv.Itoa(currentSettings.BlockStartOffsetMin),
+			BlockEndOffsetMin:    strconv.Itoa(currentSettings.BlockEndOffsetMin),
 		}
 		m.form = newSettingsForm(m.settingsForm)
 		m.state = StateEditSettings

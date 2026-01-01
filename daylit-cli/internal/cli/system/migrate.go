@@ -1,15 +1,16 @@
-package cli
+package system
 
 import (
 	"fmt"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/migration"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
 )
 
 type MigrateCmd struct{}
 
-func (c *MigrateCmd) Run(ctx *Context) error {
+func (c *MigrateCmd) Run(ctx *cli.Context) error {
 	// Load the database
 	if err := ctx.Store.Load(); err != nil {
 		return fmt.Errorf("failed to load database: %w", err)

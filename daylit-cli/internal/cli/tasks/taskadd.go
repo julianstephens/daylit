@@ -1,10 +1,11 @@
-package cli
+package tasks
 
 import (
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 )
 
@@ -91,7 +92,7 @@ func (c *TaskAddCmd) Validate() error {
 	return nil
 }
 
-func (c *TaskAddCmd) Run(ctx *Context) error {
+func (c *TaskAddCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}
@@ -124,7 +125,7 @@ func (c *TaskAddCmd) Run(ctx *Context) error {
 
 	// Parse weekdays for weekly recurrence
 	if recType == models.RecurrenceWeekly && c.Weekdays != "" {
-		wds, err := parseWeekdays(c.Weekdays)
+		wds, err := cli.ParseWeekdays(c.Weekdays)
 		if err != nil {
 			return err
 		}

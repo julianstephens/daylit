@@ -52,12 +52,17 @@ type HabitFormModel struct {
 }
 
 type SettingsFormModel struct {
-	DayStart        string
-	DayEnd          string
-	DefaultBlockMin string
-	PromptOnEmpty   bool
-	StrictMode      bool
-	DefaultLogDays  string
+	DayStart             string
+	DayEnd               string
+	DefaultBlockMin      string
+	PromptOnEmpty        bool
+	StrictMode           bool
+	DefaultLogDays       string
+	NotificationsEnabled bool
+	NotifyBlockStart     bool
+	NotifyBlockEnd       bool
+	BlockStartOffsetMin  string
+	BlockEndOffsetMin    string
 }
 
 type Model struct {

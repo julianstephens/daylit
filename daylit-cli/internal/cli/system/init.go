@@ -1,15 +1,17 @@
-package cli
+package system
 
 import (
 	"fmt"
 	"os"
+
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 )
 
 type InitCmd struct {
 	Force bool `help:"Force reset by deleting existing database before initialization."`
 }
 
-func (c *InitCmd) Run(ctx *Context) error {
+func (c *InitCmd) Run(ctx *cli.Context) error {
 	// If force flag is provided, delete existing database
 	if c.Force {
 		dbPath := ctx.Store.GetConfigPath()

@@ -48,7 +48,7 @@ func TestGetTrayAppConfigDir(t *testing.T) {
 
 	// Test 1: Default
 	expectedDefault := filepath.Join(tempDir, TrayAppIdentifier)
-	dir, err := getTrayAppConfigDir()
+	dir, err := GetTrayAppConfigDir()
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -70,7 +70,7 @@ func TestGetTrayAppConfigDir(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dir, err = getTrayAppConfigDir()
+	dir, err = GetTrayAppConfigDir()
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}

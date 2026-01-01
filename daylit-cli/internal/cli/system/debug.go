@@ -1,4 +1,4 @@
-package cli
+package system
 
 import (
 	"database/sql"
@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 )
 
 type DebugCmd struct {
@@ -16,7 +18,7 @@ type DebugCmd struct {
 
 type DebugDBPathCmd struct{}
 
-func (cmd *DebugDBPathCmd) Run(ctx *Context) error {
+func (cmd *DebugDBPathCmd) Run(ctx *cli.Context) error {
 	path := ctx.Store.GetConfigPath()
 
 	// Output in machine-readable format
@@ -37,7 +39,7 @@ type DebugDumpPlanCmd struct {
 	Date string `arg:"" help:"Date of the plan to dump (YYYY-MM-DD or 'today')."`
 }
 
-func (cmd *DebugDumpPlanCmd) Run(ctx *Context) error {
+func (cmd *DebugDumpPlanCmd) Run(ctx *cli.Context) error {
 	// Load the database
 	if err := ctx.Store.Load(); err != nil {
 		return fmt.Errorf("failed to load database: %w", err)
@@ -78,7 +80,7 @@ type DebugDumpTaskCmd struct {
 	ID string `arg:"" help:"ID of the task to dump."`
 }
 
-func (cmd *DebugDumpTaskCmd) Run(ctx *Context) error {
+func (cmd *DebugDumpTaskCmd) Run(ctx *cli.Context) error {
 	// Load the database
 	if err := ctx.Store.Load(); err != nil {
 		return fmt.Errorf("failed to load database: %w", err)

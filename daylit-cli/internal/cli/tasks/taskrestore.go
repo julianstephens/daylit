@@ -1,14 +1,16 @@
-package cli
+package tasks
 
 import (
 	"fmt"
+
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 )
 
 type TaskRestoreCmd struct {
 	ID string `arg:"" help:"Task ID to restore."`
 }
 
-func (c *TaskRestoreCmd) Run(ctx *Context) error {
+func (c *TaskRestoreCmd) Run(ctx *cli.Context) error {
 	if err := ctx.Store.Load(); err != nil {
 		return err
 	}
