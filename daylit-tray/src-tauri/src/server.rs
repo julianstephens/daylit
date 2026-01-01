@@ -5,14 +5,27 @@ use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::thread;
 use tauri::{AppHandle, Emitter, Manager, State};
-use tauri_plugin_log::log::info;
+use tauri_plugin_log::log::{error, info};
 use tiny_http::{Response, Server};
 
 pub fn start_webhook_server(app_handle: AppHandle) {
     thread::spawn(move || {
         // Bind to port 0 to let the OS choose an available port
-        let server = Server::http("127.0.0.1:0").unwrap();
-        let port = server.server_addr().to_ip().unwrap().port();
+        let server = match Server::http("127.0.0.1:0") {
+            Ok(s) => s,
+            Err(e) => {
+                error!("Failed to create webhook server: {}", e);
+                return;
+            }
+        };
+        
+        let port = match server.server_addr().to_ip() {
+            Some(addr) => addr.port(),
+            None => {
+                error!("Failed to get webhook server IP address");
+                return;
+            }
+        };
 
         // --- Create Lock File ---
         let state: State<AppState> = app_handle.state();
