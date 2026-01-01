@@ -71,7 +71,7 @@ func (c *InitCmd) migrateData(ctx *cli.Context, sourcePath string) error {
 	if strings.HasPrefix(sourcePath, "postgres://") || strings.HasPrefix(sourcePath, "postgresql://") {
 		// Validate source connection string for embedded credentials
 		if storage.HasEmbeddedCredentials(sourcePath) {
-			return fmt.Errorf("PostgreSQL source connection string contains embedded credentials. Use environment variables, .pgpass instead")
+			return fmt.Errorf("PostgreSQL source connection string contains embedded credentials. Use environment variables or .pgpass instead")
 		}
 		sourceStore = storage.NewPostgresStore(sourcePath)
 	} else {
