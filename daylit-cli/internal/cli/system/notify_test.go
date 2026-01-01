@@ -497,7 +497,7 @@ func TestUpdateSlotNotificationTimestamp(t *testing.T) {
 
 	// Update end notification timestamp
 	timestamp2 := time.Now().Format(time.RFC3339)
-	err = store.UpdateSlotNotificationTimestamp("2024-03-01", 1, "09:00", task.ID, "end", timestamp2)
+	err = store.UpdateSlotNotificationTimestamp("2024-03-01", retrievedPlan.Revision, "09:00", task.ID, "end", timestamp2)
 	if err != nil {
 		t.Fatalf("failed to update end notification timestamp: %v", err)
 	}
