@@ -173,7 +173,7 @@ func TestEnsureSearchPath(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			store := NewPostgresStore(tt.inputConnStr)
 			store.ensureSearchPath()
-			
+
 			if !strings.Contains(store.connStr, tt.expectedMatch) {
 				t.Errorf("ensureSearchPath() result %q does not contain expected substring %q", store.connStr, tt.expectedMatch)
 			}

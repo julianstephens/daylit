@@ -2,12 +2,14 @@ package system
 
 import (
 	"fmt"
+	"io/fs"
 	"time"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/backup"
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/migration"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
+	"github.com/julianstephens/daylit/daylit-cli/migrations"
 )
 
 type DoctorCmd struct{}
@@ -193,11 +195,13 @@ func checkSchemaVersion(ctx *cli.Context) error {
 		return fmt.Errorf("database connection is nil")
 	}
 
-	migrationsPath := sqliteStore.GetMigrationsPath()
-	runner, err := migration.NewRunner(db, migrationsPath, migration.DriverSQLite)
+	// Get the embedded SQLite migrations sub-filesystem
+	subFS, err := fs.Sub(migrations.FS, "sqlite")
 	if err != nil {
-		return fmt.Errorf("failed to create migration runner: %w", err)
+		return fmt.Errorf("failed to access sqlite migrations: %w", err)
 	}
+
+	runner := migration.NewRunner(db, subFS)
 
 	currentVersion, err := runner.GetCurrentVersion()
 	if err != nil {
@@ -228,11 +232,13 @@ func checkMigrationsComplete(ctx *cli.Context) error {
 		return fmt.Errorf("database connection is nil")
 	}
 
-	migrationsPath := sqliteStore.GetMigrationsPath()
-	runner, err := migration.NewRunner(db, migrationsPath, migration.DriverSQLite)
+	// Get the embedded SQLite migrations sub-filesystem
+	subFS, err := fs.Sub(migrations.FS, "sqlite")
 	if err != nil {
-		return fmt.Errorf("failed to create migration runner: %w", err)
+		return fmt.Errorf("failed to access sqlite migrations: %w", err)
 	}
+
+	runner := migration.NewRunner(db, subFS)
 
 	currentVersion, err := runner.GetCurrentVersion()
 	if err != nil {

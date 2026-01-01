@@ -2,10 +2,11 @@ package migration
 
 import (
 	"database/sql"
-	"os"
+	"io/fs"
 	"path/filepath"
 	"strings"
 	"testing"
+	"testing/fstest"
 
 	_ "modernc.org/sqlite"
 )
@@ -28,18 +29,18 @@ func setupTestDB(t *testing.T) (*sql.DB, string, func()) {
 	return db, dbPath, cleanup
 }
 
-func setupTestMigrations(t *testing.T, migrations map[string]string) string {
-	// Create a temporary directory for migrations
-	tempDir := t.TempDir()
+func setupTestMigrations(t *testing.T, migrations map[string]string) fs.FS {
+	// Create a map-based filesystem for testing
+	mapFS := fstest.MapFS{}
 
 	for filename, content := range migrations {
-		path := filepath.Join(tempDir, filename)
-		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
-			t.Fatalf("failed to write test migration %s: %v", filename, err)
+		mapFS[filename] = &fstest.MapFile{
+			Data: []byte(content),
+			Mode: 0644,
 		}
 	}
 
-	return tempDir
+	return mapFS
 }
 
 func TestGetCurrentVersion(t *testing.T) {
@@ -50,10 +51,7 @@ func TestGetCurrentVersion(t *testing.T) {
 		"001_test.sql": "CREATE TABLE test (id INTEGER);",
 	})
 
-	runner, err := NewRunner(db, migrationsPath, DriverSQLite)
-	if err != nil {
-		t.Fatalf("failed to create migration runner: %v", err)
-	}
+	runner := NewRunner(db, migrationsPath)
 
 	// Initially, version should be 0
 	version, err := runner.GetCurrentVersion()
@@ -89,10 +87,7 @@ func TestReadMigrationFiles(t *testing.T) {
 		"003_another.sql": "CREATE TABLE test2 (id INTEGER);",
 	})
 
-	runner, err := NewRunner(db, migrationsPath, DriverSQLite)
-	if err != nil {
-		t.Fatalf("failed to create migration runner: %v", err)
-	}
+	runner := NewRunner(db, migrationsPath)
 
 	migrations, err := runner.ReadMigrationFiles()
 	if err != nil {
@@ -128,10 +123,7 @@ func TestApplyMigrationsFromScratch(t *testing.T) {
 		`,
 	})
 
-	runner, err := NewRunner(db, migrationsPath, DriverSQLite)
-	if err != nil {
-		t.Fatalf("failed to create migration runner: %v", err)
-	}
+	runner := NewRunner(db, migrationsPath)
 
 	// Apply migrations
 	count, err := runner.ApplyMigrations(nil)
@@ -169,16 +161,15 @@ func TestApplyMigrationsIncremental(t *testing.T) {
 	db, _, cleanup := setupTestDB(t)
 	defer cleanup()
 
-	migrationsPath := setupTestMigrations(t, map[string]string{
-		"001_init.sql": `
-			CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);
-		`,
-	})
-
-	runner, err := NewRunner(db, migrationsPath, DriverSQLite)
-	if err != nil {
-		t.Fatalf("failed to create migration runner: %v", err)
+	// Create initial MapFS
+	mapFS := fstest.MapFS{
+		"001_init.sql": &fstest.MapFile{
+			Data: []byte(`CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);`),
+			Mode: 0644,
+		},
 	}
+
+	runner := NewRunner(db, mapFS)
 
 	// Apply first migration
 	count, err := runner.ApplyMigrations(nil)
@@ -189,11 +180,14 @@ func TestApplyMigrationsIncremental(t *testing.T) {
 		t.Errorf("expected 1 migration applied, got %d", count)
 	}
 
-	// Add a new migration file
-	newMigration := `CREATE TABLE posts (id INTEGER PRIMARY KEY, user_id INTEGER);`
-	if err := os.WriteFile(filepath.Join(migrationsPath, "002_posts.sql"), []byte(newMigration), 0644); err != nil {
-		t.Fatalf("failed to write new migration: %v", err)
+	// Create a new MapFS with the second migration added
+	mapFS["002_posts.sql"] = &fstest.MapFile{
+		Data: []byte(`CREATE TABLE posts (id INTEGER PRIMARY KEY, user_id INTEGER);`),
+		Mode: 0644,
 	}
+
+	// Create new runner with updated filesystem
+	runner = NewRunner(db, mapFS)
 
 	// Apply second migration
 	count, err = runner.ApplyMigrations(nil)
@@ -222,13 +216,10 @@ func TestApplyMigrationsNoOp(t *testing.T) {
 		"001_init.sql": `CREATE TABLE users (id INTEGER PRIMARY KEY);`,
 	})
 
-	runner, err := NewRunner(db, migrationsPath, DriverSQLite)
-	if err != nil {
-		t.Fatalf("failed to create migration runner: %v", err)
-	}
+	runner := NewRunner(db, migrationsPath)
 
 	// Apply migrations first time
-	_, err = runner.ApplyMigrations(nil)
+	_, err := runner.ApplyMigrations(nil)
 	if err != nil {
 		t.Fatalf("ApplyMigrations (1st) failed: %v", err)
 	}
@@ -255,13 +246,10 @@ func TestMigrationRollbackOnError(t *testing.T) {
 		`,
 	})
 
-	runner, err := NewRunner(db, migrationsPath, DriverSQLite)
-	if err != nil {
-		t.Fatalf("failed to create migration runner: %v", err)
-	}
+	runner := NewRunner(db, migrationsPath)
 
 	// Apply migrations (should fail)
-	_, err = runner.ApplyMigrations(nil)
+	_, err := runner.ApplyMigrations(nil)
 	if err == nil {
 		t.Fatal("ApplyMigrations should have failed with invalid SQL")
 	}
@@ -294,10 +282,7 @@ func TestValidateVersionNewerDatabase(t *testing.T) {
 		"001_init.sql": `CREATE TABLE users (id INTEGER PRIMARY KEY);`,
 	})
 
-	runner, err := NewRunner(db, migrationsPath, DriverSQLite)
-	if err != nil {
-		t.Fatalf("failed to create migration runner: %v", err)
-	}
+	runner := NewRunner(db, migrationsPath)
 
 	// Ensure schema_version table exists
 	if err := runner.EnsureSchemaVersionTable(); err != nil {
@@ -310,7 +295,7 @@ func TestValidateVersionNewerDatabase(t *testing.T) {
 	}
 
 	// ValidateVersion should fail
-	err = runner.ValidateVersion()
+	err := runner.ValidateVersion()
 	if err == nil {
 		t.Fatal("ValidateVersion should have failed with newer database version")
 	}
@@ -332,10 +317,7 @@ func TestGetLatestVersion(t *testing.T) {
 		"002_update.sql": `ALTER TABLE users ADD COLUMN name TEXT;`,
 	})
 
-	runner, err := NewRunner(db, migrationsPath, DriverSQLite)
-	if err != nil {
-		t.Fatalf("failed to create migration runner: %v", err)
-	}
+	runner := NewRunner(db, migrationsPath)
 
 	latestVersion, err := runner.GetLatestVersion()
 	if err != nil {
@@ -357,12 +339,9 @@ func TestMigrationFilenameValidation(t *testing.T) {
 		"001init.sql": `CREATE TABLE users (id INTEGER);`,
 	})
 
-	runner, err := NewRunner(db, migrationsPath, DriverSQLite)
-	if err != nil {
-		t.Fatalf("failed to create migration runner: %v", err)
-	}
+	runner := NewRunner(db, migrationsPath)
 
-	_, err = runner.ReadMigrationFiles()
+	_, err := runner.ReadMigrationFiles()
 	if err == nil {
 		t.Error("ReadMigrationFiles should have failed with invalid filename format")
 	}
@@ -377,12 +356,9 @@ func TestMigrationVersionValidation(t *testing.T) {
 		"000_init.sql": `CREATE TABLE users (id INTEGER);`,
 	})
 
-	runner, err := NewRunner(db, migrationsPath, DriverSQLite)
-	if err != nil {
-		t.Fatalf("failed to create migration runner: %v", err)
-	}
+	runner := NewRunner(db, migrationsPath)
 
-	_, err = runner.ReadMigrationFiles()
+	_, err := runner.ReadMigrationFiles()
 	if err == nil {
 		t.Error("ReadMigrationFiles should have failed with version 0")
 	}
@@ -401,60 +377,13 @@ func TestDuplicateVersionDetection(t *testing.T) {
 		"001_other.sql": `CREATE TABLE posts (id INTEGER);`,
 	})
 
-	runner, err := NewRunner(db, migrationsPath, DriverSQLite)
-	if err != nil {
-		t.Fatalf("failed to create migration runner: %v", err)
-	}
+	runner := NewRunner(db, migrationsPath)
 
-	_, err = runner.ReadMigrationFiles()
+	_, err := runner.ReadMigrationFiles()
 	if err == nil {
 		t.Error("ReadMigrationFiles should have failed with duplicate version")
 	}
 	if err != nil && !strings.Contains(err.Error(), "duplicate migration version") {
 		t.Errorf("expected duplicate version error, got: %v", err)
-	}
-}
-
-func TestPlaceholder(t *testing.T) {
-	db, _, cleanup := setupTestDB(t)
-	defer cleanup()
-
-	tests := []struct {
-		name       string
-		driverName string
-		index      int
-		want       string
-	}{
-		{"SQLite placeholder 1", DriverSQLite, 1, "?"},
-		{"SQLite placeholder 2", DriverSQLite, 2, "?"},
-		{"Postgres placeholder 1", DriverPostgres, 1, "$1"},
-		{"Postgres placeholder 2", DriverPostgres, 2, "$2"},
-		{"Postgres placeholder 10", DriverPostgres, 10, "$10"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			runner, err := NewRunner(db, "", tt.driverName)
-			if err != nil {
-				t.Fatalf("failed to create migration runner: %v", err)
-			}
-			got := runner.placeholder(tt.index)
-			if got != tt.want {
-				t.Errorf("placeholder(%d) = %q, want %q", tt.index, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestNewRunner_UnsupportedDriver(t *testing.T) {
-	db, _, cleanup := setupTestDB(t)
-	defer cleanup()
-
-	_, err := NewRunner(db, "", "unsupported")
-	if err == nil {
-		t.Error("Expected error for unsupported driver, but got nil")
-	}
-	if err != nil && !strings.Contains(err.Error(), "unsupported database driver") {
-		t.Errorf("Expected unsupported driver error, got: %v", err)
 	}
 }

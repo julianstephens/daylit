@@ -2,10 +2,12 @@ package system
 
 import (
 	"fmt"
+	"io/fs"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/migration"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
+	"github.com/julianstephens/daylit/daylit-cli/migrations"
 )
 
 type MigrateCmd struct{}
@@ -23,8 +25,11 @@ func (c *MigrateCmd) Run(ctx *cli.Context) error {
 		return fmt.Errorf("migrate command only supports SQLite storage")
 	}
 
-	// Get the migrations path
-	migrationsPath := sqliteStore.GetMigrationsPath()
+	// Get the embedded SQLite migrations sub-filesystem
+	subFS, err := fs.Sub(migrations.FS, "sqlite")
+	if err != nil {
+		return fmt.Errorf("failed to access sqlite migrations: %w", err)
+	}
 
 	// Get database connection
 	db := sqliteStore.GetDB()
@@ -33,10 +38,7 @@ func (c *MigrateCmd) Run(ctx *cli.Context) error {
 	}
 
 	// Create migration runner
-	runner, err := migration.NewRunner(db, migrationsPath, migration.DriverSQLite)
-	if err != nil {
-		return fmt.Errorf("failed to create migration runner: %w", err)
-	}
+	runner := migration.NewRunner(db, subFS)
 
 	// Apply migrations
 	count, err := runner.ApplyMigrations(func(msg string) {

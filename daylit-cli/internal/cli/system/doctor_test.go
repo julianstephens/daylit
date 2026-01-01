@@ -1,6 +1,7 @@
 package system
 
 import (
+	"io/fs"
 	"path/filepath"
 	"testing"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/migration"
 	"github.com/julianstephens/daylit/daylit-cli/internal/scheduler"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
+	"github.com/julianstephens/daylit/daylit-cli/migrations"
 )
 
 func setupTestDoctorDB(t *testing.T) (*cli.Context, func()) {
@@ -123,11 +125,14 @@ func TestCheckMigrationsComplete_Incomplete(t *testing.T) {
 	}
 
 	db := sqliteStore.GetDB()
-	migrationsPath := sqliteStore.GetMigrationsPath()
-	runner, err := migration.NewRunner(db, migrationsPath, migration.DriverSQLite)
+
+	// Get the embedded SQLite migrations sub-filesystem
+	subFS, err := fs.Sub(migrations.FS, "sqlite")
 	if err != nil {
-		t.Fatalf("failed to create migration runner: %v", err)
+		t.Fatalf("failed to access sqlite migrations: %v", err)
 	}
+
+	runner := migration.NewRunner(db, subFS)
 
 	currentVersion, err := runner.GetCurrentVersion()
 	if err != nil {

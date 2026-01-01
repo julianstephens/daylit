@@ -13,7 +13,7 @@ func setupMinimalTestStore(t *testing.T) (*SQLiteStore, func()) {
 	dbPath := filepath.Join(tempDir, "test.db")
 
 	store := NewSQLiteStore(dbPath)
-	
+
 	// Open the database manually without running Init (which runs migrations)
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
@@ -155,7 +155,7 @@ func TestTableExists(t *testing.T) {
 
 	t.Run("closed database", func(t *testing.T) {
 		store, cleanup := setupMinimalTestStore(t)
-		
+
 		// Close the database
 		store.Close()
 		cleanup()
@@ -172,7 +172,7 @@ func TestTableExists(t *testing.T) {
 		tempDir := t.TempDir()
 		dbPath := filepath.Join(tempDir, "test.db")
 		store := NewSQLiteStore(dbPath)
-		
+
 		if err := store.Init(); err != nil {
 			t.Fatalf("failed to initialize store: %v", err)
 		}

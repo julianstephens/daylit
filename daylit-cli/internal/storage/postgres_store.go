@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -14,6 +14,7 @@ import (
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/migration"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
+	"github.com/julianstephens/daylit/daylit-cli/migrations"
 )
 
 type PostgresStore struct {
@@ -176,14 +177,9 @@ func (s *PostgresStore) Load() error {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	// Validate schema version if migrations directory is available
-	migrationsPath := s.getMigrationsPath()
-	if migrationsPath != "" {
-		if _, err := os.Stat(migrationsPath); err == nil {
-			if err := s.validateSchemaVersion(); err != nil {
-				return err
-			}
-		}
+	// Validate schema version using embedded migrations
+	if err := s.validateSchemaVersion(); err != nil {
+		return err
 	}
 
 	return nil
@@ -197,11 +193,13 @@ func (s *PostgresStore) Close() error {
 }
 
 func (s *PostgresStore) runMigrations() error {
-	migrationsPath := s.getMigrationsPath()
-	runner, err := migration.NewRunner(s.db, migrationsPath, migration.DriverPostgres)
+	// Get the embedded PostgreSQL migrations sub-filesystem
+	subFS, err := fs.Sub(migrations.FS, "postgres")
 	if err != nil {
-		return fmt.Errorf("failed to create migration runner: %w", err)
+		return fmt.Errorf("failed to access postgres migrations: %w", err)
 	}
+
+	runner := migration.NewRunner(s.db, subFS)
 	_, err = runner.ApplyMigrations(func(msg string) {
 		fmt.Println(msg)
 	})
@@ -209,46 +207,13 @@ func (s *PostgresStore) runMigrations() error {
 }
 
 func (s *PostgresStore) validateSchemaVersion() error {
-	migrationsPath := s.getMigrationsPath()
-	runner, err := migration.NewRunner(s.db, migrationsPath, migration.DriverPostgres)
+	subFS, err := fs.Sub(migrations.FS, "postgres")
 	if err != nil {
-		return fmt.Errorf("failed to create migration runner: %w", err)
+		return fmt.Errorf("failed to access postgres migrations: %w", err)
 	}
+
+	runner := migration.NewRunner(s.db, subFS)
 	return runner.ValidateVersion()
-}
-
-func (s *PostgresStore) getMigrationsPath() string {
-	// Check if environment variable is set
-	if envPath := os.Getenv("DAYLIT_MIGRATIONS_PATH"); envPath != "" {
-		if absPath, err := filepath.Abs(envPath); err == nil {
-			if _, err := os.Stat(absPath); err == nil {
-				return absPath
-			}
-		}
-	}
-
-	// Try to find migrations directory relative to the executable or in common paths
-	paths := []string{
-		"migrations/postgres",
-		"./migrations/postgres",
-		"../migrations/postgres",
-		"../../migrations/postgres",
-		"../../../migrations/postgres",
-		"../../../../migrations/postgres",
-		filepath.Join(filepath.Dir(os.Args[0]), "migrations", "postgres"),
-		filepath.Join(filepath.Dir(os.Args[0]), "..", "migrations", "postgres"),
-	}
-
-	for _, path := range paths {
-		if absPath, err := filepath.Abs(path); err == nil {
-			if _, err := os.Stat(absPath); err == nil {
-				return absPath
-			}
-		}
-	}
-
-	// Default to "migrations/postgres" in current directory (will fail gracefully if not found)
-	return "migrations/postgres"
 }
 
 func (s *PostgresStore) GetSettings() (Settings, error) {
@@ -1561,7 +1526,7 @@ ORDER BY date, revision`)
 
 		// Get slots for this plan (including deleted slots for complete migration)
 		slotRows, err := s.db.Query(`
-SELECT start_time, end_time, task_id, status, feedback_rating, feedback_note, 
+SELECT start_time, end_time, task_id, status, feedback_rating, feedback_note,
        deleted_at, last_notified_start, last_notified_end
 FROM slots WHERE plan_date = $1 AND plan_revision = $2
 ORDER BY start_time`,
