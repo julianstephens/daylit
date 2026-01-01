@@ -886,14 +886,20 @@ func (s *SQLiteStore) GetAllHabits(includeArchived, includeDeleted bool) ([]mode
 	// Check if table exists (for backward compatibility)
 	var tableExists bool
 	checkRows, err := s.db.Query("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='habits'")
-	if err == nil {
-		var count int
-		if checkRows.Next() {
-			checkRows.Scan(&count)
-		}
-		checkRows.Close()
-		tableExists = count > 0
+	if err != nil {
+		// If we can't confirm the table exists, behave as if it does not.
+		return []models.Habit{}, nil
 	}
+	defer checkRows.Close()
+
+	var count int
+	if checkRows.Next() {
+		if err := checkRows.Scan(&count); err != nil {
+			// On scan error, also behave as if the table does not exist.
+			return []models.Habit{}, nil
+		}
+	}
+	tableExists = count > 0
 	if !tableExists {
 		return []models.Habit{}, nil
 	}
