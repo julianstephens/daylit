@@ -145,14 +145,14 @@ func (s *SQLiteStore) getMigrationsPath() string {
 
 	// Try to find migrations directory relative to the executable or in common paths
 	paths := []string{
-		"migrations",
-		"./migrations",
-		"../migrations",
-		"../../migrations",
-		"../../../migrations",
-		"../../../../migrations",
-		filepath.Join(filepath.Dir(os.Args[0]), "migrations"),
-		filepath.Join(filepath.Dir(os.Args[0]), "..", "migrations"),
+		"migrations/sqlite",
+		"./migrations/sqlite",
+		"../migrations/sqlite",
+		"../../migrations/sqlite",
+		"../../../migrations/sqlite",
+		"../../../../migrations/sqlite",
+		filepath.Join(filepath.Dir(os.Args[0]), "migrations", "sqlite"),
+		filepath.Join(filepath.Dir(os.Args[0]), "..", "migrations", "sqlite"),
 	}
 
 	for _, path := range paths {
@@ -163,8 +163,8 @@ func (s *SQLiteStore) getMigrationsPath() string {
 		}
 	}
 
-	// Default to "migrations" in current directory (will fail gracefully if not found)
-	return "migrations"
+	// Default to "migrations/sqlite" in current directory (will fail gracefully if not found)
+	return "migrations/sqlite"
 }
 
 func (s *SQLiteStore) GetSettings() (Settings, error) {

@@ -12,6 +12,8 @@ require (
 	modernc.org/sqlite v1.42.2
 )
 
+require github.com/lib/pq v1.10.9 // indirect
+
 require (
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
