@@ -135,7 +135,7 @@ func HasEmbeddedCredentials(connStr string) bool {
 		key := strings.ToLower(kv[0])
 
 		// Check for common DSN keys to confirm it's likely a DSN
-		if key == "host" || key == "port" || key == "dbname" || key == "user" || key == "sslmode" || key == "password" {
+		if key == "host" || key == "port" || key == "dbname" || key == "user" || key == "sslmode" {
 			isDSN = true
 		}
 

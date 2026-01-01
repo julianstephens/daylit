@@ -278,7 +278,12 @@ func TestHasEmbeddedCredentials(t *testing.T) {
 		{
 			name:     "Plain text with password param",
 			connStr:  "some random text password=hidden",
-			expected: true,
+			expected: false, // Should be false as it lacks other DSN keys
+		},
+		{
+			name:     "DSN with only password",
+			connStr:  "password=secret123",
+			expected: false, // Should be false as it lacks other DSN keys
 		},
 		{
 			name:     "Plain text (not URL or DSN)",
