@@ -77,9 +77,8 @@ func main() {
 		if storage.HasEmbeddedCredentials(CLI.Config) {
 			fmt.Fprintf(os.Stderr, "❌ Error: PostgreSQL connection strings with embedded credentials are NOT allowed.\n")
 			fmt.Fprintf(os.Stderr, "       Use one of these secure alternatives:\n")
-			fmt.Fprintf(os.Stderr, "       1. OS keyring:    daylit config set connection-string \"postgresql://user:password@host:5432/daylit\"\n")
-			fmt.Fprintf(os.Stderr, "       2. Environment:   export DAYLIT_DB_CONNECTION=\"postgresql://user:password@host:5432/daylit\"\n")
-			fmt.Fprintf(os.Stderr, "       3. .pgpass file:  Use connection string without password: \"postgresql://user@host:5432/daylit\"\n")
+			fmt.Fprintf(os.Stderr, "       1. .pgpass file:  Create ~/.pgpass with credentials, use: \"postgresql://user@host:5432/daylit\"\n")
+			fmt.Fprintf(os.Stderr, "       2. Environment:   export PGPASSWORD=\"password\" then use connection string without password\n")
 			fmt.Fprintf(os.Stderr, "\n       For more information, see docs/POSTGRES_SETUP.md\n")
 			os.Exit(1)
 		}
