@@ -1559,11 +1559,14 @@ func (s *SQLiteStore) GetAllHabitEntries() ([]models.HabitEntry, error) {
 	var tableExists bool
 	checkRows, err := s.db.Query("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='habit_entries'")
 	if err == nil {
+		defer checkRows.Close()
+
 		var count int
 		if checkRows.Next() {
-			checkRows.Scan(&count)
+			if err := checkRows.Scan(&count); err != nil {
+				return nil, fmt.Errorf("failed to check existence of habit_entries table: %w", err)
+			}
 		}
-		checkRows.Close()
 		tableExists = count > 0
 	}
 	if !tableExists {
