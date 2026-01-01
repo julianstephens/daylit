@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import "./SettingsPage.css";
 
+const STATUS_TIMEOUT_MS = 3000;
+
 interface Settings {
   font_size: string;
   launch_at_login: boolean;
@@ -68,7 +70,7 @@ const SettingsPage = () => {
       setStatus({ type: "success", message: "Settings saved successfully" });
 
       // Clear success message after 3 seconds
-      setTimeout(() => setStatus(null), 3000);
+      setTimeout(() => setStatus(null), STATUS_TIMEOUT_MS);
     } catch (error) {
       console.error("Failed to save settings:", error);
       setStatus({ type: "error", message: "Failed to save settings" });
