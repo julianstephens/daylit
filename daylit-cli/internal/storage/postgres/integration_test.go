@@ -1,4 +1,4 @@
-package storage
+package postgres
 
 import (
 	"os"
@@ -8,17 +8,17 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 )
 
-// TestPostgresStore_Integration tests PostgreSQL store with a real database
+// TestStore_Integration tests PostgreSQL store with a real database
 // Set POSTGRES_TEST_URL environment variable to run this test
 // Example: POSTGRES_TEST_URL="postgres://daylit_user:password@localhost:5432/daylit_test?sslmode=disable"
-func TestPostgresStore_Integration(t *testing.T) {
+func TestStore_Integration(t *testing.T) {
 	connStr := os.Getenv("POSTGRES_TEST_URL")
 	if connStr == "" {
 		t.Skip("POSTGRES_TEST_URL not set, skipping PostgreSQL integration test")
 	}
 
 	// Create a new PostgreSQL store
-	store := NewPostgresStore(connStr)
+	store := New(connStr)
 
 	// Initialize the store
 	if err := store.Init(); err != nil {

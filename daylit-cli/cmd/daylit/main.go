@@ -19,6 +19,7 @@ import (
 	_ "github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/scheduler"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
+	"github.com/julianstephens/daylit/daylit-cli/internal/storage/postgres"
 )
 
 var CLI struct {
@@ -91,8 +92,8 @@ func main() {
 		envConfig := os.Getenv("DAYLIT_CONFIG")
 		configFromEnv := envConfig != "" && envConfig == CLI.Config
 
-		_, err := storage.ValidatePostgresConnString(CLI.Config)
-		hasPasswordError := err != nil && errors.Is(err, storage.ErrEmbeddedCredentials)
+		_, err := postgres.ValidateConnString(CLI.Config)
+		hasPasswordError := err != nil && errors.Is(err, postgres.ErrEmbeddedCredentials)
 
 		if !configFromEnv && hasPasswordError {
 			fmt.Fprintf(os.Stderr, "❌ Error: PostgreSQL connection strings with embedded credentials are NOT allowed via command line flags.\n")
@@ -106,7 +107,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "⚠️  Warning: Using embedded credentials in DAYLIT_CONFIG environment variable.\n")
 			fmt.Fprintf(os.Stderr, "            Consider using a .pgpass file for better security.\n")
 		}
-		store = storage.NewPostgresStore(CLI.Config)
+		store = postgres.New(CLI.Config)
 	} else {
 		// Default to SQLite
 		store = storage.NewSQLiteStore(CLI.Config)
