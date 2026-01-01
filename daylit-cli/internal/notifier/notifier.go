@@ -30,7 +30,7 @@ type WebhookPayload struct {
 const (
 	NotifierLockfileName   = "daylit-tray.lock"
 	NotificationDurationMs = 5000
-	TrayAppIdentifier      = "com.julianstephens.daylit-tray"
+	TrayAppIdentifier      = "com.daylit.daylit-tray"
 )
 
 func New() *Notifier {
