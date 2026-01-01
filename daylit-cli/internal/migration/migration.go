@@ -4,8 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
+	"io/fs"
 	"sort"
 	"strconv"
 	"strings"
@@ -23,15 +22,15 @@ type Migration struct {
 
 // Runner manages database schema migrations
 type Runner struct {
-	db             *sql.DB
-	migrationsPath string
+	db *sql.DB
+	fs fs.FS
 }
 
 // NewRunner creates a new migration runner
-func NewRunner(db *sql.DB, migrationsPath string) *Runner {
+func NewRunner(db *sql.DB, migrationFS fs.FS) *Runner {
 	return &Runner{
-		db:             db,
-		migrationsPath: migrationsPath,
+		db: db,
+		fs: migrationFS,
 	}
 }
 
@@ -86,7 +85,7 @@ func (r *Runner) SetVersion(version int) error {
 // ReadMigrationFiles reads and parses migration files from the migrations directory
 // Returns migrations sorted by version number
 func (r *Runner) ReadMigrationFiles() ([]Migration, error) {
-	files, err := os.ReadDir(r.migrationsPath)
+	files, err := fs.ReadDir(r.fs, ".")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read migrations directory: %w", err)
 	}
@@ -112,7 +111,7 @@ func (r *Runner) ReadMigrationFiles() ([]Migration, error) {
 		}
 
 		// Read migration SQL
-		content, err := os.ReadFile(filepath.Join(r.migrationsPath, file.Name()))
+		content, err := fs.ReadFile(r.fs, file.Name())
 		if err != nil {
 			return nil, fmt.Errorf("failed to read migration file %s: %w", file.Name(), err)
 		}
