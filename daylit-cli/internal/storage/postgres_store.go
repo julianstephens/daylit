@@ -5,7 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
+	"net/url"
+	"strings"
 	"time"
+
+	_ "github.com/lib/pq"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/migration"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
@@ -19,8 +23,30 @@ type PostgresStore struct {
 }
 
 func NewPostgresStore(connStr string) *PostgresStore {
-	return &PostgresStore{
+	s := &PostgresStore{
 		connStr: connStr,
+	}
+	s.ensureSearchPath()
+	return s
+}
+
+func (s *PostgresStore) ensureSearchPath() {
+	// Ensure search_path is set to daylit in the connection string
+	if strings.HasPrefix(s.connStr, "postgres://") || strings.HasPrefix(s.connStr, "postgresql://") {
+		u, err := url.Parse(s.connStr)
+		if err == nil {
+			q := u.Query()
+			if q.Get("search_path") == "" {
+				q.Set("search_path", "daylit")
+				u.RawQuery = q.Encode()
+				s.connStr = u.String()
+			}
+		}
+	} else {
+		// Assume DSN format
+		if !strings.Contains(s.connStr, "search_path") {
+			s.connStr = strings.TrimSpace(s.connStr) + " search_path=daylit"
+		}
 	}
 }
 
@@ -37,8 +63,16 @@ func (s *PostgresStore) Init() error {
 	db.SetMaxIdleConns(25)
 	db.SetConnMaxLifetime(5 * time.Minute)
 
+	// Create schema if it doesn't exist
+	if _, err := s.db.Exec("CREATE SCHEMA IF NOT EXISTS daylit"); err != nil {
+		return fmt.Errorf("failed to create schema: %w", err)
+	}
+
 	// Test connection
 	if err := s.db.Ping(); err != nil {
+		if strings.Contains(err.Error(), "SSL is not enabled on the server") {
+			return fmt.Errorf("failed to connect to database: %w (hint: try adding ?sslmode=disable to your connection string)", err)
+		}
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
@@ -86,6 +120,9 @@ func (s *PostgresStore) Load() error {
 
 	// Test connection
 	if err := s.db.Ping(); err != nil {
+		if strings.Contains(err.Error(), "SSL is not enabled on the server") {
+			return fmt.Errorf("failed to connect to database: %w (hint: try adding ?sslmode=disable to your connection string)", err)
+		}
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
@@ -1470,7 +1507,7 @@ ORDER BY date, revision`)
 
 		// Get slots for this plan (including deleted slots for complete migration)
 		slotRows, err := s.db.Query(`
-SELECT start_time, end_time, task_id, status, feedback_rating, feedback_note, 
+SELECT start_time, end_time, task_id, status, feedback_rating, feedback_note,
        deleted_at, last_notified_start, last_notified_end
 FROM slots WHERE plan_date = $1 AND plan_revision = $2
 ORDER BY start_time`,

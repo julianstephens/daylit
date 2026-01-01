@@ -9,10 +9,11 @@ import (
 	"path/filepath"
 	"time"
 
+	_ "modernc.org/sqlite"
+
 	"github.com/julianstephens/daylit/daylit-cli/internal/migration"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/migrations"
-	_ "modernc.org/sqlite"
 )
 
 type SQLiteStore struct {
@@ -840,6 +841,21 @@ func (s *SQLiteStore) GetHabitByName(name string) (models.Habit, error) {
 }
 
 func (s *SQLiteStore) GetAllHabits(includeArchived, includeDeleted bool) ([]models.Habit, error) {
+	// Check if table exists (for backward compatibility)
+	var tableExists bool
+	checkRows, err := s.db.Query("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='habits'")
+	if err == nil {
+		var count int
+		if checkRows.Next() {
+			checkRows.Scan(&count)
+		}
+		checkRows.Close()
+		tableExists = count > 0
+	}
+	if !tableExists {
+		return []models.Habit{}, nil
+	}
+
 	query := "SELECT id, name, created_at, archived_at, deleted_at FROM habits WHERE 1=1"
 	if !includeDeleted {
 		query += " AND deleted_at IS NULL"
@@ -1175,18 +1191,18 @@ func (s *SQLiteStore) RestoreHabitEntry(id string) error {
 // OT Settings
 
 func (s *SQLiteStore) GetOTSettings() (models.OTSettings, error) {
-	rows, err := s.db.Query("SELECT key, value FROM settings WHERE key LIKE 'ot_%'")
-	if err != nil {
-		return models.OTSettings{}, err
-	}
-	defer rows.Close()
-
 	settings := models.OTSettings{
 		ID:             1, // Keep for backward compatibility
 		PromptOnEmpty:  true,
 		StrictMode:     true,
 		DefaultLogDays: 14,
 	}
+
+	rows, err := s.db.Query("SELECT key, value FROM settings WHERE key LIKE 'ot_%'")
+	if err != nil {
+		return models.OTSettings{}, err
+	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var key, value string
@@ -1410,6 +1426,18 @@ func (s *SQLiteStore) UpdateSlotNotificationTimestamp(date string, revision int,
 
 // GetAllPlans retrieves all plans (all dates, all revisions) including deleted ones
 func (s *SQLiteStore) GetAllPlans() ([]models.DayPlan, error) {
+	// Check if notification columns exist (for backward compatibility with older DBs during migration)
+	var hasNotificationCols bool
+	checkRows, err := s.db.Query("SELECT count(*) FROM pragma_table_info('slots') WHERE name='last_notified_start'")
+	if err == nil {
+		var count int
+		if checkRows.Next() {
+			checkRows.Scan(&count)
+		}
+		checkRows.Close()
+		hasNotificationCols = count > 0
+	}
+
 	rows, err := s.db.Query(`
 		SELECT date, revision, accepted_at, deleted_at
 		FROM plans
@@ -1435,12 +1463,13 @@ func (s *SQLiteStore) GetAllPlans() ([]models.DayPlan, error) {
 		}
 
 		// Get slots for this plan (including deleted slots for complete migration)
-		slotRows, err := s.db.Query(`
-			SELECT start_time, end_time, task_id, status, feedback_rating, feedback_note, 
-			       deleted_at, last_notified_start, last_notified_end
-			FROM slots WHERE plan_date = ? AND plan_revision = ?
-			ORDER BY start_time`,
-			plan.Date, plan.Revision)
+		query := `SELECT start_time, end_time, task_id, status, feedback_rating, feedback_note, deleted_at`
+		if hasNotificationCols {
+			query += `, last_notified_start, last_notified_end`
+		}
+		query += ` FROM slots WHERE plan_date = ? AND plan_revision = ? ORDER BY start_time`
+
+		slotRows, err := s.db.Query(query, plan.Date, plan.Revision)
 		if err != nil {
 			return nil, err
 		}
@@ -1449,11 +1478,16 @@ func (s *SQLiteStore) GetAllPlans() ([]models.DayPlan, error) {
 			var slot models.Slot
 			var rating, note string
 			var slotDeletedAt, lastNotifiedStart, lastNotifiedEnd sql.NullString
-			err := slotRows.Scan(
+
+			dest := []interface{}{
 				&slot.Start, &slot.End, &slot.TaskID, &slot.Status,
-				&rating, &note, &slotDeletedAt, &lastNotifiedStart, &lastNotifiedEnd,
-			)
-			if err != nil {
+				&rating, &note, &slotDeletedAt,
+			}
+			if hasNotificationCols {
+				dest = append(dest, &lastNotifiedStart, &lastNotifiedEnd)
+			}
+
+			if err := slotRows.Scan(dest...); err != nil {
 				slotRows.Close()
 				return nil, err
 			}
@@ -1467,11 +1501,13 @@ func (s *SQLiteStore) GetAllPlans() ([]models.DayPlan, error) {
 			if slotDeletedAt.Valid {
 				slot.DeletedAt = &slotDeletedAt.String
 			}
-			if lastNotifiedStart.Valid {
-				slot.LastNotifiedStart = &lastNotifiedStart.String
-			}
-			if lastNotifiedEnd.Valid {
-				slot.LastNotifiedEnd = &lastNotifiedEnd.String
+			if hasNotificationCols {
+				if lastNotifiedStart.Valid {
+					slot.LastNotifiedStart = &lastNotifiedStart.String
+				}
+				if lastNotifiedEnd.Valid {
+					slot.LastNotifiedEnd = &lastNotifiedEnd.String
+				}
 			}
 
 			plan.Slots = append(plan.Slots, slot)
@@ -1486,6 +1522,21 @@ func (s *SQLiteStore) GetAllPlans() ([]models.DayPlan, error) {
 
 // GetAllHabitEntries retrieves all habit entries including deleted ones
 func (s *SQLiteStore) GetAllHabitEntries() ([]models.HabitEntry, error) {
+	// Check if table exists (for backward compatibility)
+	var tableExists bool
+	checkRows, err := s.db.Query("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='habit_entries'")
+	if err == nil {
+		var count int
+		if checkRows.Next() {
+			checkRows.Scan(&count)
+		}
+		checkRows.Close()
+		tableExists = count > 0
+	}
+	if !tableExists {
+		return []models.HabitEntry{}, nil
+	}
+
 	rows, err := s.db.Query(`
 		SELECT id, habit_id, day, note, created_at, updated_at, deleted_at
 		FROM habit_entries
@@ -1531,6 +1582,21 @@ func (s *SQLiteStore) GetAllHabitEntries() ([]models.HabitEntry, error) {
 
 // GetAllOTEntries retrieves all OT entries including deleted ones
 func (s *SQLiteStore) GetAllOTEntries() ([]models.OTEntry, error) {
+	// Check if table exists (for backward compatibility)
+	var tableExists bool
+	checkRows, err := s.db.Query("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='ot_entries'")
+	if err == nil {
+		var count int
+		if checkRows.Next() {
+			checkRows.Scan(&count)
+		}
+		checkRows.Close()
+		tableExists = count > 0
+	}
+	if !tableExists {
+		return []models.OTEntry{}, nil
+	}
+
 	rows, err := s.db.Query(`
 		SELECT id, day, title, note, created_at, updated_at, deleted_at
 		FROM ot_entries
