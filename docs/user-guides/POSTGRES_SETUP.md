@@ -284,7 +284,7 @@ This will:
 3. Run all necessary migrations to create tables
 4. Initialize default settings
 
-**Note:** The restriction on embedding passwords applies specifically to the `--config` command-line flag because command-line arguments are visible in process listings. The connection string you provide via `--config` should **not** contain a password. Credentials should currently be provided through `.pgpass`, the `PGPASSWORD` environment variable, or (if necessary) a carefully managed `DAYLIT_CONFIG` environment variable. OS keyring integration is planned for a future release and is not yet available.
+**Note:** The restriction on embedding passwords applies specifically to the `--config` command-line flag because command-line arguments are visible in process listings. The connection string you provide via `--config` should **not** contain a password. Credentials should currently be provided through `.pgpass`, the `PGPASSWORD` environment variable, or (if necessary) a carefully managed `DAYLIT_CONFIG` environment variable.
 
 ## Security Considerations
 
