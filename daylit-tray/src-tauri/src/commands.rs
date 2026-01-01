@@ -1,5 +1,7 @@
 use crate::state::{AppState, Settings, WebhookPayload};
 use std::fs;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use tauri::{AppHandle, Emitter, Manager, State, WebviewWindow};
 use tauri_plugin_autostart::ManagerExt;
 
@@ -38,6 +40,13 @@ pub async fn save_settings(settings: Settings, app: AppHandle) -> Result<(), Str
 
                     fs::create_dir_all(&new_config_dir).map_err(|e| e.to_string())?;
                     fs::write(&new_path, content).map_err(|e| e.to_string())?;
+
+                    // Set file permissions to 0600 (rw-------)
+                    #[cfg(unix)]
+                    {
+                        let permissions = fs::Permissions::from_mode(0o600);
+                        fs::set_permissions(&new_path, permissions).map_err(|e| e.to_string())?;
+                    }
                 }
                 *lockfile_guard = Some(new_path);
             }

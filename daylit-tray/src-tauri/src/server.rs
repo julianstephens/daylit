@@ -1,6 +1,8 @@
 use crate::state::LOCKFILE_NAME;
 use crate::state::{AppState, Settings, UpdatePayload, WebhookPayload};
 use std::fs;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::thread;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_log::log::info;
@@ -27,6 +29,14 @@ pub fn start_webhook_server(app_handle: AppHandle) {
         let pid = std::process::id();
         let lock_content = format!("{}|{}", port, pid);
         fs::write(&lock_file_path, lock_content).expect("Failed to write lock file");
+
+        // Set file permissions to 0600 (rw-------)
+        #[cfg(unix)]
+        {
+            let permissions = fs::Permissions::from_mode(0o600);
+            fs::set_permissions(&lock_file_path, permissions)
+                .expect("Failed to set lock file permissions");
+        }
 
         // Store the path so we can delete it later
         *state.lockfile_path.lock().unwrap() = Some(lock_file_path);
