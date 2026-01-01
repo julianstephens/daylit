@@ -36,27 +36,27 @@ type Runner struct {
 
 // NewRunner creates a new migration runner
 // driverName should be DriverSQLite or DriverPostgres to determine the correct SQL placeholder syntax
-func NewRunner(db *sql.DB, migrationsPath string, driverName string) *Runner {
+// Returns an error if an unsupported driver is provided
+func NewRunner(db *sql.DB, migrationsPath string, driverName string) (*Runner, error) {
+	if driverName != DriverSQLite && driverName != DriverPostgres {
+		return nil, fmt.Errorf("unsupported database driver: %s (must be %s or %s)", driverName, DriverSQLite, DriverPostgres)
+	}
+
 	return &Runner{
 		db:             db,
 		migrationsPath: migrationsPath,
 		driverName:     driverName,
-	}
+	}, nil
 }
 
 // placeholder returns the appropriate SQL placeholder for the given parameter index
 // For SQLite: returns "?"
 // For PostgreSQL: returns "$1", "$2", etc.
-// Panics if the driver name is not supported.
 func (r *Runner) placeholder(index int) string {
-	switch r.driverName {
-	case DriverPostgres:
+	if r.driverName == DriverPostgres {
 		return fmt.Sprintf("$%d", index)
-	case DriverSQLite:
-		return "?"
-	default:
-		panic(fmt.Sprintf("unsupported database driver: %s (must be %s or %s)", r.driverName, DriverSQLite, DriverPostgres))
 	}
+	return "?"
 }
 
 // EnsureSchemaVersionTable creates the schema_version table if it doesn't exist

@@ -33,7 +33,10 @@ func (c *MigrateCmd) Run(ctx *cli.Context) error {
 	}
 
 	// Create migration runner
-	runner := migration.NewRunner(db, migrationsPath, migration.DriverSQLite)
+	runner, err := migration.NewRunner(db, migrationsPath, migration.DriverSQLite)
+	if err != nil {
+		return fmt.Errorf("failed to create migration runner: %w", err)
+	}
 
 	// Apply migrations
 	count, err := runner.ApplyMigrations(func(msg string) {
