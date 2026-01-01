@@ -38,10 +38,17 @@ func isDatabaseBusyError(err error) bool {
 		return false
 	}
 	errStr := err.Error()
-	return len(errStr) > 0 && (
-		// SQLite busy errors
-		len(errStr) >= 13 && errStr[:13] == "database is l" || // "database is locked"
-		len(errStr) >= 8 && errStr[:8] == "database")
+	// Check for SQLite busy/locked errors
+	if len(errStr) >= 16 && errStr[:16] == "database is lock" {
+		return true // "database is locked"
+	}
+	if len(errStr) >= 13 && errStr[:13] == "database busy" {
+		return true
+	}
+	if len(errStr) >= 20 && errStr[:20] == "database table is lo" {
+		return true // "database table is locked"
+	}
+	return false
 }
 
 func (c *NotifyCmd) runWithRetry(ctx *cli.Context) error {

@@ -44,14 +44,15 @@ func (s *JSONStore) Init() error {
 	s.store = &Store{
 		Version: 1,
 		Settings: Settings{
-			DayStart:             "07:00",
-			DayEnd:               "22:00",
-			DefaultBlockMin:      30,
-			NotificationsEnabled: true,
-			NotifyBlockStart:     true,
-			NotifyBlockEnd:       true,
-			BlockStartOffsetMin:  5,
-			BlockEndOffsetMin:    5,
+			DayStart:                   "07:00",
+			DayEnd:                     "22:00",
+			DefaultBlockMin:            30,
+			NotificationsEnabled:       true,
+			NotifyBlockStart:           true,
+			NotifyBlockEnd:             true,
+			BlockStartOffsetMin:        5,
+			BlockEndOffsetMin:          5,
+			NotificationGracePeriodMin: 10,
 		},
 		Tasks: make(map[string]models.Task),
 		Plans: make(map[string]map[int]models.DayPlan),
@@ -559,6 +560,42 @@ func (s *JSONStore) DeleteOTEntry(day string) error {
 
 func (s *JSONStore) RestoreOTEntry(day string) error {
 	return fmt.Errorf("OT entries are not supported in JSON store, please use SQLite")
+}
+
+func (s *JSONStore) UpdateSlotNotificationTimestamp(date string, revision int, startTime string, taskID string, notificationType string, timestamp string) error {
+	if s.store == nil {
+		return fmt.Errorf("storage not loaded")
+	}
+
+	revisions, ok := s.store.Plans[date]
+	if !ok {
+		return nil // Plan not found, nothing to update
+	}
+
+	plan, ok := revisions[revision]
+	if !ok {
+		return nil // Revision not found, nothing to update
+	}
+
+	// Find and update the matching slot
+	for i := range plan.Slots {
+		if plan.Slots[i].Start == startTime && plan.Slots[i].TaskID == taskID {
+			switch notificationType {
+			case "start":
+				plan.Slots[i].LastNotifiedStart = &timestamp
+			case "end":
+				plan.Slots[i].LastNotifiedEnd = &timestamp
+			default:
+				return fmt.Errorf("invalid notification type: %s", notificationType)
+			}
+			// Update the plan in the store
+			revisions[revision] = plan
+			s.store.Plans[date] = revisions
+			return s.save()
+		}
+	}
+
+	return nil // Slot not found, nothing to update
 }
 
 func (s *JSONStore) GetConfigPath() string {

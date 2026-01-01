@@ -206,8 +206,7 @@ func (s *SQLiteStore) GetSettings() (Settings, error) {
 			}
 		case "notification_grace_period_min":
 			if _, err := fmt.Sscanf(value, "%d", &settings.NotificationGracePeriodMin); err != nil {
-				// If not found, use default of 10 minutes
-				settings.NotificationGracePeriodMin = 10
+				return Settings{}, fmt.Errorf("parsing notification_grace_period_min: %w", err)
 			}
 		}
 		count++
@@ -1364,17 +1363,16 @@ func (s *SQLiteStore) RestoreOTEntry(day string) error {
 
 // UpdateSlotNotificationTimestamp updates the notification timestamp for a specific slot
 func (s *SQLiteStore) UpdateSlotNotificationTimestamp(date string, revision int, startTime string, taskID string, notificationType string, timestamp string) error {
-	var column string
+	var query string
 	switch notificationType {
 	case "start":
-		column = "last_notified_start"
+		query = "UPDATE slots SET last_notified_start = ? WHERE plan_date = ? AND plan_revision = ? AND start_time = ? AND task_id = ? AND deleted_at IS NULL"
 	case "end":
-		column = "last_notified_end"
+		query = "UPDATE slots SET last_notified_end = ? WHERE plan_date = ? AND plan_revision = ? AND start_time = ? AND task_id = ? AND deleted_at IS NULL"
 	default:
 		return fmt.Errorf("invalid notification type: %s", notificationType)
 	}
 
-	query := fmt.Sprintf("UPDATE slots SET %s = ? WHERE plan_date = ? AND plan_revision = ? AND start_time = ? AND task_id = ? AND deleted_at IS NULL", column)
 	result, err := s.db.Exec(query, timestamp, date, revision, startTime, taskID)
 	if err != nil {
 		return fmt.Errorf("failed to update notification timestamp: %w", err)
