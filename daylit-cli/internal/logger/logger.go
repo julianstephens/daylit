@@ -97,6 +97,9 @@ func Error(msg string, keyvals ...interface{}) {
 func Fatal(msg string, keyvals ...interface{}) {
 	if Logger != nil {
 		Logger.Fatal(msg, keyvals...)
+		// Logger.Fatal() already calls os.Exit, so this line won't be reached
+	} else {
+		// If Logger is nil, exit manually
+		os.Exit(1)
 	}
-	os.Exit(1)
 }

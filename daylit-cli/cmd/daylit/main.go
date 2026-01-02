@@ -200,7 +200,7 @@ func main() {
 
 	err := ctx.Run(appCtx)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		logger.Error("Command execution failed", "error", err)
 		os.Exit(1)
 	}
 }
