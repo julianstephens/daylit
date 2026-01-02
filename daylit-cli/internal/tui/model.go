@@ -198,12 +198,13 @@ func (m *Model) updateValidationStatus() {
 
 	// Get today's plan
 	today := time.Now().Format(constants.DateFormat)
+	todayDate := time.Now()
 	plan, err := m.store.GetPlan(today)
 
 	validator := validation.New()
 
-	// Validate tasks first
-	taskResult := validator.ValidateTasks(tasks)
+	// Validate tasks first - scoped to today's date
+	taskResult := validator.ValidateTasksForDate(tasks, &todayDate)
 
 	// Validate plan if it exists
 	var planResult validation.ValidationResult

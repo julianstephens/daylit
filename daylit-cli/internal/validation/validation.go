@@ -71,6 +71,13 @@ func New() *Validator {
 
 // ValidateTasks checks tasks for conflicts
 func (v *Validator) ValidateTasks(tasks []models.Task) ValidationResult {
+	return v.ValidateTasksForDate(tasks, nil)
+}
+
+// ValidateTasksForDate checks tasks for conflicts, optionally scoped to a specific date.
+// If planDate is nil, all tasks are validated.
+// If planDate is provided, only tasks that would be scheduled on that date are validated for conflicts.
+func (v *Validator) ValidateTasksForDate(tasks []models.Task, planDate *time.Time) ValidationResult {
 	result := ValidationResult{Conflicts: []Conflict{}}
 
 	// Check for duplicate task names
@@ -169,6 +176,10 @@ func (v *Validator) ValidateTasks(tasks []models.Task) ValidationResult {
 			continue
 		}
 		if task.Kind == models.TaskKindAppointment && task.FixedStart != "" && task.FixedEnd != "" {
+			// If a plan date is provided, only check tasks that would be scheduled on that date
+			if planDate != nil && !taskScheduledOnDate(task, *planDate) {
+				continue
+			}
 			fixedTasks = append(fixedTasks, task)
 		}
 	}
@@ -530,4 +541,38 @@ func recurrenceOverlaps(r1, r2 models.Recurrence) bool {
 
 	// For other combinations (e.g. NDays, AdHoc), assume overlap to be safe
 	return true
+}
+
+// taskScheduledOnDate checks if a task should be scheduled on the given date based on its recurrence pattern.
+// This mirrors the logic in scheduler.shouldScheduleTask to ensure consistency.
+func taskScheduledOnDate(task models.Task, date time.Time) bool {
+	switch task.Recurrence.Type {
+	case models.RecurrenceDaily:
+		return true
+	case models.RecurrenceWeekly:
+		if len(task.Recurrence.WeekdayMask) == 0 {
+			return false
+		}
+		for _, wd := range task.Recurrence.WeekdayMask {
+			if date.Weekday() == wd {
+				return true
+			}
+		}
+		return false
+	case models.RecurrenceNDays:
+		if task.LastDone == "" {
+			return true
+		}
+		lastDone, err := time.Parse(constants.DateFormat, task.LastDone)
+		if err != nil {
+			return false
+		}
+		// Calculate days since last done
+		daysSince := int(date.Sub(lastDone).Hours() / 24)
+		return daysSince >= task.Recurrence.IntervalDays
+	case models.RecurrenceAdHoc:
+		return false // Ad-hoc tasks are not automatically scheduled
+	default:
+		return false
+	}
 }
