@@ -204,6 +204,67 @@ func TestAlert_IsDueToday(t *testing.T) {
 			today: time.Date(2026, 1, 16, 0, 0, 0, 0, time.UTC),
 			want:  false,
 		},
+		{
+			name: "n_days alert on first occurrence",
+			alert: Alert{
+				Recurrence: Recurrence{
+					Type:         RecurrenceNDays,
+					IntervalDays: 3,
+				},
+				CreatedAt: time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC),
+			},
+			today: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+			want:  true,
+		},
+		{
+			name: "n_days alert on exact interval boundary",
+			alert: Alert{
+				Recurrence: Recurrence{
+					Type:         RecurrenceNDays,
+					IntervalDays: 3,
+				},
+				CreatedAt: time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC),
+			},
+			today: time.Date(2026, 1, 4, 0, 0, 0, 0, time.UTC), // 3 days later
+			want:  true,
+		},
+		{
+			name: "n_days alert not on interval boundary",
+			alert: Alert{
+				Recurrence: Recurrence{
+					Type:         RecurrenceNDays,
+					IntervalDays: 3,
+				},
+				CreatedAt: time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC),
+			},
+			today: time.Date(2026, 1, 3, 0, 0, 0, 0, time.UTC), // 2 days later
+			want:  false,
+		},
+		{
+			name: "n_days alert with LastSent as base",
+			alert: Alert{
+				Recurrence: Recurrence{
+					Type:         RecurrenceNDays,
+					IntervalDays: 3,
+				},
+				CreatedAt: time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC),
+				LastSent:  ptrTime(time.Date(2026, 1, 5, 10, 30, 0, 0, time.UTC)),
+			},
+			today: time.Date(2026, 1, 8, 0, 0, 0, 0, time.UTC), // 3 days after LastSent
+			want:  true,
+		},
+		{
+			name: "n_days alert with invalid interval",
+			alert: Alert{
+				Recurrence: Recurrence{
+					Type:         RecurrenceNDays,
+					IntervalDays: 0,
+				},
+				CreatedAt: time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC),
+			},
+			today: time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC),
+			want:  false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -213,4 +274,8 @@ func TestAlert_IsDueToday(t *testing.T) {
 			}
 		})
 	}
+}
+
+func ptrTime(t time.Time) *time.Time {
+	return &t
 }

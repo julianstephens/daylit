@@ -2,7 +2,6 @@ package alerts
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
@@ -33,24 +32,7 @@ func (i Item) Description() string {
 	if i.Alert.Date != "" {
 		return fmt.Sprintf("One-time: %s", i.Alert.Date)
 	}
-
-	switch i.Alert.Recurrence.Type {
-	case models.RecurrenceDaily:
-		return "Daily"
-	case models.RecurrenceWeekly:
-		days := make([]string, len(i.Alert.Recurrence.WeekdayMask))
-		for idx, wd := range i.Alert.Recurrence.WeekdayMask {
-			days[idx] = wd.String()[:3]
-		}
-		return fmt.Sprintf("Weekly: %s", strings.Join(days, ", "))
-	case models.RecurrenceNDays:
-		if i.Alert.Recurrence.IntervalDays == 1 {
-			return "Daily"
-		}
-		return fmt.Sprintf("Every %d days", i.Alert.Recurrence.IntervalDays)
-	default:
-		return "One-time"
-	}
+	return i.Alert.FormatRecurrence()
 }
 
 func (i Item) FilterValue() string { return i.Alert.Message }

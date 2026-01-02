@@ -2,6 +2,7 @@ package models
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -76,9 +77,33 @@ func (a *Alert) IsDueToday(today time.Time) bool {
 		}
 		return false
 	case RecurrenceNDays:
-		// For n_days recurrence, we would need to track when it was last completed
-		// For now, we'll rely on LastSent to determine if it should fire
-		return true
+		// For n_days recurrence, an alert is due when today falls on an IntervalDays boundary
+		// relative to the base date (LastSent if available, otherwise CreatedAt).
+		interval := a.Recurrence.IntervalDays
+		if interval < 1 {
+			return false
+		}
+
+		// Normalize today to a date-only value
+		todayDate := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
+
+		// Determine the base date: last sent date if available, otherwise created-at date
+		var baseDate time.Time
+		if a.LastSent != nil {
+			baseDate = time.Date(a.LastSent.Year(), a.LastSent.Month(), a.LastSent.Day(), 0, 0, 0, 0, a.LastSent.Location())
+		} else {
+			baseDate = time.Date(a.CreatedAt.Year(), a.CreatedAt.Month(), a.CreatedAt.Day(), 0, 0, 0, 0, a.CreatedAt.Location())
+		}
+
+		// If today is before the base date, it cannot be due yet
+		if todayDate.Before(baseDate) {
+			return false
+		}
+
+		daysSince := int(todayDate.Sub(baseDate).Hours() / 24)
+
+		// Fire on exact interval boundaries (0, interval, 2*interval, etc.)
+		return daysSince%interval == 0
 	case RecurrenceAdHoc:
 		// Ad-hoc alerts don't recur
 		return false
@@ -86,3 +111,29 @@ func (a *Alert) IsDueToday(today time.Time) bool {
 		return false
 	}
 }
+
+// FormatRecurrence returns a human-readable string describing the alert's recurrence pattern
+func (a *Alert) FormatRecurrence() string {
+	if a.Date != "" {
+		return fmt.Sprintf("Once on %s", a.Date)
+	}
+
+	switch a.Recurrence.Type {
+	case RecurrenceDaily:
+		return "Daily"
+	case RecurrenceWeekly:
+		days := make([]string, len(a.Recurrence.WeekdayMask))
+		for i, wd := range a.Recurrence.WeekdayMask {
+			days[i] = wd.String()[:3]
+		}
+		return fmt.Sprintf("Weekly: %s", strings.Join(days, ", "))
+	case RecurrenceNDays:
+		if a.Recurrence.IntervalDays == 1 {
+			return "Daily"
+		}
+		return fmt.Sprintf("Every %d days", a.Recurrence.IntervalDays)
+	default:
+		return "One-time"
+	}
+}
+

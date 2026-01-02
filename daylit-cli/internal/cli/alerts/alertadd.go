@@ -2,7 +2,6 @@ package alerts
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -107,29 +106,9 @@ func (c *AlertAddCmd) Run(ctx *cli.Context) error {
 	if alert.Date != "" {
 		fmt.Printf(" on %s", alert.Date)
 	} else {
-		fmt.Printf(" (%s)", formatRecurrence(alert))
+		fmt.Printf(" (%s)", alert.FormatRecurrence())
 	}
 	fmt.Println()
 
 	return nil
-}
-
-func formatRecurrence(alert models.Alert) string {
-	switch alert.Recurrence.Type {
-	case models.RecurrenceDaily:
-		return "daily"
-	case models.RecurrenceWeekly:
-		days := make([]string, len(alert.Recurrence.WeekdayMask))
-		for i, wd := range alert.Recurrence.WeekdayMask {
-			days[i] = wd.String()[:3]
-		}
-		return fmt.Sprintf("weekly on %s", strings.Join(days, ", "))
-	case models.RecurrenceNDays:
-		if alert.Recurrence.IntervalDays == 1 {
-			return "daily"
-		}
-		return fmt.Sprintf("every %d days", alert.Recurrence.IntervalDays)
-	default:
-		return "one-time"
-	}
 }

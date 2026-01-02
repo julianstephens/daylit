@@ -740,3 +740,323 @@ func TestNotifyCmd_OnlyAcceptedOrDoneSlots(t *testing.T) {
 		t.Error("expected planned slot to not be notified")
 	}
 }
+
+func TestNotifyCmd_Alerts_GracePeriod(t *testing.T) {
+store, cleanup := setupTestStore(t)
+defer cleanup()
+
+// Set notification grace period
+settings, _ := store.GetSettings()
+settings.NotificationsEnabled = true
+settings.NotificationGracePeriodMin = 5
+store.SaveSettings(settings)
+
+// Create an alert for 10:00
+alert := models.Alert{
+ID:      "alert-1",
+Message: "Test alert",
+Time:    "10:00",
+Recurrence: models.Recurrence{
+Type: models.RecurrenceDaily,
+},
+Active:    true,
+CreatedAt: time.Now(),
+}
+store.AddAlert(alert)
+
+ctx := &cli.Context{Store: store}
+cmd := &NotifyCmd{DryRun: true}
+
+// Test within grace period (10:03)
+now := time.Date(2026, 1, 5, 10, 3, 0, 0, time.UTC)
+err := cmd.checkAndSendAlerts(ctx, now, nil)
+if err != nil {
+t.Fatalf("checkAndSendAlerts failed: %v", err)
+}
+
+// Verify alert was marked as sent
+updated, _ := store.GetAlert("alert-1")
+if updated.LastSent == nil {
+t.Error("expected alert to be marked as sent")
+}
+
+// Test beyond grace period (10:10) - should not fire
+alert2 := models.Alert{
+ID:      "alert-2",
+Message: "Test alert 2",
+Time:    "10:00",
+Recurrence: models.Recurrence{
+Type: models.RecurrenceDaily,
+},
+Active:    true,
+CreatedAt: time.Now(),
+}
+store.AddAlert(alert2)
+
+now2 := time.Date(2026, 1, 5, 10, 10, 0, 0, time.UTC)
+err = cmd.checkAndSendAlerts(ctx, now2, nil)
+if err != nil {
+t.Fatalf("checkAndSendAlerts failed: %v", err)
+}
+
+// Verify alert was NOT marked as sent (beyond grace period)
+updated2, _ := store.GetAlert("alert-2")
+if updated2.LastSent != nil {
+t.Error("expected alert not to fire beyond grace period")
+}
+}
+
+func TestNotifyCmd_Alerts_DuplicatePrevention(t *testing.T) {
+store, cleanup := setupTestStore(t)
+defer cleanup()
+
+settings, _ := store.GetSettings()
+settings.NotificationsEnabled = true
+settings.NotificationGracePeriodMin = 10
+store.SaveSettings(settings)
+
+// Create an alert
+alert := models.Alert{
+ID:      "alert-dup",
+Message: "Duplicate test",
+Time:    "10:00",
+Recurrence: models.Recurrence{
+Type: models.RecurrenceDaily,
+},
+Active:    true,
+CreatedAt: time.Now(),
+}
+store.AddAlert(alert)
+
+ctx := &cli.Context{Store: store}
+cmd := &NotifyCmd{DryRun: true}
+
+// First notification
+now := time.Date(2026, 1, 5, 10, 0, 0, 0, time.UTC)
+err := cmd.checkAndSendAlerts(ctx, now, nil)
+if err != nil {
+t.Fatalf("checkAndSendAlerts failed: %v", err)
+}
+
+// Verify alert was sent
+updated, _ := store.GetAlert("alert-dup")
+if updated.LastSent == nil {
+t.Error("expected alert to be sent")
+}
+firstSent := *updated.LastSent
+
+// Try to send again on the same day
+now2 := time.Date(2026, 1, 5, 10, 5, 0, 0, time.UTC)
+err = cmd.checkAndSendAlerts(ctx, now2, nil)
+if err != nil {
+t.Fatalf("checkAndSendAlerts failed: %v", err)
+}
+
+// Verify LastSent didn't change (duplicate prevention)
+updated2, _ := store.GetAlert("alert-dup")
+if updated2.LastSent == nil {
+t.Fatal("expected LastSent to be set")
+}
+if !updated2.LastSent.Equal(firstSent) {
+t.Error("expected LastSent to remain unchanged (duplicate prevention)")
+}
+}
+
+func TestNotifyCmd_Alerts_OneTimeDeactivation(t *testing.T) {
+store, cleanup := setupTestStore(t)
+defer cleanup()
+
+settings, _ := store.GetSettings()
+settings.NotificationsEnabled = true
+settings.NotificationGracePeriodMin = 10
+store.SaveSettings(settings)
+
+// Create a one-time alert for the test date
+testDate := "2026-01-05"
+alert := models.Alert{
+ID:        "alert-onetime",
+Message:   "One-time alert",
+Time:      "10:00",
+Date:      testDate,
+Active:    true,
+CreatedAt: time.Now(),
+}
+store.AddAlert(alert)
+
+ctx := &cli.Context{Store: store}
+cmd := &NotifyCmd{DryRun: true}
+
+// Send the alert
+now := time.Date(2026, 1, 5, 10, 0, 0, 0, time.UTC)
+err := cmd.checkAndSendAlerts(ctx, now, nil)
+if err != nil {
+t.Fatalf("checkAndSendAlerts failed: %v", err)
+}
+
+// Verify alert was deactivated
+updated, _ := store.GetAlert("alert-onetime")
+if updated.Active {
+t.Error("expected one-time alert to be deactivated after firing")
+}
+if updated.LastSent == nil {
+t.Error("expected LastSent to be set")
+}
+}
+
+func TestNotifyCmd_Alerts_WeeklyRecurrence(t *testing.T) {
+store, cleanup := setupTestStore(t)
+defer cleanup()
+
+settings, _ := store.GetSettings()
+settings.NotificationsEnabled = true
+settings.NotificationGracePeriodMin = 10
+store.SaveSettings(settings)
+
+// Create a weekly alert for Monday and Friday
+alert := models.Alert{
+ID:      "alert-weekly",
+Message: "Weekly alert",
+Time:    "10:00",
+Recurrence: models.Recurrence{
+Type:        models.RecurrenceWeekly,
+WeekdayMask: []time.Weekday{time.Monday, time.Friday},
+},
+Active:    true,
+CreatedAt: time.Now(),
+}
+store.AddAlert(alert)
+
+ctx := &cli.Context{Store: store}
+cmd := &NotifyCmd{DryRun: true}
+
+// Test on Monday (2026-01-05 is a Monday)
+monday := time.Date(2026, 1, 5, 10, 0, 0, 0, time.UTC)
+err := cmd.checkAndSendAlerts(ctx, monday, nil)
+if err != nil {
+t.Fatalf("checkAndSendAlerts failed: %v", err)
+}
+
+// Verify alert was sent on Monday
+updated, _ := store.GetAlert("alert-weekly")
+if updated.LastSent == nil {
+t.Error("expected alert to fire on Monday")
+}
+
+// Reset for next test
+alert.LastSent = nil
+store.UpdateAlert(alert)
+
+// Test on Tuesday (should not fire)
+tuesday := time.Date(2026, 1, 6, 10, 0, 0, 0, time.UTC)
+err = cmd.checkAndSendAlerts(ctx, tuesday, nil)
+if err != nil {
+t.Fatalf("checkAndSendAlerts failed: %v", err)
+}
+
+updated2, _ := store.GetAlert("alert-weekly")
+if updated2.LastSent != nil {
+t.Error("expected alert not to fire on Tuesday")
+}
+}
+
+func TestNotifyCmd_Alerts_NDaysRecurrence(t *testing.T) {
+store, cleanup := setupTestStore(t)
+defer cleanup()
+
+settings, _ := store.GetSettings()
+settings.NotificationsEnabled = true
+settings.NotificationGracePeriodMin = 10
+store.SaveSettings(settings)
+
+// Create an alert for every 3 days
+createdAt := time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC)
+alert := models.Alert{
+ID:      "alert-ndays",
+Message: "Every 3 days",
+Time:    "10:00",
+Recurrence: models.Recurrence{
+Type:         models.RecurrenceNDays,
+IntervalDays: 3,
+},
+Active:    true,
+CreatedAt: createdAt,
+}
+store.AddAlert(alert)
+
+ctx := &cli.Context{Store: store}
+cmd := &NotifyCmd{DryRun: true}
+
+// Test on day 1 (should fire)
+day1 := time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC)
+err := cmd.checkAndSendAlerts(ctx, day1, nil)
+if err != nil {
+t.Fatalf("checkAndSendAlerts failed: %v", err)
+}
+
+updated, _ := store.GetAlert("alert-ndays")
+if updated.LastSent == nil {
+t.Error("expected alert to fire on day 1")
+}
+
+// Test on day 2 (should not fire)
+day2 := time.Date(2026, 1, 2, 10, 0, 0, 0, time.UTC)
+err = cmd.checkAndSendAlerts(ctx, day2, nil)
+if err != nil {
+t.Fatalf("checkAndSendAlerts failed: %v", err)
+}
+
+// Test on day 4 (3 days after day 1, should fire)
+day4 := time.Date(2026, 1, 4, 10, 0, 0, 0, time.UTC)
+err = cmd.checkAndSendAlerts(ctx, day4, nil)
+if err != nil {
+t.Fatalf("checkAndSendAlerts failed: %v", err)
+}
+
+updated2, _ := store.GetAlert("alert-ndays")
+day4Date := day4.Format("2006-01-02")
+if updated2.LastSent != nil {
+lastSentDate := updated2.LastSent.Format("2006-01-02")
+if lastSentDate != day4Date {
+t.Errorf("expected alert to fire on day 4, last sent: %s", lastSentDate)
+}
+}
+}
+
+func TestNotifyCmd_Alerts_InactiveSkipped(t *testing.T) {
+store, cleanup := setupTestStore(t)
+defer cleanup()
+
+settings, _ := store.GetSettings()
+settings.NotificationsEnabled = true
+settings.NotificationGracePeriodMin = 10
+store.SaveSettings(settings)
+
+// Create an inactive alert
+alert := models.Alert{
+ID:      "alert-inactive",
+Message: "Inactive alert",
+Time:    "10:00",
+Recurrence: models.Recurrence{
+Type: models.RecurrenceDaily,
+},
+Active:    false,
+CreatedAt: time.Now(),
+}
+store.AddAlert(alert)
+
+ctx := &cli.Context{Store: store}
+cmd := &NotifyCmd{DryRun: true}
+
+// Try to send
+now := time.Date(2026, 1, 5, 10, 0, 0, 0, time.UTC)
+err := cmd.checkAndSendAlerts(ctx, now, nil)
+if err != nil {
+t.Fatalf("checkAndSendAlerts failed: %v", err)
+}
+
+// Verify alert was not sent (inactive)
+updated, _ := store.GetAlert("alert-inactive")
+if updated.LastSent != nil {
+t.Error("expected inactive alert not to fire")
+}
+}

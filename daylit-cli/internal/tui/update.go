@@ -148,7 +148,14 @@ func newAlertForm(fm *AlertFormModel) *huh.Form {
 					huh.NewOption("Weekly", models.RecurrenceWeekly),
 					huh.NewOption("Every N Days", models.RecurrenceNDays),
 				).
-				Value(&fm.Recurrence),
+				Value(&fm.Recurrence).
+				Validate(func(r models.RecurrenceType) error {
+					// When Date is empty (recurring alert), a recurrence type must be selected
+					if strings.TrimSpace(fm.Date) == "" && r == "" {
+						return fmt.Errorf("recurrence is required when date is empty")
+					}
+					return nil
+				}),
 			huh.NewInput().
 				Title("Interval (days)").
 				Description("For 'Every N Days' recurrence").
@@ -425,17 +432,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				alert.Recurrence.Type = m.alertForm.Recurrence
 				if m.alertForm.Interval != "" {
 					interval, err := strconv.Atoi(m.alertForm.Interval)
-					if err == nil {
-						alert.Recurrence.IntervalDays = interval
+					if err != nil || interval < 1 {
+						// Invalid interval; keep user in the form to correct the value
+						m.formError = "Invalid interval: must be a positive number"
+						m.form.State = huh.StateNormal
+						return m, tea.Batch(cmds...)
 					}
+					alert.Recurrence.IntervalDays = interval
 				}
 
 				// Parse weekdays for weekly recurrence
 				if m.alertForm.Recurrence == models.RecurrenceWeekly && m.alertForm.Weekdays != "" {
 					weekdays, err := cli.ParseWeekdays(m.alertForm.Weekdays)
-					if err == nil {
-						alert.Recurrence.WeekdayMask = weekdays
+					if err != nil {
+						// Invalid weekdays; keep user in the form to correct the value
+						m.formError = fmt.Sprintf("Invalid weekdays: %v", err)
+						m.form.State = huh.StateNormal
+						return m, tea.Batch(cmds...)
 					}
+					alert.Recurrence.WeekdayMask = weekdays
 				}
 			}
 
@@ -443,9 +458,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// Refresh alerts list only if add succeeded
 				alertsList, _ := m.store.GetAllAlerts()
 				m.alertsModel.SetAlerts(alertsList)
+				m.formError = "" // Clear any previous errors
 				m.state = StateAlerts
 			} else {
-				// Stay in form state on error to allow retry
+				// Store error and stay in form state to allow retry
+				m.formError = fmt.Sprintf("Failed to add alert: %v", err)
 				m.form.State = huh.StateNormal
 			}
 		case huh.StateAborted:

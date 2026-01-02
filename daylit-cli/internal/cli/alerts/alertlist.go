@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
-	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 )
 
 type AlertListCmd struct{}
@@ -34,7 +33,7 @@ func (c *AlertListCmd) Run(ctx *cli.Context) error {
 			message = message[:25] + "..."
 		}
 
-		recurrence := formatRecurrenceForList(alert)
+		recurrence := alert.FormatRecurrence()
 		if len(recurrence) > 18 {
 			recurrence = recurrence[:15] + "..."
 		}
@@ -49,28 +48,4 @@ func (c *AlertListCmd) Run(ctx *cli.Context) error {
 	}
 
 	return nil
-}
-
-func formatRecurrenceForList(alert models.Alert) string {
-	if alert.Date != "" {
-		return fmt.Sprintf("Once on %s", alert.Date)
-	}
-
-	switch alert.Recurrence.Type {
-	case models.RecurrenceDaily:
-		return "Daily"
-	case models.RecurrenceWeekly:
-		days := make([]string, len(alert.Recurrence.WeekdayMask))
-		for i, wd := range alert.Recurrence.WeekdayMask {
-			days[i] = wd.String()[:3]
-		}
-		return fmt.Sprintf("Weekly: %s", strings.Join(days, ","))
-	case models.RecurrenceNDays:
-		if alert.Recurrence.IntervalDays == 1 {
-			return "Daily"
-		}
-		return fmt.Sprintf("Every %dd", alert.Recurrence.IntervalDays)
-	default:
-		return "One-time"
-	}
 }
