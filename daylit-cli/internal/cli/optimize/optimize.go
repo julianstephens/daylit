@@ -236,8 +236,3 @@ func applyOptimization(ctx *cli.Context, opt optimizer.Optimization) error {
 
 	return nil
 }
-
-func init() {
-	// Ensure huh uses stdout to avoid issues in some terminal environments
-	huh.NewForm().WithTheme(huh.ThemeBase())
-}
