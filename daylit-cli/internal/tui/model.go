@@ -13,6 +13,7 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/scheduler"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
+	"github.com/julianstephens/daylit/daylit-cli/internal/tui/components/alerts"
 	"github.com/julianstephens/daylit/daylit-cli/internal/tui/components/habits"
 	"github.com/julianstephens/daylit/daylit-cli/internal/tui/components/now"
 	"github.com/julianstephens/daylit/daylit-cli/internal/tui/components/ot"
@@ -30,6 +31,7 @@ const (
 	StateTasks
 	StateHabits
 	StateOT
+	StateAlerts
 	StateSettings
 	StateFeedback
 	StateEditing
@@ -38,12 +40,13 @@ const (
 	StateConfirmOverwrite
 	StateConfirmArchive
 	StateAddHabit
+	StateAddAlert
 	StateEditOT
 	StateEditSettings
 )
 
 // NumMainTabs is the number of main navigation tabs in the TUI
-const NumMainTabs = 6 // Now, Plan, Tasks, Habits, OT, Settings
+const NumMainTabs = 7 // Now, Plan, Tasks, Habits, OT, Alerts, Settings
 
 type TaskFormModel struct {
 	Name       string
@@ -77,6 +80,15 @@ type OTFormModel struct {
 	Note  string
 }
 
+type AlertFormModel struct {
+	Message    string
+	Time       string
+	Date       string
+	Recurrence models.RecurrenceType
+	Interval   string
+	Weekdays   string
+}
+
 type Model struct {
 	store               storage.Provider
 	scheduler           *scheduler.Scheduler
@@ -89,11 +101,13 @@ type Model struct {
 	nowModel            now.Model
 	habitsModel         habits.Model
 	otModel             ot.Model
+	alertsModel         alerts.Model
 	settingsModel       settings.Model
 	form                *huh.Form
 	taskForm            *TaskFormModel
 	habitForm           *HabitFormModel
 	otForm              *OTFormModel
+	alertForm           *AlertFormModel
 	settingsForm        *SettingsFormModel
 	editingTask         *models.Task
 	quitting            bool
@@ -143,6 +157,10 @@ func NewModel(store storage.Provider, sched *scheduler.Scheduler) Model {
 	otSettings, _ := store.GetOTSettings()
 	sm := settings.New(currentSettings, otSettings, 0, 0)
 
+	// Initialize alerts
+	alertsList, _ := store.GetAllAlerts()
+	am := alerts.New(alertsList, 0, 0)
+
 	m := Model{
 		store:         store,
 		scheduler:     sched,
@@ -154,6 +172,7 @@ func NewModel(store storage.Provider, sched *scheduler.Scheduler) Model {
 		nowModel:      nm,
 		habitsModel:   hm,
 		otModel:       om,
+		alertsModel:   am,
 		settingsModel: sm,
 	}
 

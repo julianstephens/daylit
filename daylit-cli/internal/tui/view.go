@@ -24,11 +24,13 @@ func (m Model) View() string {
 		content = m.viewHabits()
 	case StateOT:
 		content = m.viewOT()
+	case StateAlerts:
+		content = m.viewAlerts()
 	case StateSettings:
 		content = m.viewSettings()
 	case StateFeedback:
 		content = m.viewFeedback()
-	case StateEditing, StateAddHabit, StateEditOT, StateEditSettings:
+	case StateEditing, StateAddHabit, StateAddAlert, StateEditOT, StateEditSettings:
 		formContent := m.form.View()
 		if m.formError != "" {
 			errorStyle := lipgloss.NewStyle().
@@ -73,7 +75,7 @@ func (m Model) View() string {
 
 func (m Model) viewTabs() string {
 	var tabs []string
-	tabTitles := []string{"Now", "Plan", "Tasks", "Habits", "OT", "Settings"}
+	tabTitles := []string{"Now", "Plan", "Tasks", "Habits", "OT", "Alerts", "Settings"}
 	for i, title := range tabTitles {
 		if m.state == SessionState(i) {
 			tabs = append(tabs, activeTabStyle.Render(title))
@@ -102,6 +104,10 @@ func (m Model) viewHabits() string {
 
 func (m Model) viewOT() string {
 	return docStyle.Render(m.otModel.View())
+}
+
+func (m Model) viewAlerts() string {
+	return docStyle.Render(m.alertsModel.View())
 }
 
 func (m Model) viewSettings() string {
