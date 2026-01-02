@@ -2,6 +2,7 @@ package optimize
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/charmbracelet/huh"
@@ -11,7 +12,6 @@ import (
 )
 
 type OptimizeCmd struct {
-	DryRun        bool `help:"Show optimization suggestions without applying them (report mode)." default:"false"`
 	FeedbackLimit int  `help:"Number of recent feedback entries to analyze per task." default:"10"`
 	Interactive   bool `help:"Interactively review and apply optimizations." default:"false"`
 	AutoApply     bool `help:"Automatically apply all optimizations without confirmation." default:"false"`
@@ -43,12 +43,6 @@ func (c *OptimizeCmd) Run(ctx *cli.Context) error {
 		displayOptimization(i+1, opt)
 	}
 
-	// Dry run mode - just show suggestions
-	if c.DryRun {
-		fmt.Println("\n💡 This was a dry run. Use --interactive to apply optimizations.")
-		return nil
-	}
-
 	// Auto-apply mode
 	if c.AutoApply {
 		fmt.Println("\n🚀 Applying all optimizations...")
@@ -70,11 +64,10 @@ func (c *OptimizeCmd) Run(ctx *cli.Context) error {
 		return c.runInteractive(ctx, optimizations)
 	}
 
-	// Default: suggest using interactive or auto-apply
+	// Default: dry-run mode - just show suggestions
 	fmt.Println("\n💡 To apply these optimizations:")
 	fmt.Println("  - Use --interactive to review and select which to apply")
 	fmt.Println("  - Use --auto-apply to apply all automatically")
-	fmt.Println("  - Use --dry-run to just see the suggestions (current mode)")
 
 	return nil
 }
@@ -169,9 +162,16 @@ func displayOptimization(num int, opt optimizer.Optimization) {
 func formatValue(value interface{}) string {
 	switch v := value.(type) {
 	case map[string]interface{}:
+		// Sort keys for deterministic output
+		keys := make([]string, 0, len(v))
+		for key := range v {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		
 		var parts []string
-		for key, val := range v {
-			parts = append(parts, fmt.Sprintf("%s=%v", key, val))
+		for _, key := range keys {
+			parts = append(parts, fmt.Sprintf("%s=%v", key, v[key]))
 		}
 		return strings.Join(parts, ", ")
 	default:
@@ -192,29 +192,42 @@ func applyOptimization(ctx *cli.Context, opt optimizer.Optimization) error {
 		if suggestedMap, ok := opt.SuggestedValue.(map[string]interface{}); ok {
 			if newDuration, ok := suggestedMap["duration_min"].(int); ok {
 				task.DurationMin = newDuration
+			} else {
+				return fmt.Errorf("invalid duration_min type in suggested value")
 			}
+		} else {
+			return fmt.Errorf("invalid suggested value format")
 		}
 
 	case optimizer.OptimizationIncreaseDuration:
 		if suggestedMap, ok := opt.SuggestedValue.(map[string]interface{}); ok {
 			if newDuration, ok := suggestedMap["duration_min"].(int); ok {
 				task.DurationMin = newDuration
+			} else {
+				return fmt.Errorf("invalid duration_min type in suggested value")
 			}
+		} else {
+			return fmt.Errorf("invalid suggested value format")
 		}
 
 	case optimizer.OptimizationReduceFrequency:
 		if suggestedMap, ok := opt.SuggestedValue.(map[string]interface{}); ok {
-			// Handle change from daily to n_days
+			// Check if this is a recurrence type change (e.g., daily to n_days)
 			if recurrence, ok := suggestedMap["recurrence"].(string); ok && recurrence == "n_days" {
 				task.Recurrence.Type = models.RecurrenceNDays
 				if intervalDays, ok := suggestedMap["interval_days"].(int); ok {
 					task.Recurrence.IntervalDays = intervalDays
+				} else {
+					return fmt.Errorf("interval_days missing for recurrence type change")
 				}
-			}
-			// Handle increase in interval_days
-			if intervalDays, ok := suggestedMap["interval_days"].(int); ok {
+			} else if intervalDays, ok := suggestedMap["interval_days"].(int); ok {
+				// Handle increase in interval_days when recurrence type is not being changed
 				task.Recurrence.IntervalDays = intervalDays
+			} else {
+				return fmt.Errorf("invalid suggested value format for reduce frequency")
 			}
+		} else {
+			return fmt.Errorf("invalid suggested value format")
 		}
 
 	case optimizer.OptimizationRemoveTask:

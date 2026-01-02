@@ -2,6 +2,7 @@ package optimizer
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
@@ -40,6 +41,11 @@ func NewFeedbackAnalyzer(store storage.Provider) *FeedbackAnalyzer {
 
 // AnalyzeTask analyzes feedback for a single task and returns optimization suggestions
 func (fa *FeedbackAnalyzer) AnalyzeTask(task models.Task, feedbackLimit int) ([]Optimization, error) {
+	// Validate feedbackLimit
+	if feedbackLimit <= 0 {
+		return nil, fmt.Errorf("feedbackLimit must be positive, got %d", feedbackLimit)
+	}
+
 	// Get feedback history for this task
 	feedbackHistory, err := fa.store.GetTaskFeedbackHistory(task.ID, feedbackLimit)
 	if err != nil {
@@ -76,8 +82,11 @@ func (fa *FeedbackAnalyzer) AnalyzeTask(task models.Task, feedbackLimit int) ([]
 	// Optimization logic
 	// If >50% of feedback is "too_much", suggest reducing duration or splitting
 	if tooMuchPercent > 50 {
-		// If the task is already short (<= 30 min), suggest splitting
-		if task.DurationMin <= 30 {
+		// Calculate what the new duration would be if reduced by 25%
+		newDuration := int(float64(task.DurationMin) * 0.75)
+		
+		// If task is already at or near minimum (would reduce to <= 10 min), or is short (<= 30 min), suggest splitting
+		if newDuration <= 10 || task.DurationMin <= 30 {
 			optimizations = append(optimizations, Optimization{
 				TaskID:   task.ID,
 				TaskName: task.Name,
@@ -89,7 +98,6 @@ func (fa *FeedbackAnalyzer) AnalyzeTask(task models.Task, feedbackLimit int) ([]
 			})
 		} else {
 			// Suggest reducing duration by 25%
-			newDuration := int(float64(task.DurationMin) * 0.75)
 			if newDuration < 10 {
 				newDuration = 10
 			}
@@ -170,6 +178,7 @@ func (fa *FeedbackAnalyzer) AnalyzeAllTasks(feedbackLimit int) ([]Optimization, 
 		opts, err := fa.AnalyzeTask(task, feedbackLimit)
 		if err != nil {
 			// Log error but continue with other tasks
+			log.Printf("Warning: Failed to analyze task %s (%s): %v", task.Name, task.ID, err)
 			continue
 		}
 		allOptimizations = append(allOptimizations, opts...)

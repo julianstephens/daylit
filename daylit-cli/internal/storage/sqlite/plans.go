@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
+	"github.com/julianstephens/daylit/daylit-cli/internal/utils"
 )
 
 func (s *Store) SavePlan(plan models.DayPlan) error {
@@ -379,13 +380,13 @@ func (s *Store) GetTaskFeedbackHistory(taskID string, limit int) ([]models.TaskF
 		}
 
 		entry.Rating = models.FeedbackRating(rating)
-
-		// Calculate scheduled duration from start and end times
-		startMin, err := parseTimeToMinutes(entry.ActualStart)
+		
+		// Calculate actual duration from start and end times
+		startMin, err := utils.ParseTimeToMinutes(entry.ActualStart)
 		if err == nil {
-			endMin, err := parseTimeToMinutes(entry.ActualEnd)
+			endMin, err := utils.ParseTimeToMinutes(entry.ActualEnd)
 			if err == nil {
-				entry.ScheduledDuration = endMin - startMin
+				entry.ActualDuration = endMin - startMin
 			}
 		}
 
@@ -397,14 +398,4 @@ func (s *Store) GetTaskFeedbackHistory(taskID string, limit int) ([]models.TaskF
 	}
 
 	return entries, nil
-}
-
-// parseTimeToMinutes converts HH:MM format to minutes since midnight
-func parseTimeToMinutes(timeStr string) (int, error) {
-	var hour, min int
-	_, err := fmt.Sscanf(timeStr, "%d:%d", &hour, &min)
-	if err != nil {
-		return 0, err
-	}
-	return hour*60 + min, nil
 }
