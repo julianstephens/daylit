@@ -45,7 +45,11 @@ The TUI provides a dashboard with five main views:
 -   `?`: Toggle help.
 -   `q` / `Ctrl+C`: Quit.
 
-## `daylit task add`
+## `daylit task`
+
+Manage tasks and task templates.
+
+### `daylit task add`
 
 Add a new task template.
 
@@ -81,7 +85,7 @@ daylit task add "Gym" --duration 60 --recurrence weekly --weekdays mon,wed,fri -
 daylit task add "Doctor appointment" --duration 60 --fixed-start 14:00 --fixed-end 15:00
 ```
 
-## `daylit task edit`
+### `daylit task edit`
 
 Edit an existing task template.
 
@@ -115,7 +119,7 @@ daylit task list --show-ids
 daylit task edit 81462541-e5ef-400b-9a8e-de96de1a9574 --name "Updated Task" --duration 45
 ```
 
-## `daylit task delete`
+### `daylit task delete`
 
 Delete a task template. This performs a "soft delete", meaning the task is hidden but can be restored later using `daylit restore task`.
 
@@ -129,7 +133,7 @@ daylit task delete <TASK_ID>
 daylit task delete 81462541-e5ef-400b-9a8e-de96de1a9574
 ```
 
-## `daylit task list`
+### `daylit task list`
 
 List all task templates.
 
@@ -258,7 +262,6 @@ daylit optimize [flags]
 
 **Flags:**
 
-- `--dry-run`: Show optimization suggestions without applying them (report mode, default behavior)
 - `--interactive`: Interactively review and apply optimizations one by one
 - `--auto-apply`: Automatically apply all optimizations without confirmation
 - `--feedback-limit INT`: Number of recent feedback entries to analyze per task (default: 10)
@@ -291,7 +294,6 @@ The optimizer analyzes feedback patterns:
 ```bash
 # Review optimization suggestions (dry-run mode)
 daylit optimize
-daylit optimize --dry-run
 
 # Review and selectively apply optimizations
 daylit optimize --interactive
