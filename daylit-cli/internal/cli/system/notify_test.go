@@ -62,12 +62,24 @@ func TestNotifyCmd_Idempotency(t *testing.T) {
 	now := time.Now()
 	currentMinutes := now.Hour()*60 + now.Minute()
 
-	// Create a slot that should have triggered 2 minutes ago (within grace period)
-	triggerMinutes := currentMinutes - 2
-	startHour := triggerMinutes / 60
-	startMin := triggerMinutes % 60
+	// We want a slot that triggers a notification.
+	// Default offset is 5 min, grace period is 10 min.
+	// If we set startTime = currentMinutes + 3:
+	// triggerTime = (currentMinutes + 3) - 5 = currentMinutes - 2
+	// minutesLate = currentMinutes - (currentMinutes - 2) = 2
+	// 2 <= 10 (grace period), so it should trigger.
+	startMinutes := currentMinutes + 3
+
+	// Skip if near end of day to avoid crossing midnight (which would make startTime invalid for today)
+	// We also need endTime (start + 30) to be valid.
+	if startMinutes+30 >= 24*60 {
+		t.Skip("Skipping test near end of day")
+	}
+
+	startHour := startMinutes / 60
+	startMin := startMinutes % 60
 	startTime := fmt.Sprintf("%02d:%02d", startHour, startMin)
-	endTime := calculateEndTime(triggerMinutes, 30)
+	endTime := calculateEndTime(startMinutes, 30)
 
 	nowStr := time.Now().UTC().Format(time.RFC3339)
 	plan := models.DayPlan{
