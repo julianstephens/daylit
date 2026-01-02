@@ -65,6 +65,11 @@ func (t *Task) Validate() error {
 		if t.Recurrence.WeekOccurrence < -1 || t.Recurrence.WeekOccurrence == 0 || t.Recurrence.WeekOccurrence > 5 {
 			return fmt.Errorf("week occurrence must be -1 (last) or 1-5 for monthly_day recurrence")
 		}
+		// DayOfWeekInMonth is a time.Weekday (0-6), so any value is technically valid,
+		// but we expect it to be set for monthly_day recurrence
+		if t.Recurrence.DayOfWeekInMonth < time.Sunday || t.Recurrence.DayOfWeekInMonth > time.Saturday {
+			return fmt.Errorf("day of week in month must be specified (0-6) for monthly_day recurrence")
+		}
 	}
 	if t.Recurrence.Type == constants.RecurrenceYearly {
 		if t.Recurrence.Month < 1 || t.Recurrence.Month > 12 {

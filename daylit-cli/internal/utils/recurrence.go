@@ -39,10 +39,6 @@ func ShouldScheduleTask(task models.Task, date time.Time) bool {
 	case constants.RecurrenceMonthlyDate:
 		// Schedule on the specified day of each month
 		// If the day doesn't exist in the current month (e.g., Feb 31), skip it
-		if date.Day() != task.Recurrence.MonthDay {
-			return false
-		}
-		// Double-check the month day hasn't wrapped (e.g., setting day 31 in February)
 		return date.Day() == task.Recurrence.MonthDay
 	case constants.RecurrenceMonthlyDay:
 		// Schedule on a specific weekday occurrence in the month
