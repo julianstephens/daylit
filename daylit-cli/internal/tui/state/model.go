@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/help"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
@@ -101,9 +100,6 @@ type Model struct {
 	OTForm              *OTFormModel
 	AlertForm           *AlertFormModel
 	SettingsForm        *SettingsFormModel
-	FeedbackForm        *FeedbackFormModel
-	ConfirmationForm    *ConfirmationFormModel
-	PendingAction       func() tea.Cmd
 	EditingTask         *models.Task
 	Quitting            bool
 	Width               int
