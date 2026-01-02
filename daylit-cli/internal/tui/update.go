@@ -348,7 +348,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			// Check if entry exists for today
 			existingEntry, err := m.store.GetOTEntry(today)
-			if err == nil && existingEntry.ID != "" {
+			if err == nil {
 				// Update existing entry
 				existingEntry.Title = title
 				existingEntry.Note = note
