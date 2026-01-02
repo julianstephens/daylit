@@ -1,6 +1,6 @@
 # daylit-cli (Developer Guide)
 
-This document contains technical details for developers working on the `daylit-cli` component. For user documentation, see the [root README](../README.md) and the [`..docs/` directory](../docs/).
+This document contains technical details for developers working on the `daylit-cli` component. For user documentation, see the [root README](../README.md) and the [`docs/` directory](../docs/).
 
 ## Development Setup
 
