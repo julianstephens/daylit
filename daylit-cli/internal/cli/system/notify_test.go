@@ -193,6 +193,11 @@ func TestNotifyCmd_GracePeriod(t *testing.T) {
 	now := time.Now()
 	currentMinutes := now.Hour()*60 + now.Minute()
 
+	// Skip test if running near midnight to avoid crossing day boundary with invalid times (e.g. 24:xx)
+	if currentMinutes >= 24*60-35 {
+		t.Skip("Skipping test near end of day to avoid invalid time generation")
+	}
+
 	// Test 1: Notification within grace period (5 minutes late)
 	t.Run("WithinGracePeriod", func(t *testing.T) {
 		// Set start time to now. With 5 min offset, notification should have happened 5 mins ago.
@@ -317,6 +322,11 @@ func TestNotifyCmd_NoNotificationBeforeTime(t *testing.T) {
 	now := time.Now()
 	currentMinutes := now.Hour()*60 + now.Minute()
 
+	// Skip test if running near midnight to avoid crossing day boundary with invalid times
+	if currentMinutes >= 24*60-40 {
+		t.Skip("Skipping test near end of day to avoid invalid time generation")
+	}
+
 	// Create a slot that should trigger 10 minutes from now
 	triggerMinutes := currentMinutes + 10
 	startHour := triggerMinutes / 60
@@ -396,6 +406,12 @@ func TestNotifyCmd_DisabledNotifications(t *testing.T) {
 
 	now := time.Now()
 	currentMinutes := now.Hour()*60 + now.Minute()
+
+	// Skip test if running near start of day to avoid negative time calculations
+	if currentMinutes < 5 {
+		t.Skip("Skipping test near start of day to avoid invalid time generation")
+	}
+
 	triggerMinutes := currentMinutes - 2
 	startHour := triggerMinutes / 60
 	startMin := triggerMinutes % 60
@@ -696,6 +712,11 @@ func TestNotifyCmd_OnlyAcceptedOrDoneSlots(t *testing.T) {
 
 	now := time.Now()
 	currentMinutes := now.Hour()*60 + now.Minute()
+
+	// Skip test if running near midnight to avoid crossing day boundary with invalid times (e.g. 24:xx)
+	if currentMinutes >= 24*60-35 {
+		t.Skip("Skipping test near end of day to avoid invalid time generation")
+	}
 
 	// Set start time to now. With 5 min offset, notification should have happened 5 mins ago.
 	// This is within the 10 min grace period.
