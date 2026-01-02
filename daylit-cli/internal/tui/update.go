@@ -12,8 +12,10 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/google/uuid"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
+	"github.com/julianstephens/daylit/daylit-cli/internal/tui/components/alerts"
 	"github.com/julianstephens/daylit/daylit-cli/internal/tui/components/habits"
 	"github.com/julianstephens/daylit/daylit-cli/internal/tui/components/ot"
 	"github.com/julianstephens/daylit/daylit-cli/internal/tui/components/settings"
@@ -98,6 +100,83 @@ func newHabitForm(fm *HabitFormModel) *huh.Form {
 					}
 					return nil
 				}),
+		),
+	).WithTheme(huh.ThemeDracula())
+}
+
+func newAlertForm(fm *AlertFormModel) *huh.Form {
+	return huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Message").
+				Value(&fm.Message).
+				Validate(func(s string) error {
+					if strings.TrimSpace(s) == "" {
+						return fmt.Errorf("message cannot be empty")
+					}
+					return nil
+				}),
+			huh.NewInput().
+				Title("Time (HH:MM)").
+				Value(&fm.Time).
+				Validate(func(s string) error {
+					_, err := time.Parse(constants.TimeFormat, s)
+					if err != nil {
+						return fmt.Errorf("invalid time format, use HH:MM")
+					}
+					return nil
+				}),
+			huh.NewInput().
+				Title("Date (YYYY-MM-DD)").
+				Description("Leave empty for recurring alert").
+				Value(&fm.Date).
+				Validate(func(s string) error {
+					if strings.TrimSpace(s) == "" {
+						return nil
+					}
+					_, err := time.Parse("2006-01-02", s)
+					if err != nil {
+						return fmt.Errorf("invalid date format, use YYYY-MM-DD")
+					}
+					return nil
+				}),
+			huh.NewSelect[models.RecurrenceType]().
+				Title("Recurrence").
+				Description("Only for recurring alerts (no date)").
+				Options(
+					huh.NewOption("Daily", models.RecurrenceDaily),
+					huh.NewOption("Weekly", models.RecurrenceWeekly),
+					huh.NewOption("Every N Days", models.RecurrenceNDays),
+				).
+				Value(&fm.Recurrence).
+				Validate(func(r models.RecurrenceType) error {
+					// When Date is empty (recurring alert), a recurrence type must be selected
+					if strings.TrimSpace(fm.Date) == "" && r == "" {
+						return fmt.Errorf("recurrence is required when date is empty")
+					}
+					return nil
+				}),
+			huh.NewInput().
+				Title("Interval (days)").
+				Description("For 'Every N Days' recurrence").
+				Value(&fm.Interval).
+				Validate(func(s string) error {
+					if strings.TrimSpace(s) == "" {
+						return nil
+					}
+					i, err := strconv.Atoi(s)
+					if err != nil {
+						return err
+					}
+					if i <= 0 {
+						return fmt.Errorf("interval must be a positive number of days")
+					}
+					return nil
+				}),
+			huh.NewInput().
+				Title("Weekdays").
+				Description("For weekly: comma-separated (mon,wed,fri)").
+				Value(&fm.Weekdays),
 		),
 	).WithTheme(huh.ThemeDracula())
 }
@@ -319,6 +398,75 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case huh.StateAborted:
 			m.state = StateHabits
+		}
+		return m, tea.Batch(cmds...)
+	}
+
+	// Handle Add Alert State
+	if m.state == StateAddAlert {
+		if msg, ok := msg.(tea.KeyMsg); ok && msg.Type == tea.KeyEsc {
+			m.state = StateAlerts
+			return m, nil
+		}
+
+		form, cmd := m.form.Update(msg)
+		if f, ok := form.(*huh.Form); ok {
+			m.form = f
+		}
+		cmds = append(cmds, cmd)
+
+		switch m.form.State {
+		case huh.StateCompleted:
+			// Validate and create new alert
+			alert := models.Alert{
+				ID:        uuid.New().String(),
+				Message:   m.alertForm.Message,
+				Time:      m.alertForm.Time,
+				Date:      m.alertForm.Date,
+				Active:    true,
+				CreatedAt: time.Now(),
+			}
+
+			// Set recurrence if not one-time
+			if alert.Date == "" {
+				alert.Recurrence.Type = m.alertForm.Recurrence
+				if m.alertForm.Interval != "" {
+					interval, err := strconv.Atoi(m.alertForm.Interval)
+					if err != nil || interval < 1 {
+						// Invalid interval; keep user in the form to correct the value
+						m.formError = "Invalid interval: must be a positive number"
+						m.form.State = huh.StateNormal
+						return m, tea.Batch(cmds...)
+					}
+					alert.Recurrence.IntervalDays = interval
+				}
+
+				// Parse weekdays for weekly recurrence
+				if m.alertForm.Recurrence == models.RecurrenceWeekly && m.alertForm.Weekdays != "" {
+					weekdays, err := cli.ParseWeekdays(m.alertForm.Weekdays)
+					if err != nil {
+						// Invalid weekdays; keep user in the form to correct the value
+						m.formError = fmt.Sprintf("Invalid weekdays: %v", err)
+						m.form.State = huh.StateNormal
+						return m, tea.Batch(cmds...)
+					}
+					alert.Recurrence.WeekdayMask = weekdays
+				}
+			}
+
+			if err := m.store.AddAlert(alert); err == nil {
+				// Refresh alerts list only if add succeeded
+				alertsList, _ := m.store.GetAllAlerts()
+				m.alertsModel.SetAlerts(alertsList)
+				m.formError = "" // Clear any previous errors
+				m.state = StateAlerts
+			} else {
+				// Store error and stay in form state to allow retry
+				m.formError = fmt.Sprintf("Failed to add alert: %v", err)
+				m.form.State = huh.StateNormal
+			}
+		case huh.StateAborted:
+			m.state = StateAlerts
 		}
 		return m, tea.Batch(cmds...)
 	}
@@ -721,6 +869,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.nowModel.SetSize(msg.Width, listHeight)
 		m.habitsModel.SetSize(msg.Width-h, listHeight-v)
 		m.otModel.SetSize(msg.Width-h, listHeight-v)
+		m.alertsModel.SetSize(msg.Width-h, listHeight-v)
 		m.settingsModel.SetSize(msg.Width-h, listHeight-v)
 
 	case tasklist.DeleteTaskMsg:
@@ -829,6 +978,27 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			habitsList, _ := m.store.GetAllHabits(false, true)
 			habitEntries, _ := m.store.GetHabitEntriesForDay(today)
 			m.habitsModel.SetHabits(habitsList, habitEntries)
+		}
+		return m, nil
+
+	// Handle alert messages
+	case alerts.AddAlertMsg:
+		m.alertForm = &AlertFormModel{
+			Message:    "",
+			Time:       "",
+			Date:       "",
+			Recurrence: models.RecurrenceDaily,
+			Interval:   "1",
+			Weekdays:   "",
+		}
+		m.form = newAlertForm(m.alertForm)
+		m.state = StateAddAlert
+		return m, m.form.Init()
+
+	case alerts.DeleteAlertMsg:
+		if err := m.store.DeleteAlert(msg.ID); err == nil {
+			alertsList, _ := m.store.GetAllAlerts()
+			m.alertsModel.SetAlerts(alertsList)
 		}
 		return m, nil
 
@@ -979,6 +1149,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	case StateOT:
 		m.otModel, cmd = m.otModel.Update(msg)
+		cmds = append(cmds, cmd)
+	case StateAlerts:
+		m.alertsModel, cmd = m.alertsModel.Update(msg)
 		cmds = append(cmds, cmd)
 	case StateSettings:
 		m.settingsModel, cmd = m.settingsModel.Update(msg)

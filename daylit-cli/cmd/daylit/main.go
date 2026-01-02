@@ -9,6 +9,7 @@ import (
 	"github.com/alecthomas/kong"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli/alerts"
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli/backups"
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli/habits"
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli/optimize"
@@ -59,8 +60,13 @@ type CLI struct {
 		Task tasks.TaskRestoreCmd `cmd:"" help:"Restore a deleted task."`
 		Plan plans.PlanRestoreCmd `cmd:"" help:"Restore a deleted plan."`
 	} `cmd:"" help:"Restore deleted items."`
-	Habit   habits.HabitCmd `cmd:"" help:"Manage habits and habit tracking."`
-	OT      ot.OTCmd        `cmd:"" help:"Manage Once-Today (OT) intentions."`
+	Habit habits.HabitCmd `cmd:"" help:"Manage habits and habit tracking."`
+	OT    ot.OTCmd        `cmd:"" help:"Manage Once-Today (OT) intentions."`
+	Alert struct {
+		Add    alerts.AlertAddCmd    `cmd:"" help:"Add a new alert."`
+		List   alerts.AlertListCmd   `cmd:"" help:"List all alerts."`
+		Delete alerts.AlertDeleteCmd `cmd:"" help:"Delete an alert."`
+	} `cmd:"" help:"Manage arbitrary scheduled notifications."`
 	Keyring struct {
 		Set    system.KeyringSetCmd    `cmd:"" help:"Store database connection string in OS keyring."`
 		Get    system.KeyringGetCmd    `cmd:"" help:"Retrieve database connection string from OS keyring."`

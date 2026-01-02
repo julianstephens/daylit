@@ -70,6 +70,13 @@ type Provider interface {
 	DeleteOTEntry(day string) error
 	RestoreOTEntry(day string) error
 
+	// Alerts
+	AddAlert(models.Alert) error
+	GetAlert(id string) (models.Alert, error)
+	GetAllAlerts() ([]models.Alert, error)
+	UpdateAlert(models.Alert) error
+	DeleteAlert(id string) error
+
 	// Bulk Retrieval for Migration
 	GetAllPlans() ([]models.DayPlan, error)
 	GetAllHabitEntries() ([]models.HabitEntry, error)

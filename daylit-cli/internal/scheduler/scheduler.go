@@ -187,35 +187,7 @@ func formatTime(minutes int) string {
 }
 
 func shouldScheduleTask(task models.Task, date time.Time) bool {
-	switch task.Recurrence.Type {
-	case models.RecurrenceDaily:
-		return true
-	case models.RecurrenceWeekly:
-		if len(task.Recurrence.WeekdayMask) == 0 {
-			return false
-		}
-		for _, wd := range task.Recurrence.WeekdayMask {
-			if date.Weekday() == wd {
-				return true
-			}
-		}
-		return false
-	case models.RecurrenceNDays:
-		if task.LastDone == "" {
-			return true
-		}
-		lastDone, err := time.Parse(constants.DateFormat, task.LastDone)
-		if err != nil {
-			return false
-		}
-		// Use date-based arithmetic to avoid DST issues with explicit rounding
-		daysSince := int(math.Round(date.Sub(lastDone).Hours() / 24))
-		return daysSince >= task.Recurrence.IntervalDays
-	case models.RecurrenceAdHoc:
-		return false // Only schedule if explicitly marked (not implemented in v0.1)
-	default:
-		return false
-	}
+	return utils.ShouldScheduleTask(task, date)
 }
 
 func calculateLateness(task models.Task, date time.Time) float64 {
