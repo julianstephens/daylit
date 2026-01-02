@@ -9,6 +9,7 @@ import (
 func TestSetAndGetConnectionString(t *testing.T) {
 	// Use mock keyring for testing
 	gokeyring.MockInit()
+	defer func() { _ = DeleteConnectionString() }()
 
 	testConnStr := "postgres://testuser@localhost:5432/testdb?sslmode=disable"
 
@@ -31,6 +32,7 @@ func TestSetAndGetConnectionString(t *testing.T) {
 
 func TestSetConnectionStringEmpty(t *testing.T) {
 	gokeyring.MockInit()
+	defer func() { _ = DeleteConnectionString() }()
 
 	err := SetConnectionString("")
 	if err == nil {
@@ -40,6 +42,7 @@ func TestSetConnectionStringEmpty(t *testing.T) {
 
 func TestGetConnectionStringNotFound(t *testing.T) {
 	gokeyring.MockInit()
+	defer func() { _ = DeleteConnectionString() }()
 
 	// Ensure nothing is stored
 	_ = DeleteConnectionString()
@@ -52,6 +55,7 @@ func TestGetConnectionStringNotFound(t *testing.T) {
 
 func TestDeleteConnectionString(t *testing.T) {
 	gokeyring.MockInit()
+	defer func() { _ = DeleteConnectionString() }()
 
 	testConnStr := "postgres://testuser@localhost:5432/testdb"
 
@@ -76,6 +80,7 @@ func TestDeleteConnectionString(t *testing.T) {
 
 func TestDeleteConnectionStringNotFound(t *testing.T) {
 	gokeyring.MockInit()
+	defer func() { _ = DeleteConnectionString() }()
 
 	// Ensure nothing is stored
 	_ = DeleteConnectionString()
@@ -88,6 +93,7 @@ func TestDeleteConnectionStringNotFound(t *testing.T) {
 
 func TestIsAvailable(t *testing.T) {
 	gokeyring.MockInit()
+	defer func() { _ = DeleteConnectionString() }()
 
 	available := IsAvailable()
 	// In mock mode, keyring should be available

@@ -27,7 +27,7 @@ const defaultConfigPath = "~/.config/daylit/daylit.db"
 
 type CLI struct {
 	Version kong.VersionFlag
-	Config  string `help:"Config file path or PostgreSQL connection string. For PostgreSQL, credentials must NOT be embedded in the connection string. Use environment variables or a .pgpass file instead." type:"string" default:"~/.config/daylit/daylit.db" env:"DAYLIT_CONFIG"`
+	Config  string `help:"Config file path or PostgreSQL connection string. When passing a PostgreSQL connection string via command-line flags, credentials must NOT be embedded. Use environment variables or a .pgpass file for command-line usage, or store a connection string with embedded credentials securely in the OS keyring via the 'keyring' commands." type:"string" default:"~/.config/daylit/daylit.db" env:"DAYLIT_CONFIG"`
 
 	Init     system.InitCmd     `cmd:"" help:"Initialize daylit storage."`
 	Migrate  system.MigrateCmd  `cmd:"" help:"Run database migrations."`

@@ -137,13 +137,16 @@ daylit keyring delete
 
 **Benefits:**
 - Credentials are encrypted by the OS
-- No passwords in shell history or process lists
-- No need to specify --config flag
 - Works seamlessly with system security policies
+- No need to specify --config flag
+
+> **Security note:** Avoid passing real passwords directly on the `daylit` command line (for example, in a `daylit keyring set "postgres://..."` command). Command-line arguments can be captured in shell history and process inspection tools on multi-user systems. Prefer methods that prompt for secrets or paste them only when needed.
 
 #### 2. Environment Variable (Recommended for Automation)
 
 Set the connection string with credentials in the `DAYLIT_CONFIG` environment variable:
+
+> **Security note:** Environment variables and the commands used to set them can expose credentials (for example, via shell history, debug output, or process inspection by privileged users). Use this approach only on trusted machines, and avoid reusing these credentials elsewhere.
 
 **Bash/Zsh:**
 ```bash
@@ -245,7 +248,7 @@ daylit --config "postgres://user:password@host:5432/daylit" init
 
 Use the secure methods described below instead.
 
-### Secure Method 1: OS Keyring (Recommended for Desktop Use)
+### OS Keyring (Recommended for Desktop Use)
 
 Store your connection string in the OS keyring for maximum security and convenience:
 
@@ -262,7 +265,7 @@ daylit task list
 daylit keyring status
 ```
 
-### Secure Method 2: .pgpass File (Recommended for Interactive Use)
+### .pgpass File (Recommended for Interactive Use)
 
 Create a `.pgpass` file with your credentials and use a connection string without password:
 
@@ -277,7 +280,7 @@ daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" i
 daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" task list
 ```
 
-### Secure Method 3: Environment Variable (Recommended for Automation)
+### Environment Variable (Recommended for Automation)
 
 Set the connection credentials in the `DAYLIT_CONFIG` environment variable:
 
@@ -301,7 +304,7 @@ $env:DAYLIT_CONFIG="postgres://daylit_user:password@localhost:5432/daylit?sslmod
 [System.Environment]::SetEnvironmentVariable('DAYLIT_CONFIG', 'postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable', 'User')
 ```
 
-### Secure Method 4: PGPASSWORD Environment Variable
+### PGPASSWORD Environment Variable
 
 Alternatively, you can use the standard PostgreSQL environment variable `PGPASSWORD` to supply the password separately from the connection string:
 
@@ -317,7 +320,7 @@ $env:PGPASSWORD="your_password"
 daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" init
 ```
 
-### Secure Method 5: Shell Alias with .pgpass
+### Shell Alias with .pgpass
 
 Create an alias for convenience (requires .pgpass setup):
 

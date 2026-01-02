@@ -195,6 +195,11 @@ func TestMaskPassword(t *testing.T) {
 			connStr:  "postgresql://admin:p@ssw0rd@db.example.com:5432/mydb",
 			expected: "postgresql://admin:****@db.example.com:5432/mydb",
 		},
+		{
+			name:     "postgresql URL with properly encoded password",
+			connStr:  "postgresql://admin:p%40ssw0rd@db.example.com:5432/mydb",
+			expected: "postgresql://admin:****@db.example.com:5432/mydb",
+		},
 	}
 
 	for _, tt := range tests {

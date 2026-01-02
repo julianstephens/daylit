@@ -29,8 +29,8 @@ func (cmd *KeyringSetCmd) Run(ctx *cli.Context) error {
 		if errors.Is(err, postgres.ErrEmbeddedCredentials) {
 			// Warn about embedded credentials but allow storage in keyring (it's encrypted)
 			fmt.Println("⚠️  Warning: Connection string contains embedded credentials.")
-			fmt.Println("   Consider using .pgpass or environment variables for the password.")
-			fmt.Println("   The connection string will be stored as-is in the OS keyring.")
+			fmt.Println("   It will be stored as-is in the encrypted OS keyring, which is a secure place for credentials.")
+			fmt.Println("   If you prefer to keep passwords separate from connection strings, consider using .pgpass or environment variables instead.")
 		} else {
 			// Other validation errors should fail the operation
 			return fmt.Errorf("invalid connection string: %w", err)
