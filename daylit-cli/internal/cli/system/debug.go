@@ -11,12 +11,12 @@ import (
 )
 
 type DebugCmd struct {
-	DBPath      *DebugDBPathCmd      `cmd:"" help:"Show database path."`
-	DumpPlan    *DebugDumpPlanCmd    `cmd:"" help:"Dump plan data as JSON."`
-	DumpTask    *DebugDumpTaskCmd    `cmd:"" help:"Dump task data as JSON."`
-	DumpHabit   *DebugDumpHabitCmd   `cmd:"" help:"Dump habit data as JSON."`
-	DumpOT      *DebugDumpOTCmd      `cmd:"" help:"Dump OT intention data as JSON."`
-	DumpAlert   *DebugDumpAlertCmd   `cmd:"" help:"Dump alert data as JSON."`
+	DBPath       *DebugDBPathCmd       `cmd:"" help:"Show database path."`
+	DumpPlan     *DebugDumpPlanCmd     `cmd:"" help:"Dump plan data as JSON."`
+	DumpTask     *DebugDumpTaskCmd     `cmd:"" help:"Dump task data as JSON."`
+	DumpHabit    *DebugDumpHabitCmd    `cmd:"" help:"Dump habit data as JSON."`
+	DumpOT       *DebugDumpOTCmd       `cmd:"" help:"Dump OT intention data as JSON."`
+	DumpAlert    *DebugDumpAlertCmd    `cmd:"" help:"Dump alert data as JSON."`
 	DumpSettings *DebugDumpSettingsCmd `cmd:"" help:"Dump settings data as JSON."`
 }
 

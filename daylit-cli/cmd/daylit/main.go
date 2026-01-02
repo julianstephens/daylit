@@ -30,9 +30,9 @@ import (
 const defaultConfigPath = "~/.config/daylit/daylit.db"
 
 type CLI struct {
-	Version    kong.VersionFlag
-	DebugMode  bool   `help:"Enable debug logging." name:"debug"`
-	Config     string `help:"Config file path or PostgreSQL connection string. When passing a PostgreSQL connection string via command-line flags, credentials must NOT be embedded. Use environment variables or a .pgpass file for command-line usage, or store a connection string with embedded credentials securely in the OS keyring via the 'keyring' commands." type:"string" default:"~/.config/daylit/daylit.db" env:"DAYLIT_CONFIG"`
+	Version   kong.VersionFlag
+	DebugMode bool   `help:"Enable debug logging." name:"debug"`
+	Config    string `help:"Config file path or PostgreSQL connection string. When passing a PostgreSQL connection string via command-line flags, credentials must NOT be embedded. Use environment variables or a .pgpass file for command-line usage, or store a connection string with embedded credentials securely in the OS keyring via the 'keyring' commands." type:"string" default:"~/.config/daylit/daylit.db" env:"DAYLIT_CONFIG"`
 
 	Init     system.InitCmd       `cmd:"" help:"Initialize daylit storage."`
 	Migrate  system.MigrateCmd    `cmd:"" help:"Run database migrations."`
@@ -89,12 +89,12 @@ func (c *CLI) AfterApply(ctx *kong.Context) error {
 		configPath = os.ExpandEnv(configPath)
 	}
 	configDir := filepath.Dir(configPath)
-	
+
 	// Initialize logger
 	// For debug command, always enable debug logging
 	isDebugCmd := strings.HasPrefix(ctx.Command(), "debug ")
 	debugEnabled := c.DebugMode || isDebugCmd
-	
+
 	if err := logger.Init(logger.Config{
 		Debug:     debugEnabled,
 		ConfigDir: configDir,
