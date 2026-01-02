@@ -51,7 +51,15 @@ The system learns from user feedback to improve future plans.
   - `unnecessary`: The task wasn't valuable or could have been skipped.
 - **Impact**:
   - Feedback is stored on the specific slot in the day plan.
-  - While currently informational, future versions will use this data to adjust task durations and priorities automatically.
+  - **Immediate adjustments**: The `feedback` command applies instant adjustments to task properties when feedback is given:
+    - `on_track`: Updates the task's average actual duration using exponential moving average
+    - `too_much`: Reduces task duration by 10% (minimum 10 minutes)
+    - `unnecessary`: Increases recurrence interval for n-days tasks
+  - **Historical analysis**: The `optimize` command analyzes accumulated feedback patterns to suggest more substantial optimizations:
+    - Tasks with consistent `too_much` feedback (>50%) receive suggestions to reduce duration by 25% or split into smaller tasks
+    - Tasks with frequent `unnecessary` feedback (≥3 instances or >40%) receive suggestions to reduce frequency or remove the task
+    - Optimizations can be reviewed in dry-run mode, applied selectively in interactive mode, or auto-applied
+
 
 ### Habit
 

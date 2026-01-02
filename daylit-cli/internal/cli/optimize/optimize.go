@@ -81,7 +81,7 @@ func (c *OptimizeCmd) Run(ctx *cli.Context) error {
 
 func (c *OptimizeCmd) runInteractive(ctx *cli.Context, optimizations []optimizer.Optimization) error {
 	fmt.Println("\n🎯 Interactive optimization mode")
-	fmt.Println("Review each suggestion and choose whether to apply it.\n")
+	fmt.Println("Review each suggestion and choose whether to apply it.")
 
 	applied := 0
 	skipped := 0
