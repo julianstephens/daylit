@@ -472,7 +472,11 @@ func (s *Store) GetTaskFeedbackHistory(taskID string, limit int) ([]models.TaskF
 					endMin += 24 * 60
 				}
 				entry.ActualDuration = endMin - startMin
+			} else {
+				log.Printf("Warning: failed to parse end time '%s' for task %s on %s: %v", entry.ActualEnd, entry.TaskID, entry.Date, err)
 			}
+		} else {
+			log.Printf("Warning: failed to parse start time '%s' for task %s on %s: %v", entry.ActualStart, entry.TaskID, entry.Date, err)
 		}
 
 		entries = append(entries, entry)

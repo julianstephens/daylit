@@ -245,7 +245,7 @@ func applyOptimization(ctx *cli.Context, opt optimizer.Optimization) error {
 
 	// Validate the task before updating
 	if err := task.Validate(); err != nil {
-		return fmt.Errorf("validation failed: %w", err)
+		return fmt.Errorf("task validation failed: %w", err)
 	}
 
 	// Update the task
