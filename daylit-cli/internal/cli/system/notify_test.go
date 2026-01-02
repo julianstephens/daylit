@@ -195,11 +195,13 @@ func TestNotifyCmd_GracePeriod(t *testing.T) {
 
 	// Test 1: Notification within grace period (5 minutes late)
 	t.Run("WithinGracePeriod", func(t *testing.T) {
-		triggerMinutes := currentMinutes - 5
-		startHour := triggerMinutes / 60
-		startMin := triggerMinutes % 60
+		// Set start time to now. With 5 min offset, notification should have happened 5 mins ago.
+		// This is within the 10 min grace period.
+		startMinutes := currentMinutes
+		startHour := startMinutes / 60
+		startMin := startMinutes % 60
 		startTime := fmt.Sprintf("%02d:%02d", startHour, startMin)
-		endTime := calculateEndTime(triggerMinutes, 30)
+		endTime := calculateEndTime(startMinutes, 30)
 
 		nowStr := time.Now().UTC().Format(time.RFC3339)
 		plan := models.DayPlan{
@@ -694,11 +696,14 @@ func TestNotifyCmd_OnlyAcceptedOrDoneSlots(t *testing.T) {
 
 	now := time.Now()
 	currentMinutes := now.Hour()*60 + now.Minute()
-	triggerMinutes := currentMinutes - 2
-	startHour := triggerMinutes / 60
-	startMin := triggerMinutes % 60
+
+	// Set start time to now. With 5 min offset, notification should have happened 5 mins ago.
+	// This is within the 10 min grace period.
+	startMinutes := currentMinutes
+	startHour := startMinutes / 60
+	startMin := startMinutes % 60
 	startTime := fmt.Sprintf("%02d:%02d", startHour, startMin)
-	endTime := calculateEndTime(triggerMinutes, 30)
+	endTime := calculateEndTime(startMinutes, 30)
 
 	nowStr := time.Now().UTC().Format(time.RFC3339)
 	plan := models.DayPlan{
