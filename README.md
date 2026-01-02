@@ -6,8 +6,10 @@ Daylit is a comprehensive daily structure and time-blocking system designed to h
 
 - **[Quick Start Guide](docs/user-guides/QUICK_START.md)**: Get up and running in minutes.
 - **[Storage Configuration](docs/user-guides/STORAGE.md)**: Configure SQLite or PostgreSQL backends.
+- **[Windows & WSL Setup](docs/user-guides/WINDOWS_WSL_SETUP.md)**: Configure Daylit for Windows and WSL2.
 - **[Core Concepts](docs/CONCEPTS.md)**: Understand the scheduling algorithm, data models, and feedback loop.
 - **[CLI Reference](docs/CLI_REFERENCE.md)**: Detailed command reference.
+- **[Additional User Guides](docs/user-guides/)**: Browse all guides including Alerts & Notifications and advanced configuration.
 
 ## Components
 
