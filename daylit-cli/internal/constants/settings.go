@@ -11,6 +11,7 @@ const (
 	SettingBlockStartOffsetMin        = "block_start_offset_min"
 	SettingBlockEndOffsetMin          = "block_end_offset_min"
 	SettingNotificationGracePeriodMin = "notification_grace_period_min"
+	SettingTimezone                   = "timezone"
 
 	// OT Settings
 	SettingOTPromptOnEmpty  = "ot_prompt_on_empty"
@@ -27,4 +28,5 @@ const (
 	DefaultBlockStartOffsetMin        = 5
 	DefaultBlockEndOffsetMin          = 5
 	DefaultNotificationGracePeriodMin = 10
+	DefaultTimezone                   = "Local" // Use system local timezone by default
 )

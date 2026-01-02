@@ -38,6 +38,8 @@ func MapToSettings(data map[string]string) (Settings, error) {
 			if _, err := fmt.Sscanf(value, "%d", &settings.NotificationGracePeriodMin); err != nil {
 				return Settings{}, fmt.Errorf("parsing notification_grace_period_min: %w", err)
 			}
+		case constants.SettingTimezone:
+			settings.Timezone = value
 		}
 	}
 	return settings, nil
@@ -55,6 +57,7 @@ func SettingsToMap(settings Settings) map[string]string {
 		constants.SettingBlockStartOffsetMin:        fmt.Sprintf("%d", settings.BlockStartOffsetMin),
 		constants.SettingBlockEndOffsetMin:          fmt.Sprintf("%d", settings.BlockEndOffsetMin),
 		constants.SettingNotificationGracePeriodMin: fmt.Sprintf("%d", settings.NotificationGracePeriodMin),
+		constants.SettingTimezone:                   settings.Timezone,
 	}
 }
 
@@ -78,5 +81,8 @@ func ApplyDefaultSettings(settings *Settings) {
 	}
 	if settings.NotificationGracePeriodMin == 0 {
 		settings.NotificationGracePeriodMin = constants.DefaultNotificationGracePeriodMin
+	}
+	if settings.Timezone == "" {
+		settings.Timezone = constants.DefaultTimezone
 	}
 }
