@@ -51,7 +51,7 @@ const (
 	// Notify constants
 	NotifyMaxRetries       = 3
 	NotifyRetryDelay       = 100 * time.Millisecond
-	NotifierLockfileName   = "daylit-notifier.lock"
+	NotifierLockfileName   = "daylit-tray.lock"
 	NotificationDurationMs = 5000
 	TrayAppIdentifier      = "com.daylit.daylit-tray"
 
