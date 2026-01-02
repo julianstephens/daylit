@@ -408,4 +408,3 @@ func (s *Store) GetTaskFeedbackHistory(taskID string, limit int) ([]models.TaskF
 
 	return entries, nil
 }
-
