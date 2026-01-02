@@ -50,10 +50,14 @@ const (
 	TaskKindFlexible    TaskKind = "flexible"
 
 	// Recurrence Type constants
-	RecurrenceDaily  RecurrenceType = "daily"
-	RecurrenceWeekly RecurrenceType = "weekly"
-	RecurrenceNDays  RecurrenceType = "n_days"
-	RecurrenceAdHoc  RecurrenceType = "ad_hoc"
+	RecurrenceDaily       RecurrenceType = "daily"
+	RecurrenceWeekly      RecurrenceType = "weekly"
+	RecurrenceNDays       RecurrenceType = "n_days"
+	RecurrenceAdHoc       RecurrenceType = "ad_hoc"
+	RecurrenceMonthlyDate RecurrenceType = "monthly_date" // e.g., 15th of every month
+	RecurrenceMonthlyDay  RecurrenceType = "monthly_day"  // e.g., last Friday of the month
+	RecurrenceYearly      RecurrenceType = "yearly"       // e.g., every year on January 1st
+	RecurrenceWeekdays    RecurrenceType = "weekdays"     // every weekday (Mon-Fri)
 
 	// Energy Band constants
 	EnergyLow    EnergyBand = "low"

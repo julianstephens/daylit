@@ -8,9 +8,13 @@ import (
 )
 
 type Recurrence struct {
-	Type         constants.RecurrenceType `json:"type"`
-	IntervalDays int                      `json:"interval_days,omitempty"`
-	WeekdayMask  []time.Weekday           `json:"weekday_mask,omitempty"`
+	Type             constants.RecurrenceType `json:"type"`
+	IntervalDays     int                      `json:"interval_days,omitempty"`
+	WeekdayMask      []time.Weekday           `json:"weekday_mask,omitempty"`
+	MonthDay         int                      `json:"month_day,omitempty"`            // Day of month (1-31) for monthly_date
+	WeekOccurrence   int                      `json:"week_occurrence,omitempty"`      // Week occurrence (-1=last, 1=first, 2=second, etc.) for monthly_day
+	Month            int                      `json:"month,omitempty"`                // Month (1-12) for yearly
+	DayOfWeekInMonth time.Weekday             `json:"day_of_week_in_month,omitempty"` // Weekday for monthly_day (e.g., Friday for "last Friday")
 }
 
 type Task struct {
@@ -49,6 +53,33 @@ func (t *Task) Validate() error {
 	}
 	if t.Recurrence.Type == constants.RecurrenceWeekly && len(t.Recurrence.WeekdayMask) == 0 {
 		return fmt.Errorf("weekdays must be specified for weekly recurrence")
+	}
+	if t.Recurrence.Type == constants.RecurrenceMonthlyDate {
+		if t.Recurrence.MonthDay < 1 || t.Recurrence.MonthDay > 31 {
+			return fmt.Errorf("month day must be between 1 and 31 for monthly_date recurrence")
+		}
+		// Note: We allow day 31 even though some months don't have 31 days.
+		// The scheduler will skip those months (e.g., Feb 31 won't schedule in February).
+	}
+	if t.Recurrence.Type == constants.RecurrenceMonthlyDay {
+		if t.Recurrence.WeekOccurrence < -1 || t.Recurrence.WeekOccurrence == 0 || t.Recurrence.WeekOccurrence > 5 {
+			return fmt.Errorf("week occurrence must be -1 (last) or 1-5 for monthly_day recurrence")
+		}
+		// DayOfWeekInMonth is a time.Weekday (0-6), so any value is technically valid,
+		// but we expect it to be set for monthly_day recurrence
+		if t.Recurrence.DayOfWeekInMonth < time.Sunday || t.Recurrence.DayOfWeekInMonth > time.Saturday {
+			return fmt.Errorf("day of week in month must be specified (0-6) for monthly_day recurrence")
+		}
+	}
+	if t.Recurrence.Type == constants.RecurrenceYearly {
+		if t.Recurrence.Month < 1 || t.Recurrence.Month > 12 {
+			return fmt.Errorf("month must be between 1 and 12 for yearly recurrence")
+		}
+		if t.Recurrence.MonthDay < 1 || t.Recurrence.MonthDay > 31 {
+			return fmt.Errorf("month day must be between 1 and 31 for yearly recurrence")
+		}
+		// Note: We allow potentially invalid dates like Feb 31.
+		// The scheduler will skip years where this date doesn't exist.
 	}
 
 	return nil

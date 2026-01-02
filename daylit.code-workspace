@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "daylit-cli"
+		},
+		{
+			"path": "daylit-tray"
+		}
+	],
+	"settings": {}
+}

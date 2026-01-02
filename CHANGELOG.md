@@ -1,3 +1,11 @@
+## Unreleased
+
+- Adds support for complex recurrence patterns:
+  - Monthly by date (e.g., "15th of every month")
+  - Monthly by day (e.g., "Last Friday of the month", "First Monday of the month")
+  - Yearly (e.g., "Every year on January 1st")
+  - Weekdays (e.g., "Every weekday Monday-Friday")
+
 ## v0.5.0
 
 - Adds automatic feedback adjustment
