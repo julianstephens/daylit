@@ -9,9 +9,9 @@ import (
 type Alert struct {
 	ID         string     `json:"id"`
 	Message    string     `json:"message"`
-	Time       string     `json:"time"`                // HH:MM format
-	Date       string     `json:"date,omitempty"`      // YYYY-MM-DD (for one-time alerts)
-	Recurrence Recurrence `json:"recurrence"`          // Re-use existing Recurrence struct
+	Time       string     `json:"time"`           // HH:MM format
+	Date       string     `json:"date,omitempty"` // YYYY-MM-DD (for one-time alerts)
+	Recurrence Recurrence `json:"recurrence"`     // Re-use existing Recurrence struct
 	Active     bool       `json:"active"`
 	LastSent   *time.Time `json:"last_sent,omitempty"` // RFC3339 timestamp
 	CreatedAt  time.Time  `json:"created_at"`
@@ -136,4 +136,3 @@ func (a *Alert) FormatRecurrence() string {
 		return "One-time"
 	}
 }
-

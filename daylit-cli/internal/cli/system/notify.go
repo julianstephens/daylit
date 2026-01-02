@@ -287,94 +287,94 @@ func (c *NotifyCmd) checkAndSendEndNotification(
 }
 
 func (c *NotifyCmd) checkAndSendAlerts(
-ctx *cli.Context,
-now time.Time,
-n *notifier.Notifier,
+	ctx *cli.Context,
+	now time.Time,
+	n *notifier.Notifier,
 ) error {
-// Get all active alerts
-alerts, err := ctx.Store.GetAllAlerts()
-if err != nil {
-return fmt.Errorf("failed to get alerts: %w", err)
-}
+	// Get all active alerts
+	alerts, err := ctx.Store.GetAllAlerts()
+	if err != nil {
+		return fmt.Errorf("failed to get alerts: %w", err)
+	}
 
-dateStr := now.Format("2006-01-02")
-currentMinutes := now.Hour()*60 + now.Minute()
+	dateStr := now.Format("2006-01-02")
+	currentMinutes := now.Hour()*60 + now.Minute()
 
-for _, alert := range alerts {
-// Skip inactive alerts
-if !alert.Active {
-continue
-}
+	for _, alert := range alerts {
+		// Skip inactive alerts
+		if !alert.Active {
+			continue
+		}
 
-// Check if alert is due today
-if !alert.IsDueToday(now) {
-continue
-}
+		// Check if alert is due today
+		if !alert.IsDueToday(now) {
+			continue
+		}
 
-// Parse alert time
-alertMinutes, err := utils.ParseTimeToMinutes(alert.Time)
-if err != nil {
-continue
-}
+		// Parse alert time
+		alertMinutes, err := utils.ParseTimeToMinutes(alert.Time)
+		if err != nil {
+			continue
+		}
 
-// Check if we've already sent this alert today
-if alert.LastSent != nil {
-lastSentDate := alert.LastSent.Format("2006-01-02")
-if lastSentDate == dateStr {
-// Already sent today
-continue
-}
-}
+		// Check if we've already sent this alert today
+		if alert.LastSent != nil {
+			lastSentDate := alert.LastSent.Format("2006-01-02")
+			if lastSentDate == dateStr {
+				// Already sent today
+				continue
+			}
+		}
 
-// Check if current time is at or past the alert time
-if currentMinutes < alertMinutes {
-// Not time yet
-continue
-}
+		// Check if current time is at or past the alert time
+		if currentMinutes < alertMinutes {
+			// Not time yet
+			continue
+		}
 
-// Calculate how late we are
-minutesLate := currentMinutes - alertMinutes
+		// Calculate how late we are
+		minutesLate := currentMinutes - alertMinutes
 
-// Get grace period from settings
-settings, err := ctx.Store.GetSettings()
-if err != nil {
-return fmt.Errorf("failed to get settings: %w", err)
-}
+		// Get grace period from settings
+		settings, err := ctx.Store.GetSettings()
+		if err != nil {
+			return fmt.Errorf("failed to get settings: %w", err)
+		}
 
-// If we're too late (beyond grace period), skip
-if minutesLate > settings.NotificationGracePeriodMin {
-continue
-}
+		// If we're too late (beyond grace period), skip
+		if minutesLate > settings.NotificationGracePeriodMin {
+			continue
+		}
 
-// Build notification message
-msg := fmt.Sprintf("⏰ %s", alert.Message)
+		// Build notification message
+		msg := fmt.Sprintf("⏰ %s", alert.Message)
 
-// Update last_sent timestamp BEFORE sending to avoid duplicates
-nowTime := now
-alert.LastSent = &nowTime
-if err := ctx.Store.UpdateAlert(alert); err != nil {
-return fmt.Errorf("failed to update alert: %w", err)
-}
+		// Update last_sent timestamp BEFORE sending to avoid duplicates
+		nowTime := now
+		alert.LastSent = &nowTime
+		if err := ctx.Store.UpdateAlert(alert); err != nil {
+			return fmt.Errorf("failed to update alert: %w", err)
+		}
 
-// Send notification
-if c.DryRun {
-fmt.Println("[DryRun] " + msg)
-} else {
-if err := n.Notify(msg); err != nil {
-// Log error but continue
-fmt.Printf("Failed to send alert notification: %v\n", err)
-}
-}
+		// Send notification
+		if c.DryRun {
+			fmt.Println("[DryRun] " + msg)
+		} else {
+			if err := n.Notify(msg); err != nil {
+				// Log error but continue
+				fmt.Printf("Failed to send alert notification: %v\n", err)
+			}
+		}
 
-// If this is a one-time alert and it was sent, deactivate it
-if alert.IsOneTime() {
-alert.Active = false
-if err := ctx.Store.UpdateAlert(alert); err != nil {
-// Log error but continue
-fmt.Printf("Failed to deactivate one-time alert: %v\n", err)
-}
-}
-}
+		// If this is a one-time alert and it was sent, deactivate it
+		if alert.IsOneTime() {
+			alert.Active = false
+			if err := ctx.Store.UpdateAlert(alert); err != nil {
+				// Log error but continue
+				fmt.Printf("Failed to deactivate one-time alert: %v\n", err)
+			}
+		}
+	}
 
-return nil
+	return nil
 }

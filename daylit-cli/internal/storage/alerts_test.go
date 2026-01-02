@@ -92,11 +92,11 @@ func TestAlertGetAll(t *testing.T) {
 			CreatedAt: time.Now(),
 		},
 		{
-			ID:      uuid.New().String(),
-			Message: "Alert 2",
-			Time:    "14:00",
-			Date:    "2026-01-15",
-			Active:  true,
+			ID:        uuid.New().String(),
+			Message:   "Alert 2",
+			Time:      "14:00",
+			Date:      "2026-01-15",
+			Active:    true,
 			CreatedAt: time.Now(),
 		},
 		{
@@ -162,10 +162,10 @@ func TestAlertValidation(t *testing.T) {
 		{
 			name: "invalid time format",
 			alert: models.Alert{
-				ID:      uuid.New().String(),
-				Message: "Invalid time",
-				Time:    "25:00",
-				Active:  true,
+				ID:        uuid.New().String(),
+				Message:   "Invalid time",
+				Time:      "25:00",
+				Active:    true,
 				CreatedAt: time.Now(),
 			},
 			wantErr: true,
@@ -173,10 +173,10 @@ func TestAlertValidation(t *testing.T) {
 		{
 			name: "empty message",
 			alert: models.Alert{
-				ID:      uuid.New().String(),
-				Message: "",
-				Time:    "10:00",
-				Active:  true,
+				ID:        uuid.New().String(),
+				Message:   "",
+				Time:      "10:00",
+				Active:    true,
 				CreatedAt: time.Now(),
 			},
 			wantErr: true,

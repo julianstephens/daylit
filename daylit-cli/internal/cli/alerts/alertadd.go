@@ -44,9 +44,9 @@ func (c *AlertAddCmd) Validate() error {
 
 	// Validate recurrence type
 	validRecurrence := map[string]bool{
-		"daily":   true,
-		"weekly":  true,
-		"n_days":  true,
+		"daily":  true,
+		"weekly": true,
+		"n_days": true,
 	}
 	if !validRecurrence[c.Recurrence] {
 		return fmt.Errorf("invalid recurrence type: %s (must be daily, weekly, or n_days)", c.Recurrence)

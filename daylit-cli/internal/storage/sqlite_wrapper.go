@@ -149,11 +149,11 @@ func (s *SQLiteStore) DeleteOTEntry(day string) error           { return s.store
 func (s *SQLiteStore) RestoreOTEntry(day string) error          { return s.store.RestoreOTEntry(day) }
 
 // Alert methods
-func (s *SQLiteStore) AddAlert(alert models.Alert) error         { return s.store.AddAlert(alert) }
-func (s *SQLiteStore) GetAlert(id string) (models.Alert, error)  { return s.store.GetAlert(id) }
-func (s *SQLiteStore) GetAllAlerts() ([]models.Alert, error)     { return s.store.GetAllAlerts() }
-func (s *SQLiteStore) UpdateAlert(alert models.Alert) error      { return s.store.UpdateAlert(alert) }
-func (s *SQLiteStore) DeleteAlert(id string) error               { return s.store.DeleteAlert(id) }
+func (s *SQLiteStore) AddAlert(alert models.Alert) error        { return s.store.AddAlert(alert) }
+func (s *SQLiteStore) GetAlert(id string) (models.Alert, error) { return s.store.GetAlert(id) }
+func (s *SQLiteStore) GetAllAlerts() ([]models.Alert, error)    { return s.store.GetAllAlerts() }
+func (s *SQLiteStore) UpdateAlert(alert models.Alert) error     { return s.store.UpdateAlert(alert) }
+func (s *SQLiteStore) DeleteAlert(id string) error              { return s.store.DeleteAlert(id) }
 
 // Backup/Migration methods
 func (s *SQLiteStore) GetAllPlans() ([]models.DayPlan, error) { return s.store.GetAllPlans() }
