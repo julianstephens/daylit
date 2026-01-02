@@ -83,12 +83,12 @@ func CombineDateAndTime(dateStr, timeStr string, loc *time.Location) (time.Time,
 	if err != nil {
 		return time.Time{}, fmt.Errorf("invalid date format: %w", err)
 	}
-	
+
 	timeOfDay, err := time.Parse(constants.TimeFormat, timeStr)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("invalid time format: %w", err)
 	}
-	
+
 	return time.Date(
 		date.Year(), date.Month(), date.Day(),
 		timeOfDay.Hour(), timeOfDay.Minute(), 0, 0,
