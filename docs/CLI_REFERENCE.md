@@ -266,7 +266,7 @@ daylit optimize [flags]
 **How it works:**
 
 The optimizer analyzes feedback patterns:
-- **Too much feedback (>50%)**: Suggests reducing duration by 25% for longer tasks, or splitting shorter tasks (<30 min)
+- **Too much feedback (>50%)**: Suggests reducing duration by 25% for longer tasks, or splitting shorter tasks (30 minutes or less)
 - **Unnecessary feedback (≥3 instances or >40%)**: Suggests reducing frequency or removing the task
 - **Mixed feedback**: No optimization suggested; task is performing acceptably
 
