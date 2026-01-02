@@ -197,9 +197,11 @@ func newOTForm(fm *OTFormModel) *huh.Form {
 				Title("One Thing Title").
 				Value(&fm.Title).
 				Validate(func(s string) error {
-					if strings.TrimSpace(s) == "" {
+					trimmed := strings.TrimSpace(s)
+					if trimmed == "" {
 						return fmt.Errorf("title cannot be empty")
 					}
+					fm.Title = trimmed
 					return nil
 				}),
 			huh.NewText().
@@ -325,6 +327,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Handle Edit OT State
 	if m.state == StateEditOT {
 		if msg, ok := msg.(tea.KeyMsg); ok && msg.Type == tea.KeyEsc {
+			m.formError = "" // Clear error on cancel
 			m.state = StateOT
 			return m, nil
 		}
@@ -340,6 +343,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Save or update OT entry
 			today := time.Now().Format(constants.DateFormat)
 
+			// Trim whitespace from title and note
+			m.otForm.Title = strings.TrimSpace(m.otForm.Title)
+			m.otForm.Note = strings.TrimSpace(m.otForm.Note)
+
 			// Check if entry exists for today
 			existingEntry, err := m.store.GetOTEntry(today)
 			if err == nil && existingEntry.ID != "" {
@@ -348,11 +355,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				existingEntry.Note = m.otForm.Note
 				existingEntry.UpdatedAt = time.Now()
 				if err := m.store.UpdateOTEntry(existingEntry); err != nil {
-					// Stay in form state on error
+					// Store error and stay in form state to allow retry
+					m.formError = fmt.Sprintf("Failed to update OT: %v", err)
 					m.form.State = huh.StateNormal
 					return m, tea.Batch(cmds...)
 				}
-				m.otModel.SetEntry(&existingEntry)
+				// Create a persistent pointer to the entry
+				entryPtr := &existingEntry
+				m.otModel.SetEntry(entryPtr)
 			} else {
 				// Create new entry
 				newEntry := models.OTEntry{
@@ -364,14 +374,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					UpdatedAt: time.Now(),
 				}
 				if err := m.store.AddOTEntry(newEntry); err != nil {
-					// Stay in form state on error
+					// Store error and stay in form state to allow retry
+					m.formError = fmt.Sprintf("Failed to create OT: %v", err)
 					m.form.State = huh.StateNormal
 					return m, tea.Batch(cmds...)
 				}
-				m.otModel.SetEntry(&newEntry)
+				// Create a persistent pointer to the entry
+				entryPtr := &newEntry
+				m.otModel.SetEntry(entryPtr)
 			}
+			m.formError = "" // Clear any previous errors
 			m.state = StateOT
 		case huh.StateAborted:
+			m.formError = "" // Clear error on abort
 			m.state = StateOT
 		}
 		return m, tea.Batch(cmds...)
@@ -832,12 +847,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Handle OT messages
 	case ot.EditOTMsg:
 		today := time.Now().Format(constants.DateFormat)
-		existingEntry, _ := m.store.GetOTEntry(today)
+		existingEntry, err := m.store.GetOTEntry(today)
+
+		// Handle error explicitly - distinguish between "not found" and actual errors
+		if err != nil {
+			// If it's not a "not found" error, we might have a database issue
+			// For now, we'll initialize with empty values but could add error handling
+			existingEntry = models.OTEntry{}
+		}
 
 		m.otForm = &OTFormModel{
 			Title: existingEntry.Title,
 			Note:  existingEntry.Note,
 		}
+		m.formError = "" // Clear any previous form errors
 		m.form = newOTForm(m.otForm)
 		m.state = StateEditOT
 		return m, m.form.Init()

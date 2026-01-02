@@ -108,6 +108,7 @@ type Model struct {
 	planToDeleteDate    string
 	planToRestoreDate   string
 	planToOverwriteDate string
+	formError           string // Error message to display for form operations
 }
 
 func NewModel(store storage.Provider, sched *scheduler.Scheduler) Model {

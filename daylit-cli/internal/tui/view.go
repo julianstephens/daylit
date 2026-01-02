@@ -29,7 +29,18 @@ func (m Model) View() string {
 	case StateFeedback:
 		content = m.viewFeedback()
 	case StateEditing, StateAddHabit, StateEditOT, StateEditSettings:
-		content = m.form.View()
+		formContent := m.form.View()
+		if m.formError != "" {
+			errorStyle := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("196")).
+				Bold(true).
+				Padding(1, 0)
+			formContent = lipgloss.JoinVertical(lipgloss.Left,
+				errorStyle.Render("Error: "+m.formError),
+				formContent,
+			)
+		}
+		content = formContent
 	case StateConfirmDelete:
 		content = m.viewConfirmDelete()
 	case StateConfirmRestore:

@@ -123,5 +123,5 @@ func (m *Model) updateViewportContent() {
 	sections = append(sections, helpText)
 
 	content := lipgloss.JoinVertical(lipgloss.Left, sections...)
-	m.viewport.SetContent(lipgloss.NewStyle().Padding(2, 2).Render(content))
+	m.viewport.SetContent(lipgloss.NewStyle().Padding(0, 2).Render(content))
 }
