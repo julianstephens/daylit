@@ -272,7 +272,7 @@ The optimizer analyzes feedback patterns:
 
 **Modes:**
 
-1. **Dry-run mode** (default, `--dry-run`):
+1. **Dry-run mode** (default):
    - Shows suggestions without making any changes
    - Useful for reviewing what could be optimized
 
