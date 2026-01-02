@@ -22,8 +22,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git fetch --force origin refs/tags/$GITHUB_REF_NAME:refs/tags/$GITHUB_REF_NAME
-          git tag -l --format='%(subject)%0a%0a%(body)' $GITHUB_REF_NAME > release_notes.md
+          touch release_notes.md
+          if [ -f CHANGELOG.md ]; then
+            awk -v tag="## $GITHUB_REF_NAME" '
+              $0 ~ tag { flag = 1; next }
+              /^## / { if (flag) exit }
+              flag { print }
+            ' CHANGELOG.md | sed '/./,$!d' > release_notes.md
+          fi
+
+          if [ ! -s release_notes.md ]; then
+            git fetch --force origin refs/tags/$GITHUB_REF_NAME:refs/tags/$GITHUB_REF_NAME
+            git tag -l --format='%(subject)%0a%0a%(body)' $GITHUB_REF_NAME > release_notes.md
+          fi
+
           gh release create $GITHUB_REF_NAME --title "$GITHUB_REF_NAME" --notes-file release_notes.md --draft
 
   build-cli:
