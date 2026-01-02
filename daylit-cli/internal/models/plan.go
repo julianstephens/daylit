@@ -40,3 +40,14 @@ type DayPlan struct {
 	Slots      []Slot  `json:"slots"`
 	DeletedAt  *string `json:"deleted_at,omitempty"` // RFC3339 timestamp
 }
+
+// TaskFeedbackEntry represents a single feedback instance for a task
+type TaskFeedbackEntry struct {
+	Date           string         `json:"date"`            // YYYY-MM-DD format
+	TaskID         string         `json:"task_id"`         // Task identifier
+	Rating         FeedbackRating `json:"rating"`          // Feedback rating
+	Note           string         `json:"note,omitempty"`  // Optional feedback note
+	ScheduledDuration int         `json:"scheduled_duration"` // Duration in minutes as scheduled
+	ActualStart    string         `json:"actual_start"`    // HH:MM format
+	ActualEnd      string         `json:"actual_end"`      // HH:MM format
+}

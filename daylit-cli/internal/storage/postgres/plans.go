@@ -406,3 +406,77 @@ ORDER BY date, revision`)
 
 	return plans, nil
 }
+
+// GetTaskFeedbackHistory retrieves feedback history for a specific task
+func (s *Store) GetTaskFeedbackHistory(taskID string, limit int) ([]models.TaskFeedbackEntry, error) {
+	query := `
+		SELECT 
+			p.date,
+			s.task_id,
+			s.feedback_rating,
+			s.feedback_note,
+			s.start_time,
+			s.end_time
+		FROM slots s
+		JOIN plans p ON s.plan_date = p.date AND s.plan_revision = p.revision
+		WHERE s.task_id = $1
+			AND s.feedback_rating IS NOT NULL
+			AND s.feedback_rating != ''
+			AND s.deleted_at IS NULL
+			AND p.deleted_at IS NULL
+		ORDER BY p.date DESC
+		LIMIT $2
+	`
+
+	rows, err := s.db.Query(query, taskID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query feedback history: %w", err)
+	}
+	defer rows.Close()
+
+	var entries []models.TaskFeedbackEntry
+	for rows.Next() {
+		var entry models.TaskFeedbackEntry
+		var rating string
+		err := rows.Scan(
+			&entry.Date,
+			&entry.TaskID,
+			&rating,
+			&entry.Note,
+			&entry.ActualStart,
+			&entry.ActualEnd,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan feedback entry: %w", err)
+		}
+
+		entry.Rating = models.FeedbackRating(rating)
+		
+		// Calculate scheduled duration from start and end times
+		startMin, err := parseTimeToMinutes(entry.ActualStart)
+		if err == nil {
+			endMin, err := parseTimeToMinutes(entry.ActualEnd)
+			if err == nil {
+				entry.ScheduledDuration = endMin - startMin
+			}
+		}
+
+		entries = append(entries, entry)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating feedback rows: %w", err)
+	}
+
+	return entries, nil
+}
+
+// parseTimeToMinutes converts HH:MM format to minutes since midnight
+func parseTimeToMinutes(timeStr string) (int, error) {
+	var hour, min int
+	_, err := fmt.Sscanf(timeStr, "%d:%d", &hour, &min)
+	if err != nil {
+		return 0, err
+	}
+	return hour*60 + min, nil
+}

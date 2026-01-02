@@ -11,6 +11,7 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli/backups"
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli/habits"
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli/optimize"
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli/ot"
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli/plans"
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli/settings"
@@ -36,6 +37,7 @@ type CLI struct {
 	Plan     plans.PlanCmd      `cmd:"" help:"Generate day plans."`
 	Now      plans.NowCmd       `cmd:"" help:"Show current task."`
 	Feedback plans.FeedbackCmd  `cmd:"" help:"Provide feedback on a slot."`
+	Optimize optimize.OptimizeCmd `cmd:"" help:"Analyze feedback and suggest task optimizations."`
 	Day      plans.DayCmd       `cmd:"" help:"Show plan for a day."`
 	Debug    system.DebugCmd    `cmd:"" help:"Debug commands for troubleshooting."`
 	Validate system.ValidateCmd `cmd:"" help:"Validate tasks and plans for conflicts."`

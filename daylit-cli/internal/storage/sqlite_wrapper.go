@@ -154,3 +154,8 @@ func (s *SQLiteStore) GetAllHabitEntries() ([]models.HabitEntry, error) {
 	return s.store.GetAllHabitEntries()
 }
 func (s *SQLiteStore) GetAllOTEntries() ([]models.OTEntry, error) { return s.store.GetAllOTEntries() }
+
+// Feedback Analysis methods
+func (s *SQLiteStore) GetTaskFeedbackHistory(taskID string, limit int) ([]models.TaskFeedbackEntry, error) {
+	return s.store.GetTaskFeedbackHistory(taskID, limit)
+}
