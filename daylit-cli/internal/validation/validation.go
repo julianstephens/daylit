@@ -2,12 +2,12 @@ package validation
 
 import (
 	"fmt"
-	"math"
 	"sort"
 	"time"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
+	"github.com/julianstephens/daylit/daylit-cli/internal/utils"
 )
 
 // ConflictType represents the type of validation conflict
@@ -545,35 +545,7 @@ func recurrenceOverlaps(r1, r2 models.Recurrence) bool {
 }
 
 // taskScheduledOnDate checks if a task should be scheduled on the given date based on its recurrence pattern.
-// This mirrors the logic in scheduler.shouldScheduleTask to ensure consistency.
+// This uses the shared utility function to ensure consistency with the scheduler.
 func taskScheduledOnDate(task models.Task, date time.Time) bool {
-	switch task.Recurrence.Type {
-	case models.RecurrenceDaily:
-		return true
-	case models.RecurrenceWeekly:
-		if len(task.Recurrence.WeekdayMask) == 0 {
-			return false
-		}
-		for _, wd := range task.Recurrence.WeekdayMask {
-			if date.Weekday() == wd {
-				return true
-			}
-		}
-		return false
-	case models.RecurrenceNDays:
-		if task.LastDone == "" {
-			return true
-		}
-		lastDone, err := time.Parse(constants.DateFormat, task.LastDone)
-		if err != nil {
-			return false
-		}
-		// Use date-based arithmetic to avoid DST issues with explicit rounding
-		daysSince := int(math.Round(date.Sub(lastDone).Hours() / 24))
-		return daysSince >= task.Recurrence.IntervalDays
-	case models.RecurrenceAdHoc:
-		return false // Ad-hoc tasks are not automatically scheduled
-	default:
-		return false
-	}
+	return utils.ShouldScheduleTask(task, date)
 }

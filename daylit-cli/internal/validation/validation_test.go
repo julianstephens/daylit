@@ -931,47 +931,76 @@ func TestValidateTasksForDate_NDaysRecurrence(t *testing.T) {
 	// Task that should be done every 3 days, last done 5 days ago
 	lastDone := time.Now().AddDate(0, 0, -5).Format("2006-01-02")
 	nDaysTask := models.Task{
-		ID:       "1",
-		Name:     "Every 3 Days Task",
-		Active:   true,
-		Kind:     models.TaskKindFlexible,
-		LastDone: lastDone,
+		ID:         "1",
+		Name:       "Every 3 Days Appointment",
+		Active:     true,
+		Kind:       models.TaskKindAppointment,
+		FixedStart: "10:00",
+		FixedEnd:   "11:00",
+		LastDone:   lastDone,
 		Recurrence: models.Recurrence{
 			Type:         models.RecurrenceNDays,
 			IntervalDays: 3,
 		},
 	}
 
-	tasks := []models.Task{nDaysTask}
+	// Overlapping appointment to test conflict detection when in scope
+	overlappingTask := models.Task{
+		ID:         "2",
+		Name:       "Overlapping Appointment",
+		Active:     true,
+		Kind:       models.TaskKindAppointment,
+		FixedStart: "10:30",
+		FixedEnd:   "11:30",
+		Recurrence: models.Recurrence{
+			Type: models.RecurrenceDaily,
+		},
+	}
+
+	tasks := []models.Task{nDaysTask, overlappingTask}
 
 	// Should be in scope today (5 days since last done >= 3 day interval)
+	// and should detect conflict with overlapping task
 	today := time.Now()
 	result := validator.ValidateTasksForDate(tasks, &today)
-	// No conflicts expected, but task should be considered in scope
-	// (We can't directly test if it's in scope without conflicts, but we verify no errors)
-	if result.HasConflicts() {
-		t.Error("Unexpected conflicts for N-days task validation")
+	if !result.HasConflicts() {
+		t.Error("Expected conflict for overlapping N-days task that's in scope")
+	}
+
+	// Verify the conflict is about overlapping appointments
+	foundOverlap := false
+	for _, conflict := range result.Conflicts {
+		if conflict.Type == ConflictOverlappingFixedTasks {
+			foundOverlap = true
+			break
+		}
+	}
+	if !foundOverlap {
+		t.Error("Expected ConflictOverlappingFixedTasks conflict type")
 	}
 
 	// Task that should be done every 7 days, last done 2 days ago
 	recentLastDone := time.Now().AddDate(0, 0, -2).Format("2006-01-02")
 	nDaysTaskNotDue := models.Task{
-		ID:       "2",
-		Name:     "Every 7 Days Task",
-		Active:   true,
-		Kind:     models.TaskKindFlexible,
-		LastDone: recentLastDone,
+		ID:         "3",
+		Name:       "Every 7 Days Appointment",
+		Active:     true,
+		Kind:       models.TaskKindAppointment,
+		FixedStart: "10:00",
+		FixedEnd:   "11:00",
+		LastDone:   recentLastDone,
 		Recurrence: models.Recurrence{
 			Type:         models.RecurrenceNDays,
 			IntervalDays: 7,
 		},
 	}
 
-	tasks2 := []models.Task{nDaysTaskNotDue}
+	tasks2 := []models.Task{nDaysTaskNotDue, overlappingTask}
 
 	// Should NOT be in scope today (2 days since last done < 7 day interval)
+	// so no conflict should be detected even though times overlap
 	result2 := validator.ValidateTasksForDate(tasks2, &today)
 	if result2.HasConflicts() {
-		t.Error("Unexpected conflicts for N-days task that's not due")
+		t.Error("Unexpected conflicts for N-days task that's not due (should be out of scope)")
 	}
 }
