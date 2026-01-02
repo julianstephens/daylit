@@ -57,8 +57,8 @@ type CLI struct {
 		Task tasks.TaskRestoreCmd `cmd:"" help:"Restore a deleted task."`
 		Plan plans.PlanRestoreCmd `cmd:"" help:"Restore a deleted plan."`
 	} `cmd:"" help:"Restore deleted items."`
-	Habit   habits.HabitCmd      `cmd:"" help:"Manage habits and habit tracking."`
-	OT      ot.OTCmd             `cmd:"" help:"Manage Once-Today (OT) intentions."`
+	Habit   habits.HabitCmd `cmd:"" help:"Manage habits and habit tracking."`
+	OT      ot.OTCmd        `cmd:"" help:"Manage Once-Today (OT) intentions."`
 	Keyring struct {
 		Set    system.KeyringSetCmd    `cmd:"" help:"Store database connection string in OS keyring."`
 		Get    system.KeyringGetCmd    `cmd:"" help:"Retrieve database connection string from OS keyring."`
