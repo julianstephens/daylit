@@ -104,3 +104,36 @@ daylit restore plan <date>
 
 ### Technical Details
 Soft delete is implemented via `deleted_at` timestamp columns on tasks, plans, and slots tables.
+## Timezone Handling
+
+Daylit supports timezone-aware scheduling and time tracking to ensure consistent behavior when traveling or working across different timezones.
+
+### Configuration
+
+Users can configure their timezone preference through:
+- The TUI Settings tab (press 'e' to edit, navigate to the Timezone field)
+- The CLI: `daylit settings --timezone="America/New_York"`
+
+The timezone can be set to:
+- `Local` (default): Uses the system's local timezone
+- Any valid IANA timezone name (e.g., `America/New_York`, `Europe/London`, `Asia/Tokyo`, `UTC`)
+
+### How It Works
+
+1. **Date Determination**: When determining "today's date", daylit uses the configured timezone rather than just the system timezone
+2. **Time Storage**: Times are stored as strings (`HH:MM` for time-of-day, `YYYY-MM-DD` for dates) which are timezone-independent
+3. **Timestamps**: Full timestamps (like `created_at`, `last_sent`) are stored in RFC3339 format which includes timezone information
+4. **Scheduling**: When scheduling tasks and alerts, time windows are interpreted in the configured timezone
+
+### Use Cases
+
+- **Traveling**: If you travel from New York to London, you can update your timezone setting to `Europe/London` and daylit will correctly determine today's date and schedule times according to London time
+- **Remote Work**: If you work with a team in a different timezone, you can set your timezone to match theirs for consistent scheduling
+- **Consistency**: By explicitly setting your timezone, you ensure daylit behaves consistently even if your system timezone changes
+
+### Important Notes
+
+- Changing the timezone setting affects how "today" is determined going forward
+- Existing timestamps are preserved and will be interpreted in the context of the new timezone
+- The timezone setting does not retroactively change historical data - it only affects current and future date/time interpretations
+- When using `Local`, daylit will automatically adapt to system timezone changes (useful for travelers who adjust their system clock)

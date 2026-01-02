@@ -1163,3 +1163,105 @@ daylit ot restore
 # Restore specific day
 daylit ot restore --day 2025-12-30
 ```
+
+## `daylit settings`
+
+View and manage application settings.
+
+```bash
+daylit settings [flags]
+```
+
+**Flags:**
+- `--list`: List all current settings
+- `--timezone STRING`: Set timezone (IANA name, e.g., 'America/New_York', 'Europe/London', or 'Local' for system timezone)
+- `--notifications-enabled BOOL`: Enable or disable notifications
+- `--notify-block-start BOOL`: Enable block start notifications
+- `--notify-block-end BOOL`: Enable block end notifications
+- `--block-start-offset-min INT`: Minutes before block start to send notification
+- `--block-end-offset-min INT`: Minutes before block end to send notification
+- `--ot-prompt-on-empty BOOL`: Prompt when no OT entry exists for today
+- `--ot-strict-mode BOOL`: Strict mode - only one OT entry per day
+- `--ot-default-log-days INT`: Default number of days to show in OT log view
+
+### View Current Settings
+
+```bash
+daylit settings --list
+```
+
+**Example output:**
+
+```
+Current Settings:
+  Day Start:             07:00
+  Day End:               22:00
+  Default Block Min:     30
+  Timezone:              Local
+
+Once Today (OT) Settings:
+  Prompt On Empty:       true
+  Strict Mode:           true
+  Default Log Days:      14
+
+Notification Settings:
+  Notifications Enabled: true
+  Notify Block Start:    true
+  Notify Block End:      true
+  Block Start Offset:    5 min
+  Block End Offset:      5 min
+```
+
+### Update Settings
+
+```bash
+# Set timezone to America/New_York
+daylit settings --timezone="America/New_York"
+
+# Set timezone to UTC
+daylit settings --timezone="UTC"
+
+# Set timezone to system local timezone
+daylit settings --timezone="Local"
+
+# Disable notifications
+daylit settings --notifications-enabled=false
+
+# Change notification timing
+daylit settings --block-start-offset-min=10
+
+# Update OT settings
+daylit settings --ot-default-log-days=30
+```
+
+### Timezone Configuration
+
+The timezone setting controls how daylit interprets dates and times. This is particularly useful when:
+- You travel frequently and want daylit to respect your current timezone
+- You want to schedule tasks in a specific timezone different from your system timezone
+- You need consistent behavior across devices in different timezones
+
+**Supported values:**
+- `Local` (default): Uses your system's local timezone
+- IANA timezone names: `America/New_York`, `Europe/London`, `Asia/Tokyo`, `UTC`, etc.
+
+**Important notes:**
+- Changing the timezone affects how "today" is determined and when notifications are triggered
+- Existing timestamps and schedules are preserved and interpreted in the new timezone
+- Use the full IANA timezone name (e.g., `America/New_York` not `EST`)
+
+**Example:**
+
+```bash
+# View current timezone
+daylit settings --list | grep Timezone
+
+# Set timezone to New York
+daylit settings --timezone="America/New_York"
+
+# Set timezone to London
+daylit settings --timezone="Europe/London"
+
+# Reset to system timezone
+daylit settings --timezone="Local"
+```
