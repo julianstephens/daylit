@@ -84,7 +84,7 @@ func (fa *FeedbackAnalyzer) AnalyzeTask(task models.Task, feedbackLimit int) ([]
 	if tooMuchPercent > 50 {
 		// Calculate what the new duration would be if reduced by 25%
 		newDuration := int(float64(task.DurationMin) * 0.75)
-		
+
 		// If task is already at or near minimum (would reduce to <= 10 min), or is short (<= 30 min), suggest splitting
 		if newDuration <= 10 || task.DurationMin <= 30 {
 			optimizations = append(optimizations, Optimization{

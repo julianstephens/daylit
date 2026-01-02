@@ -168,7 +168,7 @@ func formatValue(value interface{}) string {
 			keys = append(keys, key)
 		}
 		sort.Strings(keys)
-		
+
 		var parts []string
 		for _, key := range keys {
 			parts = append(parts, fmt.Sprintf("%s=%v", key, v[key]))

@@ -53,56 +53,64 @@ func (m *mockStore) UpdateTask(task models.Task) error {
 }
 
 // Implement other storage.Provider methods as no-ops
-func (m *mockStore) Init() error                                                    { return nil }
-func (m *mockStore) Load() error                                                    { return nil }
-func (m *mockStore) Close() error                                                   { return nil }
-func (m *mockStore) GetSettings() (models.Settings, error)                          { return models.Settings{}, nil }
-func (m *mockStore) SaveSettings(models.Settings) error                             { return nil }
-func (m *mockStore) AddTask(models.Task) error                                      { return nil }
-func (m *mockStore) GetAllTasksIncludingDeleted() ([]models.Task, error)            { return nil, nil }
-func (m *mockStore) DeleteTask(id string) error                                     { return nil }
-func (m *mockStore) RestoreTask(id string) error                                    { return nil }
-func (m *mockStore) SavePlan(models.DayPlan) error                                  { return nil }
-func (m *mockStore) GetPlan(date string) (models.DayPlan, error)                    { return models.DayPlan{}, nil }
-func (m *mockStore) GetPlanRevision(date string, revision int) (models.DayPlan, error) { return models.DayPlan{}, nil }
-func (m *mockStore) GetLatestPlanRevision(date string) (models.DayPlan, error)      { return models.DayPlan{}, nil }
-func (m *mockStore) DeletePlan(date string) error                                   { return nil }
-func (m *mockStore) RestorePlan(date string) error                                  { return nil }
+func (m *mockStore) Init() error                                         { return nil }
+func (m *mockStore) Load() error                                         { return nil }
+func (m *mockStore) Close() error                                        { return nil }
+func (m *mockStore) GetSettings() (models.Settings, error)               { return models.Settings{}, nil }
+func (m *mockStore) SaveSettings(models.Settings) error                  { return nil }
+func (m *mockStore) AddTask(models.Task) error                           { return nil }
+func (m *mockStore) GetAllTasksIncludingDeleted() ([]models.Task, error) { return nil, nil }
+func (m *mockStore) DeleteTask(id string) error                          { return nil }
+func (m *mockStore) RestoreTask(id string) error                         { return nil }
+func (m *mockStore) SavePlan(models.DayPlan) error                       { return nil }
+func (m *mockStore) GetPlan(date string) (models.DayPlan, error)         { return models.DayPlan{}, nil }
+func (m *mockStore) GetPlanRevision(date string, revision int) (models.DayPlan, error) {
+	return models.DayPlan{}, nil
+}
+func (m *mockStore) GetLatestPlanRevision(date string) (models.DayPlan, error) {
+	return models.DayPlan{}, nil
+}
+func (m *mockStore) DeletePlan(date string) error  { return nil }
+func (m *mockStore) RestorePlan(date string) error { return nil }
 func (m *mockStore) UpdateSlotNotificationTimestamp(date string, revision int, startTime string, taskID string, notificationType string, timestamp string) error {
 	return nil
 }
-func (m *mockStore) AddHabit(models.Habit) error                                  { return nil }
-func (m *mockStore) GetHabit(id string) (models.Habit, error)                     { return models.Habit{}, nil }
-func (m *mockStore) GetHabitByName(name string) (models.Habit, error)             { return models.Habit{}, nil }
-func (m *mockStore) GetAllHabits(includeArchived, includeDeleted bool) ([]models.Habit, error) { return nil, nil }
-func (m *mockStore) UpdateHabit(models.Habit) error                               { return nil }
-func (m *mockStore) ArchiveHabit(id string) error                                 { return nil }
-func (m *mockStore) UnarchiveHabit(id string) error                               { return nil }
-func (m *mockStore) DeleteHabit(id string) error                                  { return nil }
-func (m *mockStore) RestoreHabit(id string) error                                 { return nil }
-func (m *mockStore) AddHabitEntry(models.HabitEntry) error                        { return nil }
-func (m *mockStore) GetHabitEntry(habitID, day string) (models.HabitEntry, error) { return models.HabitEntry{}, nil }
+func (m *mockStore) AddHabit(models.Habit) error                      { return nil }
+func (m *mockStore) GetHabit(id string) (models.Habit, error)         { return models.Habit{}, nil }
+func (m *mockStore) GetHabitByName(name string) (models.Habit, error) { return models.Habit{}, nil }
+func (m *mockStore) GetAllHabits(includeArchived, includeDeleted bool) ([]models.Habit, error) {
+	return nil, nil
+}
+func (m *mockStore) UpdateHabit(models.Habit) error        { return nil }
+func (m *mockStore) ArchiveHabit(id string) error          { return nil }
+func (m *mockStore) UnarchiveHabit(id string) error        { return nil }
+func (m *mockStore) DeleteHabit(id string) error           { return nil }
+func (m *mockStore) RestoreHabit(id string) error          { return nil }
+func (m *mockStore) AddHabitEntry(models.HabitEntry) error { return nil }
+func (m *mockStore) GetHabitEntry(habitID, day string) (models.HabitEntry, error) {
+	return models.HabitEntry{}, nil
+}
 func (m *mockStore) GetHabitEntriesForDay(day string) ([]models.HabitEntry, error) { return nil, nil }
 func (m *mockStore) GetHabitEntriesForHabit(habitID string, startDay, endDay string) ([]models.HabitEntry, error) {
 	return nil, nil
 }
-func (m *mockStore) UpdateHabitEntry(models.HabitEntry) error { return nil }
-func (m *mockStore) DeleteHabitEntry(id string) error         { return nil }
-func (m *mockStore) RestoreHabitEntry(id string) error        { return nil }
-func (m *mockStore) GetOTSettings() (models.OTSettings, error) { return models.OTSettings{}, nil }
-func (m *mockStore) SaveOTSettings(models.OTSettings) error   { return nil }
-func (m *mockStore) AddOTEntry(models.OTEntry) error          { return nil }
+func (m *mockStore) UpdateHabitEntry(models.HabitEntry) error      { return nil }
+func (m *mockStore) DeleteHabitEntry(id string) error              { return nil }
+func (m *mockStore) RestoreHabitEntry(id string) error             { return nil }
+func (m *mockStore) GetOTSettings() (models.OTSettings, error)     { return models.OTSettings{}, nil }
+func (m *mockStore) SaveOTSettings(models.OTSettings) error        { return nil }
+func (m *mockStore) AddOTEntry(models.OTEntry) error               { return nil }
 func (m *mockStore) GetOTEntry(day string) (models.OTEntry, error) { return models.OTEntry{}, nil }
 func (m *mockStore) GetOTEntries(startDay, endDay string, includeDeleted bool) ([]models.OTEntry, error) {
 	return nil, nil
 }
-func (m *mockStore) UpdateOTEntry(models.OTEntry) error { return nil }
-func (m *mockStore) DeleteOTEntry(day string) error     { return nil }
-func (m *mockStore) RestoreOTEntry(day string) error    { return nil }
-func (m *mockStore) GetAllPlans() ([]models.DayPlan, error) { return nil, nil }
+func (m *mockStore) UpdateOTEntry(models.OTEntry) error               { return nil }
+func (m *mockStore) DeleteOTEntry(day string) error                   { return nil }
+func (m *mockStore) RestoreOTEntry(day string) error                  { return nil }
+func (m *mockStore) GetAllPlans() ([]models.DayPlan, error)           { return nil, nil }
 func (m *mockStore) GetAllHabitEntries() ([]models.HabitEntry, error) { return nil, nil }
-func (m *mockStore) GetAllOTEntries() ([]models.OTEntry, error) { return nil, nil }
-func (m *mockStore) GetConfigPath() string                      { return "" }
+func (m *mockStore) GetAllOTEntries() ([]models.OTEntry, error)       { return nil, nil }
+func (m *mockStore) GetConfigPath() string                            { return "" }
 
 func TestApplyOptimization_ReduceDuration(t *testing.T) {
 	store := &mockStore{
