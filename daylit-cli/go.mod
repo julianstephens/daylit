@@ -21,6 +21,7 @@ require (
 	github.com/danieljoos/wincred v1.2.2 // indirect
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
+	github.com/natefinch/lumberjack v2.0.0+incompatible // indirect
 )
 
 require (
