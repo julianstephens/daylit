@@ -20,13 +20,15 @@ daylit tui
 daylit
 ```
 
-The TUI provides a dashboard with five main views:
+The TUI provides a dashboard with seven main views:
 
 1.  **Now**: Shows the current task and time.
 2.  **Plan**: Displays today's schedule. Press `g` to generate a plan if one doesn't exist.
 3.  **Tasks**: Lists all your tasks.
 4.  **Habits**: View and manage your daily habits.
-5.  **Settings**: View and edit application settings.
+5.  **OT**: View and manage Once-Today intentions.
+6.  **Alerts**: View and manage scheduled notifications.
+7.  **Settings**: View and edit application settings.
 
 **Key Bindings:**
 
@@ -34,9 +36,9 @@ The TUI provides a dashboard with five main views:
 -   `h` / `l`: Switch between tabs (Vim style).
 -   `j` / `k`: Navigate up/down in lists.
 -   `g`: Generate plan (in Plan tab).
--   `a`: Add task (in Tasks tab) or habit (in Habits tab).
--   `e`: Edit task (in Tasks tab) or settings (in Settings tab).
--   `d`: Delete task (in Tasks tab) or habit (in Habits tab).
+-   `a`: Add task (in Tasks tab), habit (in Habits tab), or alert (in Alerts tab).
+-   `e`: Edit task (in Tasks tab), OT (in OT tab), or settings (in Settings tab).
+-   `d`: Delete task (in Tasks tab), habit (in Habits tab), or alert (in Alerts tab).
 -   `m`: Mark habit as done (in Habits tab).
 -   `u`: Unmark habit (in Habits tab).
 -   `x`: Archive habit (in Habits tab).
@@ -772,6 +774,90 @@ daylit habit restore <name>
 ```bash
 daylit habit restore "Obsolete habit"
 ```
+
+
+## `daylit alert`
+
+Manage arbitrary scheduled notifications. Alerts let you set up reminders independent of your task schedule, perfect for recurring reminders like "Drink water", "Take medication", or one-time notifications like appointments.
+
+### `daylit alert add`
+
+Add a new alert notification.
+
+```bash
+daylit alert add MESSAGE --time TIME [flags]
+```
+
+**Arguments:**
+- `MESSAGE`: The alert message to display
+
+**Flags:**
+- `--time STRING` (required): Time for the alert in HH:MM format
+- `--date STRING`: Date for one-time alert in YYYY-MM-DD format
+- `--recurrence STRING`: Recurrence type for recurring alerts: `daily`, `weekly`, or `n_days`
+- `--interval N`: Interval for n_days recurrence (default: 1)
+- `--weekdays STRING`: Comma-separated weekdays for weekly recurrence (e.g., "mon,wed,fri")
+
+**Alert Types:**
+
+1. **One-time alert**: Specify `--date` for a single notification on a specific date
+2. **Recurring alert**: Specify `--recurrence` without `--date` for repeated notifications
+
+**Examples:**
+
+```bash
+# One-time alert
+daylit alert add "Doctor's Appointment" --time 14:30 --date 2026-01-15
+
+# Daily alert
+daylit alert add "Drink Water" --time 10:00 --recurrence daily
+
+# Weekly alert on specific days
+daylit alert add "Submit Timesheet" --time 16:45 --recurrence weekly --weekdays fri
+
+# Alert every 3 days
+daylit alert add "Water plants" --time 09:00 --recurrence n_days --interval 3
+```
+
+### `daylit alert list`
+
+List all configured alerts.
+
+```bash
+daylit alert list
+```
+
+Displays all alerts with their ID, message, time, recurrence pattern, and active status.
+
+**Example:**
+
+```bash
+daylit alert list
+```
+
+### `daylit alert delete`
+
+Delete an alert by its ID.
+
+```bash
+daylit alert delete <id>
+```
+
+**Arguments:**
+- `id`: The alert ID (shown in `daylit alert list`)
+
+**Example:**
+
+```bash
+daylit alert delete 53d25b70-cb40-4e64-ba23-0d2ff25b703d
+```
+
+**Notes:**
+
+- Alerts are checked by the `daylit notify` command, which should be run every minute (e.g., via cron)
+- Alerts respect the notification grace period setting
+- One-time alerts are automatically deactivated after they fire
+- Alerts are integrated into the TUI in the "Alerts" tab
 
 ## `daylit ot`
 

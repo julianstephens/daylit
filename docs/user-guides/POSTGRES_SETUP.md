@@ -6,7 +6,7 @@ This document describes how to set up and use the PostgreSQL storage backend for
 
 The PostgreSQL storage backend allows daylit to connect to a centralized PostgreSQL database server instead of using a local SQLite file. This is particularly useful when:
 
-- Running `daylit-cli` in WSL2 while `daylit-tray` runs on Windows (avoids file locking issues)
+- Running `daylit-cli` in WSL2 while `daylit-tray` runs on Windows (avoids file locking issues). **See the [Windows & WSL Setup Guide](WINDOWS_WSL_SETUP.md) for specific instructions on this configuration.**
 - Multiple clients need concurrent access to the same data
 - You want centralized database management and backups
 
