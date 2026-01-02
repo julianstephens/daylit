@@ -88,6 +88,11 @@ func (m *mockStore) GetAllPlans() ([]models.DayPlan, error)           { return n
 func (m *mockStore) GetAllHabitEntries() ([]models.HabitEntry, error) { return nil, nil }
 func (m *mockStore) GetAllOTEntries() ([]models.OTEntry, error)       { return nil, nil }
 func (m *mockStore) GetConfigPath() string                            { return "" }
+func (m *mockStore) AddAlert(models.Alert) error                      { return nil }
+func (m *mockStore) GetAlert(id string) (models.Alert, error)         { return models.Alert{}, nil }
+func (m *mockStore) GetAllAlerts() ([]models.Alert, error)            { return nil, nil }
+func (m *mockStore) UpdateAlert(models.Alert) error                   { return nil }
+func (m *mockStore) DeleteAlert(id string) error                      { return nil }
 
 func TestAnalyzeTask_NoFeedback(t *testing.T) {
 	store := &mockStore{
