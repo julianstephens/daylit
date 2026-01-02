@@ -848,10 +848,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.quitting = true
 			return m, tea.Quit
 		case key.Matches(msg, m.keys.Tab, m.keys.Right):
-			m.state = (m.state + 1) % 6 // Cycle through 6 main tabs
+			m.state = (m.state + 1) % NumMainTabs
 			return m, nil
 		case key.Matches(msg, m.keys.ShiftTab, m.keys.Left):
-			m.state = (m.state - 1 + 6) % 6
+			m.state = (m.state - 1 + NumMainTabs) % NumMainTabs
 			return m, nil
 		case key.Matches(msg, m.keys.Help):
 			m.help.ShowAll = !m.help.ShowAll

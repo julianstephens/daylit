@@ -42,6 +42,9 @@ const (
 	StateEditSettings
 )
 
+// NumMainTabs is the number of main navigation tabs in the TUI
+const NumMainTabs = 6 // Now, Plan, Tasks, Habits, OT, Settings
+
 type TaskFormModel struct {
 	Name       string
 	Duration   string
