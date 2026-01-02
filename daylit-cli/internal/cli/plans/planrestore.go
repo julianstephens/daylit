@@ -11,10 +11,6 @@ type PlanRestoreCmd struct {
 }
 
 func (c *PlanRestoreCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	if err := ctx.Store.RestorePlan(c.Date); err != nil {
 		return fmt.Errorf("failed to restore plan: %w", err)
 	}

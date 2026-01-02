@@ -13,10 +13,6 @@ type ValidateCmd struct {
 }
 
 func (cmd *ValidateCmd) Run(ctx *cli.Context) error {
-	// Load storage
-	if err := ctx.Store.Load(); err != nil {
-		return fmt.Errorf("failed to load storage: %w", err)
-	}
 	defer ctx.Store.Close()
 
 	// Get settings for day boundaries

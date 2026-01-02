@@ -7,6 +7,7 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
+	"github.com/julianstephens/daylit/daylit-cli/internal/utils"
 )
 
 type FeedbackCmd struct {
@@ -48,7 +49,7 @@ func (c *FeedbackCmd) Run(ctx *cli.Context) error {
 		slot := &plan.Slots[i]
 		if (slot.Status == models.SlotStatusAccepted || slot.Status == models.SlotStatusDone) &&
 			slot.Feedback == nil {
-			endMinutes, err := cli.ParseTimeToMinutes(slot.End)
+			endMinutes, err := utils.ParseTimeToMinutes(slot.End)
 			if err != nil {
 				// Skip slots with invalid end time format
 				continue

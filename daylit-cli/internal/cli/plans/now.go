@@ -6,15 +6,12 @@ import (
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
+	"github.com/julianstephens/daylit/daylit-cli/internal/utils"
 )
 
 type NowCmd struct{}
 
 func (c *NowCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	now := time.Now()
 	dateStr := now.Format("2006-01-02")
 	currentMinutes := now.Hour()*60 + now.Minute()
@@ -29,11 +26,11 @@ func (c *NowCmd) Run(ctx *cli.Context) error {
 	var currentSlot *models.Slot
 	for i := range plan.Slots {
 		if plan.Slots[i].Status == models.SlotStatusAccepted || plan.Slots[i].Status == models.SlotStatusDone {
-			startMinutes, err := cli.ParseTimeToMinutes(plan.Slots[i].Start)
+			startMinutes, err := utils.ParseTimeToMinutes(plan.Slots[i].Start)
 			if err != nil {
 				continue
 			}
-			endMinutes, err := cli.ParseTimeToMinutes(plan.Slots[i].End)
+			endMinutes, err := utils.ParseTimeToMinutes(plan.Slots[i].End)
 			if err != nil {
 				continue
 			}

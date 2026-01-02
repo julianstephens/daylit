@@ -2,13 +2,12 @@ package now
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
+	"github.com/julianstephens/daylit/daylit-cli/internal/utils"
 )
 
 var (
@@ -124,11 +123,11 @@ func (m Model) getCurrentSlot() *models.Slot {
 	for i := range m.Plan.Slots {
 		slot := &m.Plan.Slots[i]
 
-		startMinutes, err := parseTimeToMinutes(slot.Start)
+		startMinutes, err := utils.ParseTimeToMinutes(slot.Start)
 		if err != nil {
 			continue
 		}
-		endMinutes, err := parseTimeToMinutes(slot.End)
+		endMinutes, err := utils.ParseTimeToMinutes(slot.End)
 		if err != nil {
 			continue
 		}
@@ -138,20 +137,4 @@ func (m Model) getCurrentSlot() *models.Slot {
 		}
 	}
 	return nil
-}
-
-func parseTimeToMinutes(t string) (int, error) {
-	parts := strings.Split(t, ":")
-	if len(parts) != 2 {
-		return 0, fmt.Errorf("invalid time format")
-	}
-	h, err := strconv.Atoi(parts[0])
-	if err != nil {
-		return 0, err
-	}
-	m, err := strconv.Atoi(parts[1])
-	if err != nil {
-		return 0, err
-	}
-	return h*60 + m, nil
 }

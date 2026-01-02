@@ -4,19 +4,15 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
-
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/tui"
 )
 
 type TuiCmd struct{}
 
 func (c *TuiCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	// Perform automatic backup on TUI startup (after successful load)
 	ctx.PerformAutomaticBackup()
 

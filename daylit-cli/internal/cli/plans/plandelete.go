@@ -11,10 +11,6 @@ type PlanDeleteCmd struct {
 }
 
 func (c *PlanDeleteCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	// Check if plan exists first
 	_, err := ctx.Store.GetPlan(c.Date)
 	if err != nil {

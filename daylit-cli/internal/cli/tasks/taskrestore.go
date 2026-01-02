@@ -11,10 +11,6 @@ type TaskRestoreCmd struct {
 }
 
 func (c *TaskRestoreCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	if err := ctx.Store.RestoreTask(c.ID); err != nil {
 		return fmt.Errorf("failed to restore task: %w", err)
 	}

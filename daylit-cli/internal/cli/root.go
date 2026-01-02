@@ -92,23 +92,6 @@ func FormatRecurrence(rec models.Recurrence) string {
 	}
 }
 
-// ParseTimeToMinutes parses a "HH:MM" string into minutes from midnight
-func ParseTimeToMinutes(timeStr string) (int, error) {
-	parts := strings.Split(timeStr, ":")
-	if len(parts) != 2 {
-		return 0, fmt.Errorf("invalid time format: %q", timeStr)
-	}
-	hour, err := strconv.Atoi(parts[0])
-	if err != nil {
-		return 0, fmt.Errorf("invalid hour in %q: %w", timeStr, err)
-	}
-	minute, err := strconv.Atoi(parts[1])
-	if err != nil {
-		return 0, fmt.Errorf("invalid minute in %q: %w", timeStr, err)
-	}
-	return hour*60 + minute, nil
-}
-
 // CalculateSlotDuration returns the duration of a slot in minutes.
 // Returns 0 if the time format is invalid (which the caller should check).
 func CalculateSlotDuration(slot models.Slot) int {

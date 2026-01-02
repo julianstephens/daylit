@@ -15,10 +15,6 @@ type BackupCreateCmd struct{}
 
 func (c *BackupCreateCmd) Run(ctx *cli.Context) error {
 	// Perform a manual backup
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	mgr := backup.NewManager(ctx.Store.GetConfigPath())
 	backupPath, err := mgr.CreateBackup()
 	if err != nil {
@@ -32,10 +28,6 @@ func (c *BackupCreateCmd) Run(ctx *cli.Context) error {
 type BackupListCmd struct{}
 
 func (c *BackupListCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	mgr := backup.NewManager(ctx.Store.GetConfigPath())
 	backups, err := mgr.ListBackups()
 	if err != nil {
@@ -65,10 +57,6 @@ type BackupRestoreCmd struct {
 }
 
 func (c *BackupRestoreCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	mgr := backup.NewManager(ctx.Store.GetConfigPath())
 
 	// Determine the full path to the backup file

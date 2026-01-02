@@ -16,6 +16,7 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/tui/components/habits"
 	"github.com/julianstephens/daylit/daylit-cli/internal/tui/components/settings"
 	"github.com/julianstephens/daylit/daylit-cli/internal/tui/components/tasklist"
+	"github.com/julianstephens/daylit/daylit-cli/internal/utils"
 )
 
 func newEditForm(fm *TaskFormModel) *huh.Form {
@@ -186,22 +187,6 @@ func newSettingsForm(fm *SettingsFormModel) *huh.Form {
 				}),
 		),
 	).WithTheme(huh.ThemeDracula())
-}
-
-func parseTimeToMinutes(timeStr string) (int, error) {
-	parts := strings.Split(timeStr, ":")
-	if len(parts) != 2 {
-		return 0, fmt.Errorf("invalid time format: %q", timeStr)
-	}
-	hour, err := strconv.Atoi(parts[0])
-	if err != nil {
-		return 0, fmt.Errorf("invalid hour in %q: %w", timeStr, err)
-	}
-	minute, err := strconv.Atoi(parts[1])
-	if err != nil {
-		return 0, fmt.Errorf("invalid minute in %q: %w", timeStr, err)
-	}
-	return hour*60 + minute, nil
 }
 
 func calculateSlotDuration(slot models.Slot) int {
@@ -795,7 +780,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					slot := &plan.Slots[i]
 					if (slot.Status == models.SlotStatusAccepted || slot.Status == models.SlotStatusDone) &&
 						slot.Feedback == nil {
-						endMinutes, err := parseTimeToMinutes(slot.End)
+						endMinutes, err := utils.ParseTimeToMinutes(slot.End)
 						if err == nil && endMinutes <= currentMinutes {
 							targetSlotIdx = i
 							break

@@ -11,10 +11,6 @@ type TaskDeleteCmd struct {
 }
 
 func (c *TaskDeleteCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	// Check if task exists first
 	task, err := ctx.Store.GetTask(c.ID)
 	if err != nil {

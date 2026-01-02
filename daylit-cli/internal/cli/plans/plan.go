@@ -18,10 +18,6 @@ type PlanCmd struct {
 }
 
 func (c *PlanCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	// Perform automatic backup on plan invocation (after successful load)
 	ctx.PerformAutomaticBackup()
 

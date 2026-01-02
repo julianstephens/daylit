@@ -8,6 +8,7 @@ import (
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
+	"github.com/julianstephens/daylit/daylit-cli/internal/utils"
 )
 
 type Scheduler struct{}
@@ -30,11 +31,11 @@ func (s *Scheduler) GeneratePlan(date string, tasks []models.Task, dayStart, day
 	}
 
 	// Parse day boundaries
-	startTime, err := parseTime(dayStart)
+	startTime, err := utils.ParseTimeToMinutes(dayStart)
 	if err != nil {
 		return plan, fmt.Errorf("invalid day start time: %w", err)
 	}
-	endTime, err := parseTime(dayEnd)
+	endTime, err := utils.ParseTimeToMinutes(dayEnd)
 	if err != nil {
 		return plan, fmt.Errorf("invalid day end time: %w", err)
 	}
@@ -126,8 +127,8 @@ func (s *Scheduler) GeneratePlan(date string, tasks []models.Task, dayStart, day
 				placed = true
 
 				// Update blocks: remove current block and add up to 2 new blocks
-				slotStart, _ := parseTime(slot.Start)
-				slotEnd, _ := parseTime(slot.End)
+				slotStart, _ := utils.ParseTimeToMinutes(slot.Start)
+				slotEnd, _ := utils.ParseTimeToMinutes(slot.End)
 
 				// Remove the current block
 				freeBlocks = append(freeBlocks[:blockIdx], freeBlocks[blockIdx+1:]...)
@@ -170,14 +171,6 @@ func (s *Scheduler) GeneratePlan(date string, tasks []models.Task, dayStart, day
 type timeBlock struct {
 	start int // minutes from midnight
 	end   int // minutes from midnight
-}
-
-func parseTime(timeStr string) (int, error) {
-	t, err := time.Parse(constants.TimeFormat, timeStr)
-	if err != nil {
-		return 0, err
-	}
-	return t.Hour()*60 + t.Minute(), nil
 }
 
 func formatTime(minutes int) string {
@@ -252,11 +245,11 @@ func findFreeBlocks(dayStart, dayEnd int, fixedSlots []models.Slot) []timeBlock 
 	currentStart := dayStart
 
 	for _, slot := range fixedSlots {
-		slotStart, err := parseTime(slot.Start)
+		slotStart, err := utils.ParseTimeToMinutes(slot.Start)
 		if err != nil {
 			continue
 		}
-		slotEnd, err := parseTime(slot.End)
+		slotEnd, err := utils.ParseTimeToMinutes(slot.End)
 		if err != nil {
 			continue
 		}
@@ -285,14 +278,14 @@ func canScheduleInBlock(task models.Task, block timeBlock) bool {
 
 	// Check earliest/latest constraints
 	if task.EarliestStart != "" {
-		earliest, err := parseTime(task.EarliestStart)
+		earliest, err := utils.ParseTimeToMinutes(task.EarliestStart)
 		if err == nil && block.end <= earliest {
 			return false
 		}
 	}
 
 	if task.LatestEnd != "" {
-		latest, err := parseTime(task.LatestEnd)
+		latest, err := utils.ParseTimeToMinutes(task.LatestEnd)
 		if err == nil && block.start >= latest {
 			return false
 		}
@@ -306,7 +299,7 @@ func placeTaskInBlock(task models.Task, block timeBlock) (models.Slot, bool) {
 	startTime := block.start
 
 	if task.EarliestStart != "" {
-		earliest, err := parseTime(task.EarliestStart)
+		earliest, err := utils.ParseTimeToMinutes(task.EarliestStart)
 		if err == nil && earliest > startTime {
 			startTime = earliest
 		}
@@ -317,7 +310,7 @@ func placeTaskInBlock(task models.Task, block timeBlock) (models.Slot, bool) {
 
 	// Check if it fits within latest end constraint
 	if task.LatestEnd != "" {
-		latest, err := parseTime(task.LatestEnd)
+		latest, err := utils.ParseTimeToMinutes(task.LatestEnd)
 		if err == nil && endTime > latest {
 			return models.Slot{}, false
 		}
