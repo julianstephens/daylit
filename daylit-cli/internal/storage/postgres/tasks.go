@@ -17,19 +17,21 @@ func (s *Store) AddTask(task models.Task) error {
 func (s *Store) GetTask(id string) (models.Task, error) {
 	row := s.db.QueryRow(`
 SELECT id, name, kind, duration_min, earliest_start, latest_end, fixed_start, fixed_end,
-       recurrence_type, recurrence_interval, recurrence_weekdays, priority, energy_band,
-       active, last_done, success_streak, avg_actual_duration, deleted_at
+       recurrence_type, recurrence_interval, recurrence_weekdays, recurrence_month_day,
+       recurrence_week_occurrence, recurrence_month, recurrence_day_of_week,
+       priority, energy_band, active, last_done, success_streak, avg_actual_duration, deleted_at
 FROM tasks WHERE id = $1 AND deleted_at IS NULL`, id)
 
 	var t models.Task
 	var recType, recWeekdays, energyBand string
 	var active bool
 	var deletedAt sql.NullString
+	var recMonthDay, recWeekOccurrence, recMonth, recDayOfWeek sql.NullInt64
 
 	err := row.Scan(
 		&t.ID, &t.Name, &t.Kind, &t.DurationMin, &t.EarliestStart, &t.LatestEnd, &t.FixedStart, &t.FixedEnd,
-		&recType, &t.Recurrence.IntervalDays, &recWeekdays, &t.Priority, &energyBand,
-		&active, &t.LastDone, &t.SuccessStreak, &t.AvgActualDurationMin, &deletedAt,
+		&recType, &t.Recurrence.IntervalDays, &recWeekdays, &recMonthDay, &recWeekOccurrence, &recMonth, &recDayOfWeek,
+		&t.Priority, &energyBand, &active, &t.LastDone, &t.SuccessStreak, &t.AvgActualDurationMin, &deletedAt,
 	)
 	if err != nil {
 		return models.Task{}, err
@@ -38,6 +40,19 @@ FROM tasks WHERE id = $1 AND deleted_at IS NULL`, id)
 	t.Recurrence.Type = constants.RecurrenceType(recType)
 	t.EnergyBand = constants.EnergyBand(energyBand)
 	t.Active = active
+
+	if recMonthDay.Valid {
+		t.Recurrence.MonthDay = int(recMonthDay.Int64)
+	}
+	if recWeekOccurrence.Valid {
+		t.Recurrence.WeekOccurrence = int(recWeekOccurrence.Int64)
+	}
+	if recMonth.Valid {
+		t.Recurrence.Month = int(recMonth.Int64)
+	}
+	if recDayOfWeek.Valid {
+		t.Recurrence.DayOfWeekInMonth = time.Weekday(recDayOfWeek.Int64)
+	}
 
 	if deletedAt.Valid {
 		t.DeletedAt = &deletedAt.String
@@ -58,8 +73,9 @@ FROM tasks WHERE id = $1 AND deleted_at IS NULL`, id)
 func (s *Store) GetAllTasks() ([]models.Task, error) {
 	rows, err := s.db.Query(`
 SELECT id, name, kind, duration_min, earliest_start, latest_end, fixed_start, fixed_end,
-       recurrence_type, recurrence_interval, recurrence_weekdays, priority, energy_band,
-       active, last_done, success_streak, avg_actual_duration, deleted_at
+       recurrence_type, recurrence_interval, recurrence_weekdays, recurrence_month_day,
+       recurrence_week_occurrence, recurrence_month, recurrence_day_of_week,
+       priority, energy_band, active, last_done, success_streak, avg_actual_duration, deleted_at
 FROM tasks WHERE deleted_at IS NULL`)
 	if err != nil {
 		return nil, err
@@ -72,11 +88,12 @@ FROM tasks WHERE deleted_at IS NULL`)
 		var recType, recWeekdays, energyBand string
 		var active bool
 		var deletedAt sql.NullString
+		var recMonthDay, recWeekOccurrence, recMonth, recDayOfWeek sql.NullInt64
 
 		err := rows.Scan(
 			&t.ID, &t.Name, &t.Kind, &t.DurationMin, &t.EarliestStart, &t.LatestEnd, &t.FixedStart, &t.FixedEnd,
-			&recType, &t.Recurrence.IntervalDays, &recWeekdays, &t.Priority, &energyBand,
-			&active, &t.LastDone, &t.SuccessStreak, &t.AvgActualDurationMin, &deletedAt,
+			&recType, &t.Recurrence.IntervalDays, &recWeekdays, &recMonthDay, &recWeekOccurrence, &recMonth, &recDayOfWeek,
+			&t.Priority, &energyBand, &active, &t.LastDone, &t.SuccessStreak, &t.AvgActualDurationMin, &deletedAt,
 		)
 		if err != nil {
 			return nil, err
@@ -85,6 +102,19 @@ FROM tasks WHERE deleted_at IS NULL`)
 		t.Recurrence.Type = constants.RecurrenceType(recType)
 		t.EnergyBand = constants.EnergyBand(energyBand)
 		t.Active = active
+
+		if recMonthDay.Valid {
+			t.Recurrence.MonthDay = int(recMonthDay.Int64)
+		}
+		if recWeekOccurrence.Valid {
+			t.Recurrence.WeekOccurrence = int(recWeekOccurrence.Int64)
+		}
+		if recMonth.Valid {
+			t.Recurrence.Month = int(recMonth.Int64)
+		}
+		if recDayOfWeek.Valid {
+			t.Recurrence.DayOfWeekInMonth = time.Weekday(recDayOfWeek.Int64)
+		}
 
 		if deletedAt.Valid {
 			t.DeletedAt = &deletedAt.String
@@ -107,8 +137,9 @@ FROM tasks WHERE deleted_at IS NULL`)
 func (s *Store) GetAllTasksIncludingDeleted() ([]models.Task, error) {
 	rows, err := s.db.Query(`
 SELECT id, name, kind, duration_min, earliest_start, latest_end, fixed_start, fixed_end,
-       recurrence_type, recurrence_interval, recurrence_weekdays, priority, energy_band,
-       active, last_done, success_streak, avg_actual_duration, deleted_at
+       recurrence_type, recurrence_interval, recurrence_weekdays, recurrence_month_day,
+       recurrence_week_occurrence, recurrence_month, recurrence_day_of_week,
+       priority, energy_band, active, last_done, success_streak, avg_actual_duration, deleted_at
 FROM tasks`)
 	if err != nil {
 		return nil, err
@@ -121,14 +152,15 @@ FROM tasks`)
 		var recType, recWeekdays, energyBand sql.NullString
 		var earliestStart, latestEnd, fixedStart, fixedEnd, lastDone sql.NullString
 		var durationMin, recurrenceInterval, priority, successStreak sql.NullInt64
+		var recMonthDay, recWeekOccurrence, recMonth, recDayOfWeek sql.NullInt64
 		var avgActualDuration sql.NullFloat64
 		var active bool
 		var deletedAt sql.NullString
 
 		err := rows.Scan(
 			&t.ID, &t.Name, &t.Kind, &durationMin, &earliestStart, &latestEnd, &fixedStart, &fixedEnd,
-			&recType, &recurrenceInterval, &recWeekdays, &priority, &energyBand,
-			&active, &lastDone, &successStreak, &avgActualDuration, &deletedAt,
+			&recType, &recurrenceInterval, &recWeekdays, &recMonthDay, &recWeekOccurrence, &recMonth, &recDayOfWeek,
+			&priority, &energyBand, &active, &lastDone, &successStreak, &avgActualDuration, &deletedAt,
 		)
 		if err != nil {
 			return nil, err
@@ -139,6 +171,18 @@ FROM tasks`)
 		}
 		if recurrenceInterval.Valid {
 			t.Recurrence.IntervalDays = int(recurrenceInterval.Int64)
+		}
+		if recMonthDay.Valid {
+			t.Recurrence.MonthDay = int(recMonthDay.Int64)
+		}
+		if recWeekOccurrence.Valid {
+			t.Recurrence.WeekOccurrence = int(recWeekOccurrence.Int64)
+		}
+		if recMonth.Valid {
+			t.Recurrence.Month = int(recMonth.Int64)
+		}
+		if recDayOfWeek.Valid {
+			t.Recurrence.DayOfWeekInMonth = time.Weekday(recDayOfWeek.Int64)
 		}
 		if priority.Valid {
 			t.Priority = int(priority.Int64)
@@ -201,13 +245,28 @@ func (s *Store) UpdateTask(task models.Task) error {
 		deletedAt = sql.NullString{String: *task.DeletedAt, Valid: true}
 	}
 
+	var recMonthDay, recWeekOccurrence, recMonth, recDayOfWeek sql.NullInt64
+	if task.Recurrence.MonthDay != 0 {
+		recMonthDay = sql.NullInt64{Int64: int64(task.Recurrence.MonthDay), Valid: true}
+	}
+	if task.Recurrence.WeekOccurrence != 0 {
+		recWeekOccurrence = sql.NullInt64{Int64: int64(task.Recurrence.WeekOccurrence), Valid: true}
+	}
+	if task.Recurrence.Month != 0 {
+		recMonth = sql.NullInt64{Int64: int64(task.Recurrence.Month), Valid: true}
+	}
+	if task.Recurrence.Type == constants.RecurrenceMonthlyDay {
+		recDayOfWeek = sql.NullInt64{Int64: int64(task.Recurrence.DayOfWeekInMonth), Valid: true}
+	}
+
 	// PostgreSQL uses INSERT ... ON CONFLICT for upsert
 	_, err = s.db.Exec(`
 INSERT INTO tasks (
 id, name, kind, duration_min, earliest_start, latest_end, fixed_start, fixed_end,
-recurrence_type, recurrence_interval, recurrence_weekdays, priority, energy_band,
-active, last_done, success_streak, avg_actual_duration, deleted_at
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+recurrence_type, recurrence_interval, recurrence_weekdays, recurrence_month_day,
+recurrence_week_occurrence, recurrence_month, recurrence_day_of_week,
+priority, energy_band, active, last_done, success_streak, avg_actual_duration, deleted_at
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
 ON CONFLICT (id) DO UPDATE SET
 name = EXCLUDED.name,
 kind = EXCLUDED.kind,
@@ -219,6 +278,10 @@ fixed_end = EXCLUDED.fixed_end,
 recurrence_type = EXCLUDED.recurrence_type,
 recurrence_interval = EXCLUDED.recurrence_interval,
 recurrence_weekdays = EXCLUDED.recurrence_weekdays,
+recurrence_month_day = EXCLUDED.recurrence_month_day,
+recurrence_week_occurrence = EXCLUDED.recurrence_week_occurrence,
+recurrence_month = EXCLUDED.recurrence_month,
+recurrence_day_of_week = EXCLUDED.recurrence_day_of_week,
 priority = EXCLUDED.priority,
 energy_band = EXCLUDED.energy_band,
 active = EXCLUDED.active,
@@ -227,8 +290,9 @@ success_streak = EXCLUDED.success_streak,
 avg_actual_duration = EXCLUDED.avg_actual_duration,
 deleted_at = EXCLUDED.deleted_at`,
 		task.ID, task.Name, task.Kind, task.DurationMin, task.EarliestStart, task.LatestEnd, task.FixedStart, task.FixedEnd,
-		task.Recurrence.Type, task.Recurrence.IntervalDays, string(weekdaysJSON), task.Priority, task.EnergyBand,
-		task.Active, task.LastDone, task.SuccessStreak, task.AvgActualDurationMin, deletedAt,
+		task.Recurrence.Type, task.Recurrence.IntervalDays, string(weekdaysJSON), recMonthDay,
+		recWeekOccurrence, recMonth, recDayOfWeek,
+		task.Priority, task.EnergyBand, task.Active, task.LastDone, task.SuccessStreak, task.AvgActualDurationMin, deletedAt,
 	)
 	return err
 }

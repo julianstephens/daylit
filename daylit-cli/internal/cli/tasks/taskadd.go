@@ -12,16 +12,20 @@ import (
 )
 
 type TaskAddCmd struct {
-	Name       string `arg:"" help:"Task name."`
-	Duration   int    `short:"d" help:"Duration in minutes." required:""`
-	Recurrence string `short:"r" help:"Recurrence type (daily|weekly|n_days|ad_hoc)." default:"ad_hoc"`
-	Interval   int    `short:"i" help:"Interval for n_days recurrence." default:"1"`
-	Weekdays   string `short:"w" help:"Comma-separated weekdays for weekly recurrence."`
-	Earliest   string `short:"s" help:"Earliest start time (HH:MM)."`
-	Latest     string `short:"e" help:"Latest end time (HH:MM)."`
-	FixedStart string `short:"S" help:"Fixed start time for appointments (HH:MM)."`
-	FixedEnd   string `short:"E" help:"Fixed end time for appointments (HH:MM)."`
-	Priority   int    `short:"p" help:"Priority (1-5, lower is higher priority)." default:"3"`
+	Name             string `arg:"" help:"Task name."`
+	Duration         int    `short:"d" help:"Duration in minutes." required:""`
+	Recurrence       string `short:"r" help:"Recurrence type (daily|weekly|n_days|ad_hoc|monthly_date|monthly_day|yearly|weekdays)." default:"ad_hoc"`
+	Interval         int    `short:"i" help:"Interval for n_days recurrence." default:"1"`
+	Weekdays         string `short:"w" help:"Comma-separated weekdays for weekly recurrence."`
+	MonthDay         int    `help:"Day of month (1-31) for monthly_date or yearly recurrence."`
+	Month            int    `help:"Month (1-12) for yearly recurrence."`
+	WeekOccurrence   int    `help:"Week occurrence for monthly_day recurrence (-1=last, 1=first, 2=second, etc.)."`
+	DayOfWeekInMonth string `help:"Day of week for monthly_day recurrence (e.g., 'monday', 'friday')."`
+	Earliest         string `short:"s" help:"Earliest start time (HH:MM)."`
+	Latest           string `short:"e" help:"Latest end time (HH:MM)."`
+	FixedStart       string `short:"S" help:"Fixed start time for appointments (HH:MM)."`
+	FixedEnd         string `short:"E" help:"Fixed end time for appointments (HH:MM)."`
+	Priority         int    `short:"p" help:"Priority (1-5, lower is higher priority)." default:"3"`
 }
 
 func (c *TaskAddCmd) Validate() error {
@@ -43,6 +47,33 @@ func (c *TaskAddCmd) Validate() error {
 	// Validate weekly recurrence has weekdays
 	if c.Recurrence == "weekly" && c.Weekdays == "" {
 		return fmt.Errorf("weekdays must be specified for weekly recurrence")
+	}
+
+	// Validate monthly_date recurrence
+	if c.Recurrence == "monthly_date" {
+		if c.MonthDay < 1 || c.MonthDay > 31 {
+			return fmt.Errorf("month_day must be between 1 and 31 for monthly_date recurrence")
+		}
+	}
+
+	// Validate monthly_day recurrence
+	if c.Recurrence == "monthly_day" {
+		if c.WeekOccurrence < -1 || c.WeekOccurrence == 0 || c.WeekOccurrence > 5 {
+			return fmt.Errorf("week_occurrence must be -1 (last) or 1-5 for monthly_day recurrence")
+		}
+		if c.DayOfWeekInMonth == "" {
+			return fmt.Errorf("day_of_week_in_month must be specified for monthly_day recurrence")
+		}
+	}
+
+	// Validate yearly recurrence
+	if c.Recurrence == "yearly" {
+		if c.Month < 1 || c.Month > 12 {
+			return fmt.Errorf("month must be between 1 and 12 for yearly recurrence")
+		}
+		if c.MonthDay < 1 || c.MonthDay > 31 {
+			return fmt.Errorf("month_day must be between 1 and 31 for yearly recurrence")
+		}
 	}
 
 	// Validate time formats
@@ -112,6 +143,14 @@ func (c *TaskAddCmd) Run(ctx *cli.Context) error {
 		recType = constants.RecurrenceNDays
 	case "ad_hoc":
 		recType = constants.RecurrenceAdHoc
+	case "monthly_date":
+		recType = constants.RecurrenceMonthlyDate
+	case "monthly_day":
+		recType = constants.RecurrenceMonthlyDay
+	case "yearly":
+		recType = constants.RecurrenceYearly
+	case "weekdays":
+		recType = constants.RecurrenceWeekdays
 	default:
 		return fmt.Errorf("invalid recurrence type: %s", c.Recurrence)
 	}
@@ -128,6 +167,27 @@ func (c *TaskAddCmd) Run(ctx *cli.Context) error {
 			return err
 		}
 		rec.WeekdayMask = wds
+	}
+
+	// Set fields for monthly_date recurrence
+	if recType == constants.RecurrenceMonthlyDate {
+		rec.MonthDay = c.MonthDay
+	}
+
+	// Set fields for monthly_day recurrence
+	if recType == constants.RecurrenceMonthlyDay {
+		rec.WeekOccurrence = c.WeekOccurrence
+		wd, err := cli.ParseWeekday(c.DayOfWeekInMonth)
+		if err != nil {
+			return fmt.Errorf("invalid day_of_week_in_month: %w", err)
+		}
+		rec.DayOfWeekInMonth = wd
+	}
+
+	// Set fields for yearly recurrence
+	if recType == constants.RecurrenceYearly {
+		rec.Month = c.Month
+		rec.MonthDay = c.MonthDay
 	}
 
 	// Create task
