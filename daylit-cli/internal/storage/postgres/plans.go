@@ -451,7 +451,7 @@ func (s *Store) GetTaskFeedbackHistory(taskID string, limit int) ([]models.TaskF
 		}
 
 		entry.Rating = models.FeedbackRating(rating)
-		
+
 		// Calculate scheduled duration from start and end times
 		startMin, err := parseTimeToMinutes(entry.ActualStart)
 		if err == nil {

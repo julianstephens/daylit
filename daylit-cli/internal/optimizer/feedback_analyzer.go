@@ -11,21 +11,21 @@ import (
 type OptimizationType string
 
 const (
-	OptimizationReduceDuration OptimizationType = "reduce_duration"
+	OptimizationReduceDuration   OptimizationType = "reduce_duration"
 	OptimizationIncreaseDuration OptimizationType = "increase_duration"
-	OptimizationSplitTask      OptimizationType = "split_task"
-	OptimizationRemoveTask     OptimizationType = "remove_task"
-	OptimizationReduceFrequency OptimizationType = "reduce_frequency"
+	OptimizationSplitTask        OptimizationType = "split_task"
+	OptimizationRemoveTask       OptimizationType = "remove_task"
+	OptimizationReduceFrequency  OptimizationType = "reduce_frequency"
 )
 
 // Optimization represents a suggested optimization for a task
 type Optimization struct {
-	TaskID      string           `json:"task_id"`
-	TaskName    string           `json:"task_name"`
-	Type        OptimizationType `json:"type"`
-	Reason      string           `json:"reason"`
-	CurrentValue interface{}     `json:"current_value,omitempty"`
-	SuggestedValue interface{}   `json:"suggested_value,omitempty"`
+	TaskID         string           `json:"task_id"`
+	TaskName       string           `json:"task_name"`
+	Type           OptimizationType `json:"type"`
+	Reason         string           `json:"reason"`
+	CurrentValue   interface{}      `json:"current_value,omitempty"`
+	SuggestedValue interface{}      `json:"suggested_value,omitempty"`
 }
 
 // FeedbackAnalyzer analyzes task feedback and suggests optimizations
@@ -111,7 +111,8 @@ func (fa *FeedbackAnalyzer) AnalyzeTask(task models.Task, feedbackLimit int) ([]
 	// If >= 3 instances of "unnecessary" feedback or >40% unnecessary, suggest removal or frequency reduction
 	if unnecessaryCount >= 3 || unnecessaryPercent > 40 {
 		// If it's a recurring task, suggest reducing frequency
-		if task.Recurrence.Type == models.RecurrenceNDays {
+		switch task.Recurrence.Type {
+		case models.RecurrenceNDays:
 			newInterval := task.Recurrence.IntervalDays + 2
 			optimizations = append(optimizations, Optimization{
 				TaskID:   task.ID,
@@ -125,7 +126,7 @@ func (fa *FeedbackAnalyzer) AnalyzeTask(task models.Task, feedbackLimit int) ([]
 					"interval_days": newInterval,
 				},
 			})
-		} else if task.Recurrence.Type == models.RecurrenceDaily {
+		case models.RecurrenceDaily:
 			optimizations = append(optimizations, Optimization{
 				TaskID:   task.ID,
 				TaskName: task.Name,
@@ -135,11 +136,11 @@ func (fa *FeedbackAnalyzer) AnalyzeTask(task models.Task, feedbackLimit int) ([]
 					"recurrence": "daily",
 				},
 				SuggestedValue: map[string]interface{}{
-					"recurrence":   "n_days",
+					"recurrence":    "n_days",
 					"interval_days": 2,
 				},
 			})
-		} else {
+		default:
 			// For other types, suggest removal
 			optimizations = append(optimizations, Optimization{
 				TaskID:   task.ID,

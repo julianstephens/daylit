@@ -11,10 +11,10 @@ import (
 )
 
 type OptimizeCmd struct {
-	DryRun         bool `help:"Show optimization suggestions without applying them (report mode)." default:"false"`
-	FeedbackLimit  int  `help:"Number of recent feedback entries to analyze per task." default:"10"`
-	Interactive    bool `help:"Interactively review and apply optimizations." default:"false"`
-	AutoApply      bool `help:"Automatically apply all optimizations without confirmation." default:"false"`
+	DryRun        bool `help:"Show optimization suggestions without applying them (report mode)." default:"false"`
+	FeedbackLimit int  `help:"Number of recent feedback entries to analyze per task." default:"10"`
+	Interactive   bool `help:"Interactively review and apply optimizations." default:"false"`
+	AutoApply     bool `help:"Automatically apply all optimizations without confirmation." default:"false"`
 }
 
 func (c *OptimizeCmd) Run(ctx *cli.Context) error {
@@ -75,7 +75,7 @@ func (c *OptimizeCmd) Run(ctx *cli.Context) error {
 	fmt.Println("  - Use --interactive to review and select which to apply")
 	fmt.Println("  - Use --auto-apply to apply all automatically")
 	fmt.Println("  - Use --dry-run to just see the suggestions (current mode)")
-	
+
 	return nil
 }
 
