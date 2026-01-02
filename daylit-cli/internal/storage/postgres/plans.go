@@ -3,6 +3,7 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
@@ -165,7 +166,7 @@ func (s *Store) GetLatestPlanRevision(date string) (models.DayPlan, error) {
 		return models.DayPlan{}, err
 	}
 
-	return s.getPlanByRevision(date, revision, acceptedAt, sql.NullString{})
+	return s.getPlanByRevision(date, revision, acceptedAt)
 }
 
 func (s *Store) GetPlanRevision(date string, revision int) (models.DayPlan, error) {
@@ -183,10 +184,14 @@ func (s *Store) GetPlanRevision(date string, revision int) (models.DayPlan, erro
 		return models.DayPlan{}, err
 	}
 
-	return s.getPlanByRevision(date, revision, acceptedAt, deletedAt)
+	if deletedAt.Valid {
+		return models.DayPlan{}, fmt.Errorf("plan for date %s revision %d has been deleted; use 'daylit restore plan %s' to restore it", date, revision, date)
+	}
+
+	return s.getPlanByRevision(date, revision, acceptedAt)
 }
 
-func (s *Store) getPlanByRevision(date string, revision int, acceptedAt, deletedAt sql.NullString) (models.DayPlan, error) {
+func (s *Store) getPlanByRevision(date string, revision int, acceptedAt sql.NullString) (models.DayPlan, error) {
 	plan := models.DayPlan{
 		Date:     date,
 		Revision: revision,
@@ -455,9 +460,13 @@ func (s *Store) GetTaskFeedbackHistory(taskID string, limit int) ([]models.TaskF
 
 		// Calculate actual duration from start and end times
 		startMin, err := utils.ParseTimeToMinutes(entry.ActualStart)
-		if err == nil {
+		if err != nil {
+			log.Printf("Warning: failed to parse start time '%s' for task %s on %s: %v", entry.ActualStart, entry.TaskID, entry.Date, err)
+		} else {
 			endMin, err := utils.ParseTimeToMinutes(entry.ActualEnd)
-			if err == nil {
+			if err != nil {
+				log.Printf("Warning: failed to parse end time '%s' for task %s on %s: %v", entry.ActualEnd, entry.TaskID, entry.Date, err)
+			} else {
 				// Handle potential midnight wraparound (e.g., 23:00 to 01:00)
 				if endMin < startMin {
 					endMin += 24 * 60

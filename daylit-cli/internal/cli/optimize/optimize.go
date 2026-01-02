@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/huh"
+
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/optimizer"
@@ -240,6 +241,11 @@ func applyOptimization(ctx *cli.Context, opt optimizer.Optimization) error {
 		fmt.Printf("      1. Create new smaller tasks to replace '%s'\n", task.Name)
 		fmt.Printf("      2. Deactivate or delete the original task\n")
 		return nil
+	}
+
+	// Validate the task before updating
+	if err := task.Validate(); err != nil {
+		return fmt.Errorf("validation failed: %w", err)
 	}
 
 	// Update the task
