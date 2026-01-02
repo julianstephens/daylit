@@ -10,39 +10,20 @@ import (
 // HandleGlobalKeys handles global key presses
 func HandleGlobalKeys(m *state.Model, msg tea.KeyMsg) (bool, tea.Cmd) {
 	switch msg.String() {
-	case "ctrl+c":
+	case "ctrl+c", "q":
 		m.Quitting = true
 		return true, tea.Quit
-	case "tab":
-		// Cycle through main views
-		switch m.State {
-		case constants.StateTasks:
-			m.State = constants.StateHabits
-		case constants.StateHabits:
-			m.State = constants.StateOT
-		case constants.StateOT:
-			m.State = constants.StateSettings
-		case constants.StateSettings:
-			m.State = constants.StateTasks
-		default:
-			// If in a sub-state (like editing), don't switch views with tab
-			// unless we want to force exit the sub-state
-		}
+	case "tab", "l":
+		// Cycle through main views - all 7 tabs
+		m.State = (m.State + 1) % constants.NumMainTabs
 		return true, nil
-	case "shift+tab":
+	case "shift+tab", "h":
 		// Cycle backwards through main views
-		switch m.State {
-		case constants.StateTasks:
-			m.State = constants.StateSettings
-		case constants.StateHabits:
-			m.State = constants.StateTasks
-		case constants.StateOT:
-			m.State = constants.StateHabits
-		case constants.StateSettings:
-			m.State = constants.StateOT
-		default:
-			// If in a sub-state, don't switch
-		}
+		m.State = (m.State - 1 + constants.NumMainTabs) % constants.NumMainTabs
+		return true, nil
+	case "?":
+		// Toggle help
+		m.Help.ShowAll = !m.Help.ShowAll
 		return true, nil
 	}
 	return false, nil

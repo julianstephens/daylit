@@ -49,12 +49,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 
-	// Handle Confirmation State
-	if m.State == constants.StateConfirmation {
-		cmd := handlers.HandleConfirmationState(&m.Model, msg)
-		return m, cmd
-	}
-
 	// Handle Confirm Delete State
 	if m.State == constants.StateConfirmDelete {
 		cmd := handlers.HandleConfirmDeleteState(&m.Model, msg)
@@ -120,10 +114,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	if handled, cmd := handlers.HandleFeedbackMessages(&m.Model, msg); handled {
-		return m, cmd
-	}
-
-	if handled, cmd := handlers.HandleConfirmationMessages(&m.Model, msg); handled {
 		return m, cmd
 	}
 

@@ -4,47 +4,10 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/huh"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/tui/state"
 )
-
-// HandleConfirmationState handles the generic confirmation state
-func HandleConfirmationState(m *state.Model, msg tea.Msg) tea.Cmd {
-	var cmds []tea.Cmd
-
-	if msg, ok := msg.(tea.KeyMsg); ok && msg.Type == tea.KeyEsc {
-		m.FormError = "" // Clear error on cancel
-		m.State = constants.StateTasks
-		return nil
-	}
-
-	form, cmd := m.Form.Update(msg)
-	if f, ok := form.(*huh.Form); ok {
-		m.Form = f
-	}
-	cmds = append(cmds, cmd)
-
-	switch m.Form.State {
-	case huh.StateCompleted:
-		if m.ConfirmationForm.Confirmed {
-			// Execute the confirmed action
-			if m.PendingAction != nil {
-				cmd := m.PendingAction()
-				cmds = append(cmds, cmd)
-			}
-		}
-		m.PendingAction = nil
-		m.FormError = "" // Clear any previous errors
-		m.State = constants.StateTasks
-	case huh.StateAborted:
-		m.PendingAction = nil
-		m.FormError = "" // Clear error on abort
-		m.State = constants.StateTasks
-	}
-	return tea.Batch(cmds...)
-}
 
 // HandleConfirmDeleteState handles the delete confirmation state
 func HandleConfirmDeleteState(m *state.Model, msg tea.Msg) tea.Cmd {
@@ -130,35 +93,21 @@ func HandleConfirmArchiveState(m *state.Model, msg tea.Msg) tea.Cmd {
 	if msg, ok := msg.(tea.KeyMsg); ok {
 		switch msg.String() {
 		case "y", "Y":
-			today := time.Now().Format(constants.DateFormat)
-			if err := m.Store.ArchivePlan(today); err == nil {
-				// Refresh plan view
-				plan, err := m.Store.GetPlan(today)
-				if err == nil {
-					tasks, _ := m.Store.GetAllTasks()
-					m.PlanModel.SetPlan(plan, tasks)
-					m.NowModel.SetPlan(plan, tasks)
+			if m.HabitToArchiveID != "" {
+				if err := m.Store.ArchiveHabit(m.HabitToArchiveID); err == nil {
+					// Refresh habits list
+					today := time.Now().Format(constants.DateFormat)
+					habitsList, _ := m.Store.GetAllHabits(false, true)
+					habitEntries, _ := m.Store.GetHabitEntriesForDay(today)
+					m.HabitsModel.SetHabits(habitsList, habitEntries)
 				}
+				m.HabitToArchiveID = ""
 			}
-			m.State = constants.StatePlan
+			m.State = constants.StateHabits
 		case "n", "N", "esc":
-			m.State = constants.StatePlan
+			m.HabitToArchiveID = ""
+			m.State = constants.StateHabits
 		}
 	}
 	return nil
-}
-
-// HandleConfirmationMessages handles messages related to confirmations
-func HandleConfirmationMessages(m *state.Model, msg tea.Msg) (bool, tea.Cmd) {
-	switch msg := msg.(type) {
-	case constants.ConfirmationMsg:
-		m.ConfirmationForm = &state.ConfirmationFormModel{
-			Message: msg.Message,
-		}
-		m.PendingAction = msg.Action
-		m.Form = NewConfirmationForm(m.ConfirmationForm)
-		m.State = constants.StateConfirmation
-		return true, m.Form.Init()
-	}
-	return false, nil
 }

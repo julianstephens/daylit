@@ -1,10 +1,6 @@
 package constants
 
-import (
-	"time"
-
-	tea "github.com/charmbracelet/bubbletea"
-)
+import "time"
 
 // ConflictType represents the type of validation conflict
 type ConflictType string
@@ -20,15 +16,6 @@ type RecurrenceType string
 
 // EnergyBand represents the energy band of a task
 type EnergyBand string
-
-// ConfirmationMsg is a message to trigger a confirmation dialog
-type ConfirmationMsg struct {
-	Message string
-	Action  func() tea.Cmd
-}
-
-// FeedbackMsg is a message to trigger feedback
-type FeedbackMsg struct{}
 
 const (
 	AppName            = "daylit"
@@ -65,47 +52,49 @@ const (
 	TaskKindAppointment TaskKind = "appointment"
 	TaskKindFlexible    TaskKind = "flexible"
 
-	// Recurrence constants
-	RecurrenceAdHoc       RecurrenceType = "ad-hoc"
+	// Recurrence Type constants
 	RecurrenceDaily       RecurrenceType = "daily"
 	RecurrenceWeekly      RecurrenceType = "weekly"
-	RecurrenceNDays       RecurrenceType = "n-days"
-	RecurrenceMonthlyDate RecurrenceType = "monthly-date"
-	RecurrenceMonthlyDay  RecurrenceType = "monthly-day"
-	RecurrenceYearly      RecurrenceType = "yearly"
-	RecurrenceWeekdays    RecurrenceType = "weekdays"
+	RecurrenceNDays       RecurrenceType = "n_days"
+	RecurrenceAdHoc       RecurrenceType = "ad_hoc"
+	RecurrenceMonthlyDate RecurrenceType = "monthly_date" // e.g., 15th of every month
+	RecurrenceMonthlyDay  RecurrenceType = "monthly_day"  // e.g., last Friday of the month
+	RecurrenceYearly      RecurrenceType = "yearly"       // e.g., every year on January 1st
+	RecurrenceWeekdays    RecurrenceType = "weekdays"     // every weekday (Mon-Fri)
 
 	// Energy Band constants
-	EnergyHigh   EnergyBand = "high"
-	EnergyMedium EnergyBand = "medium"
 	EnergyLow    EnergyBand = "low"
+	EnergyMedium EnergyBand = "medium"
+	EnergyHigh   EnergyBand = "high"
+
+	// NumMainTabs is the number of main navigation tabs in the TUI
+	NumMainTabs = 7 // Now, Plan, Tasks, Habits, OT, Alerts, Settings
 
 	// Conflict Types
-	ConflictDuplicateTaskName     ConflictType = "duplicate_task_name"
-	ConflictInvalidDateTime       ConflictType = "invalid_date_time"
 	ConflictOverlappingFixedTasks ConflictType = "overlapping_fixed_tasks"
-	ConflictMissingTaskID         ConflictType = "missing_task_id"
 	ConflictOverlappingSlots      ConflictType = "overlapping_slots"
 	ConflictExceedsWakingWindow   ConflictType = "exceeds_waking_window"
 	ConflictOvercommitted         ConflictType = "overcommitted"
+	ConflictMissingTaskID         ConflictType = "missing_task_id"
+	ConflictDuplicateTaskName     ConflictType = "duplicate_task_name"
+	ConflictInvalidDateTime       ConflictType = "invalid_datetime"
 
-	// Session States
-	StateTasks SessionState = iota
+	// TUI Session States
+	StateNow SessionState = iota
 	StatePlan
-	StateNow
+	StateTasks
 	StateHabits
 	StateOT
 	StateAlerts
 	StateSettings
-	StateEditing
-	StateAddHabit
-	StateAddAlert
-	StateEditOT
-	StateEditSettings
 	StateFeedback
-	StateConfirmation
+	StateEditing
 	StateConfirmDelete
 	StateConfirmRestore
 	StateConfirmOverwrite
 	StateConfirmArchive
+	StateAddHabit
+	StateAddAlert
+	StateEditOT
+	StateEditSettings
 )

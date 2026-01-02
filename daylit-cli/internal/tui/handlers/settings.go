@@ -30,8 +30,7 @@ func HandleEditSettingsState(m *state.Model, msg tea.Msg) tea.Cmd {
 
 	switch m.Form.State {
 	case huh.StateCompleted:
-		// Save settings
-		// Convert form model to models.Settings
+		// Save general settings
 		newSettings := models.Settings{
 			DayStart:             m.SettingsForm.DayStart,
 			DayEnd:               m.SettingsForm.DayEnd,
@@ -57,6 +56,27 @@ func HandleEditSettingsState(m *state.Model, msg tea.Msg) tea.Cmd {
 			m.Form.State = huh.StateNormal
 			return tea.Batch(cmds...)
 		}
+
+		// Save OT settings
+		otSettings := models.OTSettings{
+			PromptOnEmpty: m.SettingsForm.PromptOnEmpty,
+			StrictMode:    m.SettingsForm.StrictMode,
+		}
+
+		if val, err := strconv.Atoi(m.SettingsForm.DefaultLogDays); err == nil {
+			otSettings.DefaultLogDays = val
+		}
+
+		if err := m.Store.SaveOTSettings(otSettings); err != nil {
+			// Store error and stay in form state to allow retry
+			m.FormError = "Failed to update OT settings: " + err.Error()
+			m.Form.State = huh.StateNormal
+			return tea.Batch(cmds...)
+		}
+
+		// Refresh settings view
+		m.SettingsModel.SetSettings(newSettings, otSettings)
+
 		m.FormError = "" // Clear any previous errors
 		m.State = constants.StateSettings
 	case huh.StateAborted:
@@ -89,11 +109,25 @@ func HandleSettingsMessages(m *state.Model, msg tea.Msg) (bool, tea.Cmd) {
 			m.FormError = ""
 		}
 
+		// Load OT settings
+		currentOTSettings, err := m.Store.GetOTSettings()
+		if err != nil {
+			// Initialize with defaults if loading fails
+			currentOTSettings = models.OTSettings{
+				PromptOnEmpty:  false,
+				StrictMode:     false,
+				DefaultLogDays: 7,
+			}
+		}
+
 		m.SettingsForm = &state.SettingsFormModel{
 			DayStart:             currentSettings.DayStart,
 			DayEnd:               currentSettings.DayEnd,
 			DefaultBlockMin:      strconv.Itoa(currentSettings.DefaultBlockMin),
 			Timezone:             currentSettings.Timezone,
+			PromptOnEmpty:        currentOTSettings.PromptOnEmpty,
+			StrictMode:           currentOTSettings.StrictMode,
+			DefaultLogDays:       strconv.Itoa(currentOTSettings.DefaultLogDays),
 			NotificationsEnabled: currentSettings.NotificationsEnabled,
 			NotifyBlockStart:     currentSettings.NotifyBlockStart,
 			NotifyBlockEnd:       currentSettings.NotifyBlockEnd,
