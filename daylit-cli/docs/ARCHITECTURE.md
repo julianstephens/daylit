@@ -11,7 +11,7 @@ The `daylit-cli` project follows a standard Go project layout. The core logic is
 ### Core Packages (`internal/`)
 
 - **`backup`**: Manages database backup creation, rotation, and restoration workflows.
-- **`cli`**: Contains the Cobra command definitions. It maps command-line arguments and flags to application logic.
+- **`cli`**: Contains the Kong command definitions. It maps command-line arguments and flags to application logic.
 - **`constants`**: Holds application-wide constants, configuration defaults, and shared string literals.
 - **`keyring`**: Handles secure storage and retrieval of sensitive information (like database connection strings) using the operating system's keyring.
 - **`logger`**: Provides structured logging capabilities for the application.
