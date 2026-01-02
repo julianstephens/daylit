@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/alecthomas/kong"
@@ -20,6 +21,7 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli/tasks"
 	_ "github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/keyring"
+	"github.com/julianstephens/daylit/daylit-cli/internal/logger"
 	"github.com/julianstephens/daylit/daylit-cli/internal/scheduler"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage/postgres"
@@ -28,8 +30,9 @@ import (
 const defaultConfigPath = "~/.config/daylit/daylit.db"
 
 type CLI struct {
-	Version kong.VersionFlag
-	Config  string `help:"Config file path or PostgreSQL connection string. When passing a PostgreSQL connection string via command-line flags, credentials must NOT be embedded. Use environment variables or a .pgpass file for command-line usage, or store a connection string with embedded credentials securely in the OS keyring via the 'keyring' commands." type:"string" default:"~/.config/daylit/daylit.db" env:"DAYLIT_CONFIG"`
+	Version    kong.VersionFlag
+	DebugMode  bool   `help:"Enable debug logging." name:"debug"`
+	Config     string `help:"Config file path or PostgreSQL connection string. When passing a PostgreSQL connection string via command-line flags, credentials must NOT be embedded. Use environment variables or a .pgpass file for command-line usage, or store a connection string with embedded credentials securely in the OS keyring via the 'keyring' commands." type:"string" default:"~/.config/daylit/daylit.db" env:"DAYLIT_CONFIG"`
 
 	Init     system.InitCmd       `cmd:"" help:"Initialize daylit storage."`
 	Migrate  system.MigrateCmd    `cmd:"" help:"Run database migrations."`
@@ -80,6 +83,25 @@ type CLI struct {
 }
 
 func (c *CLI) AfterApply(ctx *kong.Context) error {
+	// Determine config directory for logger initialization
+	configPath := c.Config
+	if configPath == defaultConfigPath {
+		configPath = os.ExpandEnv(configPath)
+	}
+	configDir := filepath.Dir(configPath)
+	
+	// Initialize logger
+	// For debug command, always enable debug logging
+	isDebugCmd := strings.HasPrefix(ctx.Command(), "debug ")
+	debugEnabled := c.DebugMode || isDebugCmd
+	
+	if err := logger.Init(logger.Config{
+		Debug:     debugEnabled,
+		ConfigDir: configDir,
+	}); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to initialize logger: %v\n", err)
+	}
+
 	// Skip keyring lookup for keyring management commands
 	cmdPath := ctx.Command()
 	if strings.HasPrefix(cmdPath, "keyring") {
@@ -98,10 +120,10 @@ func (c *CLI) AfterApply(ctx *kong.Context) error {
 		if err == nil {
 			// Successfully retrieved from keyring
 			configToUse = keyringConnStr
+			logger.Debug("Using connection string from OS keyring")
 		} else if !errors.Is(err, keyring.ErrNotFound) {
 			// Keyring error (not just "not found")
-			fmt.Fprintf(os.Stderr, "⚠️  Warning: Failed to access OS keyring: %v\n", err)
-			fmt.Fprintf(os.Stderr, "   Falling back to default SQLite configuration.\n")
+			logger.Warn("Failed to access OS keyring, falling back to default SQLite configuration", "error", err)
 		}
 		// If ErrNotFound, silently fall back to SQLite
 	}
@@ -137,12 +159,13 @@ func (c *CLI) AfterApply(ctx *kong.Context) error {
 			os.Exit(1)
 		} else if configFromEnv && hasPasswordError {
 			// Warn user about embedded credentials in environment variable
-			fmt.Fprintf(os.Stderr, "⚠️  Warning: Using embedded credentials in DAYLIT_CONFIG environment variable.\n")
-			fmt.Fprintf(os.Stderr, "            Consider using a .pgpass file or OS keyring for better security.\n")
+			logger.Warn("Using embedded credentials in DAYLIT_CONFIG environment variable. Consider using a .pgpass file or OS keyring for better security.")
 		}
+		logger.Debug("Using PostgreSQL storage backend")
 		store = postgres.New(configToUse)
 	} else {
 		// Default to SQLite
+		logger.Debug("Using SQLite storage backend", "path", configToUse)
 		store = storage.NewSQLiteStore(configToUse)
 	}
 

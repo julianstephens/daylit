@@ -16,8 +16,11 @@ require (
 
 require (
 	al.essio.dev/pkg/shellescape v1.5.1 // indirect
+	github.com/charmbracelet/log v0.4.2 // indirect
 	github.com/danieljoos/wincred v1.2.2 // indirect
+	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
 
 require (

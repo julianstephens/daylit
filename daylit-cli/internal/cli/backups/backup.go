@@ -9,6 +9,7 @@ import (
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/backup"
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
+	"github.com/julianstephens/daylit/daylit-cli/internal/logger"
 )
 
 type BackupCreateCmd struct{}
@@ -110,7 +111,7 @@ func (c *BackupRestoreCmd) Run(ctx *cli.Context) error {
 
 	// Close the current store connection before restoring
 	if err := ctx.Store.Close(); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to close database connection: %v\n", err)
+		logger.Warn("Failed to close database connection", "error", err)
 	}
 
 	// Perform restore

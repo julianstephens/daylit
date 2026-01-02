@@ -3,9 +3,9 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"time"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/logger"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/utils"
 )
@@ -461,11 +461,11 @@ func (s *Store) GetTaskFeedbackHistory(taskID string, limit int) ([]models.TaskF
 		// Calculate actual duration from start and end times
 		startMin, err := utils.ParseTimeToMinutes(entry.ActualStart)
 		if err != nil {
-			log.Printf("Warning: failed to parse start time '%s' for task %s on %s: %v", entry.ActualStart, entry.TaskID, entry.Date, err)
+			logger.Warn("Failed to parse start time for feedback entry", "start", entry.ActualStart, "task_id", entry.TaskID, "date", entry.Date, "error", err)
 		} else {
 			endMin, err := utils.ParseTimeToMinutes(entry.ActualEnd)
 			if err != nil {
-				log.Printf("Warning: failed to parse end time '%s' for task %s on %s: %v", entry.ActualEnd, entry.TaskID, entry.Date, err)
+				logger.Warn("Failed to parse end time for feedback entry", "end", entry.ActualEnd, "task_id", entry.TaskID, "date", entry.Date, "error", err)
 			} else {
 				// Handle potential midnight wraparound (e.g., 23:00 to 01:00)
 				if endMin < startMin {

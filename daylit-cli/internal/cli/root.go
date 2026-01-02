@@ -2,13 +2,13 @@ package cli
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/backup"
 	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
+	"github.com/julianstephens/daylit/daylit-cli/internal/logger"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/scheduler"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
@@ -24,8 +24,8 @@ func (c *Context) PerformAutomaticBackup() {
 	mgr := backup.NewManager(c.Store.GetConfigPath())
 	_, err := mgr.CreateBackup()
 	if err != nil {
-		// Silently fail - don't interrupt user workflow
-		fmt.Fprintf(os.Stderr, "Warning: automatic backup failed: %v\n", err)
+		// Log warning but don't interrupt user workflow
+		logger.Warn("Automatic backup failed", "error", err)
 	}
 }
 

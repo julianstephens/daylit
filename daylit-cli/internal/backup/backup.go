@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/logger"
 	_ "modernc.org/sqlite"
 )
 
@@ -119,7 +120,7 @@ func (m *Manager) createBackup(isPreRestoreBackup bool) (string, error) {
 	if !isPreRestoreBackup {
 		if err := m.rotateBackups(); err != nil {
 			// Log error but don't fail the backup operation
-			fmt.Fprintf(os.Stderr, "Warning: failed to rotate old backups: %v\n", err)
+			logger.Warn("Failed to rotate old backups", "error", err)
 		}
 	}
 
@@ -190,7 +191,7 @@ func (m *Manager) backupDatabase(destPath string) error {
 				if _, chkErr := checkpointDB.Exec("PRAGMA wal_checkpoint(FULL)"); chkErr != nil {
 					// Emit a warning if the checkpoint fails, as the backup
 					// may be missing recent changes.
-					fmt.Fprintf(os.Stderr, "warning: wal_checkpoint(FULL) failed during backup: %v\n", chkErr)
+					logger.Warn("wal_checkpoint(FULL) failed during backup", "error", chkErr)
 				}
 				checkpointDB.Close()
 			}
@@ -358,14 +359,14 @@ func (m *Manager) RestoreBackup(backupPath string) error {
 	// Remove WAL file if it exists
 	if _, err := os.Stat(walPath); err == nil {
 		if err := os.Remove(walPath); err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to remove WAL file %s: %v\n", walPath, err)
+			logger.Warn("Failed to remove WAL file", "path", walPath, "error", err)
 		}
 	}
 
 	// Remove SHM file if it exists
 	if _, err := os.Stat(shmPath); err == nil {
 		if err := os.Remove(shmPath); err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to remove SHM file %s: %v\n", shmPath, err)
+			logger.Warn("Failed to remove SHM file", "path", shmPath, "error", err)
 		}
 	}
 
@@ -373,7 +374,7 @@ func (m *Manager) RestoreBackup(backupPath string) error {
 	if err := os.Rename(tempPath, m.dbPath); err != nil {
 		// Clean up temp file on error
 		if removeErr := os.Remove(tempPath); removeErr != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to remove temporary file %s: %v\n", tempPath, removeErr)
+			logger.Warn("Failed to remove temporary file", "path", tempPath, "error", removeErr)
 		}
 		return fmt.Errorf("failed to restore database: %w", err)
 	}

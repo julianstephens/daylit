@@ -2,8 +2,8 @@ package optimizer
 
 import (
 	"fmt"
-	"log"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/logger"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
 )
@@ -175,7 +175,7 @@ func (fa *FeedbackAnalyzer) AnalyzeAllTasks(feedbackLimit int) ([]Optimization, 
 		opts, err := fa.AnalyzeTask(task, feedbackLimit)
 		if err != nil {
 			// Log error but continue with other tasks
-			log.Printf("Warning: Failed to analyze task %s (%s): %v", task.Name, task.ID, err)
+			logger.Warn("Failed to analyze task", "task", task.Name, "id", task.ID, "error", err)
 			continue
 		}
 		allOptimizations = append(allOptimizations, opts...)
