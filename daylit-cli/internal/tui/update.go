@@ -197,11 +197,9 @@ func newOTForm(fm *OTFormModel) *huh.Form {
 				Title("One Thing Title").
 				Value(&fm.Title).
 				Validate(func(s string) error {
-					trimmed := strings.TrimSpace(s)
-					if trimmed == "" {
+					if strings.TrimSpace(s) == "" {
 						return fmt.Errorf("title cannot be empty")
 					}
-					fm.Title = trimmed
 					return nil
 				}),
 			huh.NewText().
@@ -344,15 +342,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			today := time.Now().Format(constants.DateFormat)
 
 			// Trim whitespace from title and note
-			m.otForm.Title = strings.TrimSpace(m.otForm.Title)
-			m.otForm.Note = strings.TrimSpace(m.otForm.Note)
+			title := strings.TrimSpace(m.otForm.Title)
+			note := strings.TrimSpace(m.otForm.Note)
 
 			// Check if entry exists for today
 			existingEntry, err := m.store.GetOTEntry(today)
 			if err == nil && existingEntry.ID != "" {
 				// Update existing entry
-				existingEntry.Title = m.otForm.Title
-				existingEntry.Note = m.otForm.Note
+				existingEntry.Title = title
+				existingEntry.Note = note
 				existingEntry.UpdatedAt = time.Now()
 				if err := m.store.UpdateOTEntry(existingEntry); err != nil {
 					// Store error and stay in form state to allow retry
@@ -360,16 +358,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.form.State = huh.StateNormal
 					return m, tea.Batch(cmds...)
 				}
-				// Create a persistent pointer to the entry
-				entryPtr := &existingEntry
-				m.otModel.SetEntry(entryPtr)
+				// Reload entry from storage to get a fresh copy
+				updatedEntry, err := m.store.GetOTEntry(today)
+				if err == nil {
+					entryPtr := &updatedEntry
+					m.otModel.SetEntry(entryPtr)
+				}
 			} else {
 				// Create new entry
 				newEntry := models.OTEntry{
 					ID:        uuid.New().String(),
 					Day:       today,
-					Title:     m.otForm.Title,
-					Note:      m.otForm.Note,
+					Title:     title,
+					Note:      note,
 					CreatedAt: time.Now(),
 					UpdatedAt: time.Now(),
 				}
@@ -379,9 +380,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.form.State = huh.StateNormal
 					return m, tea.Batch(cmds...)
 				}
-				// Create a persistent pointer to the entry
-				entryPtr := &newEntry
-				m.otModel.SetEntry(entryPtr)
+				// Reload entry from storage to get a fresh copy
+				savedEntry, err := m.store.GetOTEntry(today)
+				if err == nil {
+					entryPtr := &savedEntry
+					m.otModel.SetEntry(entryPtr)
+				}
 			}
 			m.formError = "" // Clear any previous errors
 			m.state = StateOT
