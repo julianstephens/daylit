@@ -12,6 +12,7 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli/alerts"
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli/backups"
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli/habits"
+	"github.com/julianstephens/daylit/daylit-cli/internal/cli/optimize"
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli/ot"
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli/plans"
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli/settings"
@@ -30,16 +31,17 @@ type CLI struct {
 	Version kong.VersionFlag
 	Config  string `help:"Config file path or PostgreSQL connection string. When passing a PostgreSQL connection string via command-line flags, credentials must NOT be embedded. Use environment variables or a .pgpass file for command-line usage, or store a connection string with embedded credentials securely in the OS keyring via the 'keyring' commands." type:"string" default:"~/.config/daylit/daylit.db" env:"DAYLIT_CONFIG"`
 
-	Init     system.InitCmd     `cmd:"" help:"Initialize daylit storage."`
-	Migrate  system.MigrateCmd  `cmd:"" help:"Run database migrations."`
-	Doctor   system.DoctorCmd   `cmd:"" help:"Run health checks and diagnostics."`
-	Tui      system.TuiCmd      `cmd:"" help:"Launch the interactive TUI." default:"1"`
-	Plan     plans.PlanCmd      `cmd:"" help:"Generate day plans."`
-	Now      plans.NowCmd       `cmd:"" help:"Show current task."`
-	Feedback plans.FeedbackCmd  `cmd:"" help:"Provide feedback on a slot."`
-	Day      plans.DayCmd       `cmd:"" help:"Show plan for a day."`
-	Debug    system.DebugCmd    `cmd:"" help:"Debug commands for troubleshooting."`
-	Validate system.ValidateCmd `cmd:"" help:"Validate tasks and plans for conflicts."`
+	Init     system.InitCmd       `cmd:"" help:"Initialize daylit storage."`
+	Migrate  system.MigrateCmd    `cmd:"" help:"Run database migrations."`
+	Doctor   system.DoctorCmd     `cmd:"" help:"Run health checks and diagnostics."`
+	Tui      system.TuiCmd        `cmd:"" help:"Launch the interactive TUI." default:"1"`
+	Plan     plans.PlanCmd        `cmd:"" help:"Generate day plans."`
+	Now      plans.NowCmd         `cmd:"" help:"Show current task."`
+	Feedback plans.FeedbackCmd    `cmd:"" help:"Provide feedback on a slot."`
+	Optimize optimize.OptimizeCmd `cmd:"" help:"Analyze feedback and suggest task optimizations."`
+	Day      plans.DayCmd         `cmd:"" help:"Show plan for a day."`
+	Debug    system.DebugCmd      `cmd:"" help:"Debug commands for troubleshooting."`
+	Validate system.ValidateCmd   `cmd:"" help:"Validate tasks and plans for conflicts."`
 	Backup   struct {
 		Create  backups.BackupCreateCmd  `cmd:"" help:"Create a manual backup." default:"1"`
 		List    backups.BackupListCmd    `cmd:"" help:"List available backups."`
@@ -165,7 +167,7 @@ func main() {
 			Compact:             true,
 			NoExpandSubcommands: true,
 		}),
-		kong.Vars{"version": "v0.4.0"},
+		kong.Vars{"version": "v0.5.0"},
 	)
 
 	appCtx := &cli.Context{

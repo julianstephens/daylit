@@ -47,7 +47,11 @@ The TUI provides a dashboard with seven main views:
 -   `?`: Toggle help.
 -   `q` / `Ctrl+C`: Quit.
 
-## `daylit task add`
+## `daylit task`
+
+Manage tasks and task templates.
+
+### `daylit task add`
 
 Add a new task template.
 
@@ -83,7 +87,7 @@ daylit task add "Gym" --duration 60 --recurrence weekly --weekdays mon,wed,fri -
 daylit task add "Doctor appointment" --duration 60 --fixed-start 14:00 --fixed-end 15:00
 ```
 
-## `daylit task edit`
+### `daylit task edit`
 
 Edit an existing task template.
 
@@ -117,7 +121,7 @@ daylit task list --show-ids
 daylit task edit 81462541-e5ef-400b-9a8e-de96de1a9574 --name "Updated Task" --duration 45
 ```
 
-## `daylit task delete`
+### `daylit task delete`
 
 Delete a task template. This performs a "soft delete", meaning the task is hidden but can be restored later using `daylit restore task`.
 
@@ -131,7 +135,7 @@ daylit task delete <TASK_ID>
 daylit task delete 81462541-e5ef-400b-9a8e-de96de1a9574
 ```
 
-## `daylit task list`
+### `daylit task list`
 
 List all task templates.
 
@@ -249,6 +253,85 @@ daylit feedback --rating on_track
 daylit feedback --rating too_much --note "Only needed 20 minutes, not 50"
 daylit feedback --rating unnecessary --note "Skip this on Mondays"
 ```
+
+## `daylit optimize`
+
+Analyze feedback history and suggest task optimizations. This command uses accumulated feedback data to identify tasks that may need adjustment.
+
+```bash
+daylit optimize [flags]
+```
+
+**Flags:**
+
+- `--interactive`: Interactively review and apply optimizations one by one
+- `--auto-apply`: Automatically apply all optimizations without confirmation
+- `--feedback-limit INT`: Number of recent feedback entries to analyze per task (default: 10)
+
+**How it works:**
+
+The optimizer analyzes feedback patterns:
+- **Too much feedback (>50%)**: Suggests reducing duration by 25% for longer tasks, or splitting shorter tasks (30 minutes or less)
+- **Unnecessary feedback (≥3 instances or >40%)**: Suggests reducing frequency or removing the task
+- **Mixed feedback**: No optimization suggested; task is performing acceptably
+
+**Modes:**
+
+1. **Dry-run mode** (default):
+   - Shows suggestions without making any changes
+   - Useful for reviewing what could be optimized
+
+2. **Interactive mode** (`--interactive`):
+   - Reviews each suggestion one by one
+   - Prompts to apply, skip, or skip all remaining
+   - Provides full control over which optimizations to apply
+
+3. **Auto-apply mode** (`--auto-apply`):
+   - Applies all optimizations automatically
+   - No confirmation required
+   - Shows summary of applied optimizations
+
+**Examples:**
+
+```bash
+# Review optimization suggestions (dry-run mode)
+daylit optimize
+
+# Review and selectively apply optimizations
+daylit optimize --interactive
+
+# Automatically apply all optimizations
+daylit optimize --auto-apply
+
+# Analyze only the last 5 feedback entries per task
+daylit optimize --feedback-limit 5 --interactive
+```
+
+**Example output:**
+
+```
+Analyzing task feedback history...
+
+📊 Found 2 optimization suggestion(s):
+
+1. ⏱️  Reduce Duration
+   Task: Morning Exercise
+   Reason: 75% of recent feedback indicates task takes too long (too_much)
+   Current: duration_min=60
+   Suggested: duration_min=45
+
+2. 📉 Reduce Frequency
+   Task: Email Cleanup
+   Reason: 60% of recent feedback indicates task is unnecessary
+   Current: interval_days=1
+   Suggested: interval_days=3
+
+💡 To apply these optimizations:
+  - Use --interactive to review and select which to apply
+  - Use --auto-apply to apply all automatically
+```
+
+**Note:** Task splitting suggestions require manual action, as they cannot be automatically applied.
 
 ## `daylit day`
 

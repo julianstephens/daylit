@@ -3,9 +3,11 @@ package sqlite
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
+	"github.com/julianstephens/daylit/daylit-cli/internal/utils"
 )
 
 func (s *Store) SavePlan(plan models.DayPlan) error {
@@ -161,7 +163,7 @@ func (s *Store) GetLatestPlanRevision(date string) (models.DayPlan, error) {
 		return models.DayPlan{}, err
 	}
 
-	return s.getPlanByRevision(date, revision, acceptedAt, sql.NullString{})
+	return s.getPlanByRevision(date, revision, acceptedAt)
 }
 
 func (s *Store) GetPlanRevision(date string, revision int) (models.DayPlan, error) {
@@ -183,10 +185,10 @@ func (s *Store) GetPlanRevision(date string, revision int) (models.DayPlan, erro
 		return models.DayPlan{}, fmt.Errorf("plan for date %s revision %d has been deleted; use 'daylit restore plan %s' to restore it", date, revision, date)
 	}
 
-	return s.getPlanByRevision(date, revision, acceptedAt, deletedAt)
+	return s.getPlanByRevision(date, revision, acceptedAt)
 }
 
-func (s *Store) getPlanByRevision(date string, revision int, acceptedAt, deletedAt sql.NullString) (models.DayPlan, error) {
+func (s *Store) getPlanByRevision(date string, revision int, acceptedAt sql.NullString) (models.DayPlan, error) {
 	plan := models.DayPlan{
 		Date:     date,
 		Revision: revision,
@@ -333,4 +335,76 @@ func (s *Store) UpdateSlotNotificationTimestamp(date string, revision int, start
 	}
 
 	return nil
+}
+
+// GetTaskFeedbackHistory retrieves feedback history for a specific task
+func (s *Store) GetTaskFeedbackHistory(taskID string, limit int) ([]models.TaskFeedbackEntry, error) {
+	query := `
+		SELECT 
+			p.date,
+			s.task_id,
+			s.feedback_rating,
+			s.feedback_note,
+			s.start_time,
+			s.end_time
+		FROM slots s
+		JOIN plans p ON s.plan_date = p.date AND s.plan_revision = p.revision
+		WHERE s.task_id = ?
+			AND s.feedback_rating IS NOT NULL
+			AND s.feedback_rating != ''
+			AND s.deleted_at IS NULL
+			AND p.deleted_at IS NULL
+		ORDER BY p.date DESC
+		LIMIT ?
+	`
+
+	rows, err := s.db.Query(query, taskID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query feedback history: %w", err)
+	}
+	defer rows.Close()
+
+	var entries []models.TaskFeedbackEntry
+	for rows.Next() {
+		var entry models.TaskFeedbackEntry
+		var rating string
+		err := rows.Scan(
+			&entry.Date,
+			&entry.TaskID,
+			&rating,
+			&entry.Note,
+			&entry.ActualStart,
+			&entry.ActualEnd,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan feedback entry: %w", err)
+		}
+
+		entry.Rating = models.FeedbackRating(rating)
+
+		// Calculate actual duration from start and end times
+		startMin, err := utils.ParseTimeToMinutes(entry.ActualStart)
+		if err != nil {
+			log.Printf("Warning: failed to parse start time '%s' for task %s on %s: %v", entry.ActualStart, entry.TaskID, entry.Date, err)
+		} else {
+			endMin, err := utils.ParseTimeToMinutes(entry.ActualEnd)
+			if err != nil {
+				log.Printf("Warning: failed to parse end time '%s' for task %s on %s: %v", entry.ActualEnd, entry.TaskID, entry.Date, err)
+			} else {
+				// Handle slots that span midnight by treating the end time as the next day.
+				if endMin < startMin {
+					endMin += 24 * 60
+				}
+				entry.ActualDuration = endMin - startMin
+			}
+		}
+
+		entries = append(entries, entry)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating feedback rows: %w", err)
+	}
+
+	return entries, nil
 }

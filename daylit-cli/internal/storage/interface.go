@@ -82,6 +82,11 @@ type Provider interface {
 	GetAllHabitEntries() ([]models.HabitEntry, error)
 	GetAllOTEntries() ([]models.OTEntry, error)
 
+	// Feedback Analysis
+	// GetTaskFeedbackHistory retrieves feedback history for a specific task
+	// Returns feedback entries ordered by date (most recent first)
+	GetTaskFeedbackHistory(taskID string, limit int) ([]models.TaskFeedbackEntry, error)
+
 	// Utils
 	GetConfigPath() string
 }

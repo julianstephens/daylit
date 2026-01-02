@@ -22,6 +22,7 @@ clean: ## Remove built binary
 
 lint: ## Run golangci-lint
 	golangci-lint run ./... --fix
+	go vet ./...
 
 test: ## Run tests
 	go test -v ./...
