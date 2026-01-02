@@ -25,7 +25,6 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/utils"
 )
 
-
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
