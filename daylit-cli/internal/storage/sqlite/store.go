@@ -58,6 +58,7 @@ func (s *Store) Init() error {
 			BlockStartOffsetMin:        constants.DefaultBlockStartOffsetMin,
 			BlockEndOffsetMin:          constants.DefaultBlockEndOffsetMin,
 			NotificationGracePeriodMin: constants.DefaultNotificationGracePeriodMin,
+			Timezone:                   constants.DefaultTimezone,
 		}
 		if err := s.SaveSettings(defaultSettings); err != nil {
 			return fmt.Errorf("failed to save default settings: %w", err)

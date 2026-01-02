@@ -11,4 +11,5 @@ type Settings struct {
 	BlockStartOffsetMin        int    `json:"block_start_offset_min"`        // the offset in minutes for block start notifications
 	BlockEndOffsetMin          int    `json:"block_end_offset_min"`          // the offset in minutes for block end notifications
 	NotificationGracePeriodMin int    `json:"notification_grace_period_min"` // grace period for late notifications in minutes
+	Timezone                   string `json:"timezone"`                      // IANA timezone name (e.g. "America/New_York", "Europe/London", or "Local" for system timezone)
 }
