@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/notifier"
 	"github.com/julianstephens/daylit/daylit-cli/internal/utils"
@@ -16,18 +17,15 @@ type NotifyCmd struct {
 }
 
 func (c *NotifyCmd) Run(ctx *cli.Context) error {
-	const maxRetries = 3
-	const retryDelay = 100 * time.Millisecond
-
 	var err error
-	for attempt := 0; attempt < maxRetries; attempt++ {
+	for attempt := 0; attempt < constants.NotifyMaxRetries; attempt++ {
 		err = c.runWithRetry(ctx)
 		if err == nil {
 			return nil
 		}
 		// Check if it's a database lock error
-		if attempt < maxRetries-1 && isDatabaseBusyError(err) {
-			time.Sleep(retryDelay * time.Duration(attempt+1))
+		if attempt < constants.NotifyMaxRetries-1 && isDatabaseBusyError(err) {
+			time.Sleep(constants.NotifyRetryDelay * time.Duration(attempt+1))
 			continue
 		}
 		break
@@ -81,7 +79,7 @@ func (c *NotifyCmd) runWithRetry(ctx *cli.Context) error {
 
 	for _, slot := range plan.Slots {
 		// Only notify for accepted or done slots
-		if slot.Status != models.SlotStatusAccepted && slot.Status != models.SlotStatusDone {
+		if slot.Status != constants.SlotStatusAccepted && slot.Status != constants.SlotStatusDone {
 			continue
 		}
 

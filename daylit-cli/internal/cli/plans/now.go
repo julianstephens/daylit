@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/utils"
 )
@@ -25,7 +26,7 @@ func (c *NowCmd) Run(ctx *cli.Context) error {
 	// Find current slot
 	var currentSlot *models.Slot
 	for i := range plan.Slots {
-		if plan.Slots[i].Status == models.SlotStatusAccepted || plan.Slots[i].Status == models.SlotStatusDone {
+		if plan.Slots[i].Status == constants.SlotStatusAccepted || plan.Slots[i].Status == constants.SlotStatusDone {
 			startMinutes, err := utils.ParseTimeToMinutes(plan.Slots[i].Start)
 			if err != nil {
 				continue

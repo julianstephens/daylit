@@ -24,11 +24,11 @@ func (c *FeedbackCmd) Run(ctx *cli.Context) error {
 	var rating models.FeedbackRating
 	switch c.Rating {
 	case "on_track":
-		rating = models.FeedbackOnTrack
+		rating = constants.FeedbackOnTrack
 	case "too_much":
-		rating = models.FeedbackTooMuch
+		rating = constants.FeedbackTooMuch
 	case "unnecessary":
-		rating = models.FeedbackUnnecessary
+		rating = constants.FeedbackUnnecessary
 	default:
 		return fmt.Errorf("invalid rating: %s (use on_track, too_much, or unnecessary)", c.Rating)
 	}
@@ -47,7 +47,7 @@ func (c *FeedbackCmd) Run(ctx *cli.Context) error {
 
 	for i := len(plan.Slots) - 1; i >= 0; i-- {
 		slot := &plan.Slots[i]
-		if (slot.Status == models.SlotStatusAccepted || slot.Status == models.SlotStatusDone) &&
+		if (slot.Status == constants.SlotStatusAccepted || slot.Status == constants.SlotStatusDone) &&
 			slot.Feedback == nil {
 			endMinutes, err := utils.ParseTimeToMinutes(slot.End)
 			if err != nil {
@@ -70,13 +70,13 @@ func (c *FeedbackCmd) Run(ctx *cli.Context) error {
 		Rating: rating,
 		Note:   c.Note,
 	}
-	plan.Slots[targetSlotIdx].Status = models.SlotStatusDone
+	plan.Slots[targetSlotIdx].Status = constants.SlotStatusDone
 
 	// Update task statistics
 	task, err := ctx.Store.GetTask(plan.Slots[targetSlotIdx].TaskID)
 	if err == nil {
 		switch rating {
-		case models.FeedbackOnTrack:
+		case constants.FeedbackOnTrack:
 			// Keep duration as is, nudge slightly toward actual
 			slotDuration := cli.CalculateSlotDuration(plan.Slots[targetSlotIdx])
 			if slotDuration > 0 {
@@ -88,14 +88,14 @@ func (c *FeedbackCmd) Run(ctx *cli.Context) error {
 				}
 			}
 			task.LastDone = dateStr
-		case models.FeedbackTooMuch:
+		case constants.FeedbackTooMuch:
 			// Reduce duration slightly
 			task.DurationMin = int(float64(task.DurationMin) * constants.FeedbackTooMuchReductionFactor)
 			if task.DurationMin < constants.MinTaskDurationMin {
 				task.DurationMin = constants.MinTaskDurationMin
 			}
 			task.LastDone = dateStr
-		case models.FeedbackUnnecessary:
+		case constants.FeedbackUnnecessary:
 			// Increase interval or reduce priority
 			if task.Recurrence.Type == models.RecurrenceNDays {
 				task.Recurrence.IntervalDays++

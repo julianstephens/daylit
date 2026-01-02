@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/scheduler"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
@@ -60,7 +61,7 @@ func createTestPlan(date string, revision int, taskIDs []string) models.DayPlan 
 			Start:  fmt.Sprintf("%02d:00", startHour),
 			End:    fmt.Sprintf("%02d:30", startHour),
 			TaskID: taskID,
-			Status: models.SlotStatusPlanned,
+			Status: constants.SlotStatusPlanned,
 		}
 		plan.Slots = append(plan.Slots, slot)
 		startHour++

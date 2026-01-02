@@ -10,22 +10,9 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/utils"
 )
 
-// ConflictType represents the type of validation conflict
-type ConflictType string
-
-const (
-	ConflictOverlappingFixedTasks ConflictType = "overlapping_fixed_tasks"
-	ConflictOverlappingSlots      ConflictType = "overlapping_slots"
-	ConflictExceedsWakingWindow   ConflictType = "exceeds_waking_window"
-	ConflictOvercommitted         ConflictType = "overcommitted"
-	ConflictMissingTaskID         ConflictType = "missing_task_id"
-	ConflictDuplicateTaskName     ConflictType = "duplicate_task_name"
-	ConflictInvalidDateTime       ConflictType = "invalid_datetime"
-)
-
 // Conflict represents a detected conflict in tasks or plans
 type Conflict struct {
-	Type        ConflictType
+	Type        constants.ConflictType
 	Description string
 	Date        string   // YYYY-MM-DD format (if applicable)
 	Items       []string // Task/slot names involved
@@ -97,7 +84,7 @@ func (v *Validator) ValidateTasksForDate(tasks []models.Task, planDate *time.Tim
 	for name, ids := range nameCount {
 		if len(ids) > 1 {
 			result.Conflicts = append(result.Conflicts, Conflict{
-				Type:        ConflictDuplicateTaskName,
+				Type:        constants.ConflictDuplicateTaskName,
 				Description: fmt.Sprintf("Duplicate task name: \"%s\" (IDs: %v)", name, ids),
 				Items:       []string{name},
 				TaskIDs:     ids,
@@ -114,7 +101,7 @@ func (v *Validator) ValidateTasksForDate(tasks []models.Task, planDate *time.Tim
 		if task.EarliestStart != "" {
 			if !isValidTimeFormat(task.EarliestStart) {
 				result.Conflicts = append(result.Conflicts, Conflict{
-					Type:        ConflictInvalidDateTime,
+					Type:        constants.ConflictInvalidDateTime,
 					Description: fmt.Sprintf("Task \"%s\" has invalid earliest_start time: %s", task.Name, task.EarliestStart),
 					Items:       []string{task.Name},
 				})
@@ -124,7 +111,7 @@ func (v *Validator) ValidateTasksForDate(tasks []models.Task, planDate *time.Tim
 		if task.LatestEnd != "" {
 			if !isValidTimeFormat(task.LatestEnd) {
 				result.Conflicts = append(result.Conflicts, Conflict{
-					Type:        ConflictInvalidDateTime,
+					Type:        constants.ConflictInvalidDateTime,
 					Description: fmt.Sprintf("Task \"%s\" has invalid latest_end time: %s", task.Name, task.LatestEnd),
 					Items:       []string{task.Name},
 				})
@@ -134,7 +121,7 @@ func (v *Validator) ValidateTasksForDate(tasks []models.Task, planDate *time.Tim
 		if task.FixedStart != "" {
 			if !isValidTimeFormat(task.FixedStart) {
 				result.Conflicts = append(result.Conflicts, Conflict{
-					Type:        ConflictInvalidDateTime,
+					Type:        constants.ConflictInvalidDateTime,
 					Description: fmt.Sprintf("Task \"%s\" has invalid fixed_start time: %s", task.Name, task.FixedStart),
 					Items:       []string{task.Name},
 				})
@@ -144,7 +131,7 @@ func (v *Validator) ValidateTasksForDate(tasks []models.Task, planDate *time.Tim
 		if task.FixedEnd != "" {
 			if !isValidTimeFormat(task.FixedEnd) {
 				result.Conflicts = append(result.Conflicts, Conflict{
-					Type:        ConflictInvalidDateTime,
+					Type:        constants.ConflictInvalidDateTime,
 					Description: fmt.Sprintf("Task \"%s\" has invalid fixed_end time: %s", task.Name, task.FixedEnd),
 					Items:       []string{task.Name},
 				})
@@ -157,7 +144,7 @@ func (v *Validator) ValidateTasksForDate(tasks []models.Task, planDate *time.Tim
 			endMin, err2 := parseTimeToMinutes(task.FixedEnd)
 			if err1 == nil && err2 == nil && endMin < startMin {
 				result.Conflicts = append(result.Conflicts, Conflict{
-					Type:        ConflictInvalidDateTime,
+					Type:        constants.ConflictInvalidDateTime,
 					Description: fmt.Sprintf("Task \"%s\" has end time (%s) before start time (%s)", task.Name, task.FixedEnd, task.FixedStart),
 					Items:       []string{task.Name},
 				})
@@ -176,7 +163,7 @@ func (v *Validator) ValidateTasksForDate(tasks []models.Task, planDate *time.Tim
 		if !task.Active {
 			continue
 		}
-		if task.Kind == models.TaskKindAppointment && task.FixedStart != "" && task.FixedEnd != "" {
+		if task.Kind == constants.TaskKindAppointment && task.FixedStart != "" && task.FixedEnd != "" {
 			// If a plan date is provided, only check tasks that would be scheduled on that date
 			if planDate != nil && !taskScheduledOnDate(task, *planDate) {
 				continue
@@ -204,7 +191,7 @@ func (v *Validator) ValidateTasksForDate(tasks []models.Task, planDate *time.Tim
 				// Check if recurrence patterns overlap
 				if recurrenceOverlaps(t1.Recurrence, t2.Recurrence) {
 					result.Conflicts = append(result.Conflicts, Conflict{
-						Type: ConflictOverlappingFixedTasks,
+						Type: constants.ConflictOverlappingFixedTasks,
 						Description: fmt.Sprintf("Appointments overlap: \"%s\" (%s-%s) and \"%s\" (%s-%s)",
 							t1.Name, t1.FixedStart, t1.FixedEnd, t2.Name, t2.FixedStart, t2.FixedEnd),
 						Items:     []string{t1.Name, t2.Name},
@@ -234,7 +221,7 @@ func (v *Validator) ValidatePlan(plan models.DayPlan, tasks []models.Task, daySt
 	planDate, err := time.Parse(constants.DateFormat, plan.Date)
 	if err != nil {
 		result.Conflicts = append(result.Conflicts, Conflict{
-			Type:        ConflictInvalidDateTime,
+			Type:        constants.ConflictInvalidDateTime,
 			Description: fmt.Sprintf("Invalid plan date: %s", plan.Date),
 			Date:        plan.Date,
 		})
@@ -245,7 +232,7 @@ func (v *Validator) ValidatePlan(plan models.DayPlan, tasks []models.Task, daySt
 	dayStartMinutes, err := parseTimeToMinutes(dayStart)
 	if err != nil {
 		result.Conflicts = append(result.Conflicts, Conflict{
-			Type:        ConflictInvalidDateTime,
+			Type:        constants.ConflictInvalidDateTime,
 			Description: fmt.Sprintf("Invalid day start time: %s", dayStart),
 		})
 	}
@@ -253,7 +240,7 @@ func (v *Validator) ValidatePlan(plan models.DayPlan, tasks []models.Task, daySt
 	dayEndMinutes, err := parseTimeToMinutes(dayEnd)
 	if err != nil {
 		result.Conflicts = append(result.Conflicts, Conflict{
-			Type:        ConflictInvalidDateTime,
+			Type:        constants.ConflictInvalidDateTime,
 			Description: fmt.Sprintf("Invalid day end time: %s", dayEnd),
 		})
 	}
@@ -261,7 +248,7 @@ func (v *Validator) ValidatePlan(plan models.DayPlan, tasks []models.Task, daySt
 	wakingWindowMinutes := dayEndMinutes - dayStartMinutes
 	if wakingWindowMinutes <= 0 {
 		result.Conflicts = append(result.Conflicts, Conflict{
-			Type:        ConflictInvalidDateTime,
+			Type:        constants.ConflictInvalidDateTime,
 			Description: fmt.Sprintf("Invalid waking window: day_start (%s) must be before day_end (%s)", dayStart, dayEnd),
 		})
 		return result // Can't continue validation
@@ -277,14 +264,14 @@ func (v *Validator) ValidatePlan(plan models.DayPlan, tasks []models.Task, daySt
 		// Check for invalid time format in slots
 		if !isValidTimeFormat(slot.Start) {
 			result.Conflicts = append(result.Conflicts, Conflict{
-				Type:        ConflictInvalidDateTime,
+				Type:        constants.ConflictInvalidDateTime,
 				Description: fmt.Sprintf("%s: Invalid slot start time: %s", formatDate(planDate), slot.Start),
 				Date:        plan.Date,
 			})
 		}
 		if !isValidTimeFormat(slot.End) {
 			result.Conflicts = append(result.Conflicts, Conflict{
-				Type:        ConflictInvalidDateTime,
+				Type:        constants.ConflictInvalidDateTime,
 				Description: fmt.Sprintf("%s: Invalid slot end time: %s", formatDate(planDate), slot.End),
 				Date:        plan.Date,
 			})
@@ -294,7 +281,7 @@ func (v *Validator) ValidatePlan(plan models.DayPlan, tasks []models.Task, daySt
 		_, exists := taskMap[slot.TaskID]
 		if !exists {
 			result.Conflicts = append(result.Conflicts, Conflict{
-				Type:        ConflictMissingTaskID,
+				Type:        constants.ConflictMissingTaskID,
 				Description: fmt.Sprintf("%s: Slot references missing task ID: %s", formatDate(planDate), slot.TaskID),
 				Date:        plan.Date,
 			})
@@ -313,7 +300,7 @@ func (v *Validator) ValidatePlan(plan models.DayPlan, tasks []models.Task, daySt
 		// Validate that the slot end time is not before the start time
 		if slotEnd < slotStart {
 			result.Conflicts = append(result.Conflicts, Conflict{
-				Type:        ConflictInvalidDateTime,
+				Type:        constants.ConflictInvalidDateTime,
 				Description: fmt.Sprintf("%s: Slot end time '%s' is before start time '%s'", formatDate(planDate), slot.End, slot.Start),
 				Date:        plan.Date,
 			})
@@ -353,7 +340,7 @@ func (v *Validator) ValidatePlan(plan models.DayPlan, tasks []models.Task, daySt
 				}
 
 				result.Conflicts = append(result.Conflicts, Conflict{
-					Type: ConflictOverlappingSlots,
+					Type: constants.ConflictOverlappingSlots,
 					Description: fmt.Sprintf("%s: %s-%s \"%s\" overlaps \"%s\"",
 						formatDate(planDate), slot1.Start, slot1.End, task1Name, task2Name),
 					Date:      plan.Date,
@@ -369,7 +356,7 @@ func (v *Validator) ValidatePlan(plan models.DayPlan, tasks []models.Task, daySt
 		hoursScheduled := float64(totalPlannedMinutes) / 60.0
 		hoursAvailable := float64(wakingWindowMinutes) / 60.0
 		result.Conflicts = append(result.Conflicts, Conflict{
-			Type: ConflictExceedsWakingWindow,
+			Type: constants.ConflictExceedsWakingWindow,
 			Description: fmt.Sprintf("%s: %.1fh scheduled exceeds %.1fh waking window",
 				formatDate(planDate), hoursScheduled, hoursAvailable),
 			Date: plan.Date,
@@ -382,7 +369,7 @@ func (v *Validator) ValidatePlan(plan models.DayPlan, tasks []models.Task, daySt
 		hoursScheduled := float64(totalPlannedMinutes) / 60.0
 		hoursAvailable := float64(wakingWindowMinutes) / 60.0
 		result.Conflicts = append(result.Conflicts, Conflict{
-			Type: ConflictOvercommitted,
+			Type: constants.ConflictOvercommitted,
 			Description: fmt.Sprintf("%s: %.1fh scheduled in %.1fh waking window (>80%% capacity)",
 				formatDate(planDate), hoursScheduled, hoursAvailable),
 			Date: plan.Date,
@@ -449,7 +436,7 @@ func AutoFixDuplicateTasks(conflicts []Conflict, tasks []models.Task, deleteFunc
 
 	// Process each duplicate conflict
 	for _, conflict := range conflicts {
-		if conflict.Type != ConflictDuplicateTaskName {
+		if conflict.Type != constants.ConflictDuplicateTaskName {
 			continue
 		}
 
@@ -519,12 +506,12 @@ func AutoFixDuplicateTasks(conflicts []Conflict, tasks []models.Task, deleteFunc
 // recurrenceOverlaps checks if two recurrence patterns can occur on the same day
 func recurrenceOverlaps(r1, r2 models.Recurrence) bool {
 	// If either is daily, they overlap (unless the other is weekly with empty mask, which shouldn't happen)
-	if r1.Type == models.RecurrenceDaily || r2.Type == models.RecurrenceDaily {
+	if r1.Type == constants.RecurrenceDaily || r2.Type == constants.RecurrenceDaily {
 		return true
 	}
 
 	// If both are weekly, check for common weekdays
-	if r1.Type == models.RecurrenceWeekly && r2.Type == models.RecurrenceWeekly {
+	if r1.Type == constants.RecurrenceWeekly && r2.Type == constants.RecurrenceWeekly {
 		// If either mask is empty, assume overlap (conservative)
 		if len(r1.WeekdayMask) == 0 || len(r2.WeekdayMask) == 0 {
 			return true

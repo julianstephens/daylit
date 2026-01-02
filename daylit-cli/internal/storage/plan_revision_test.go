@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 )
 
@@ -39,7 +40,7 @@ func TestPlanAcceptCreatesRevision1(t *testing.T) {
 				Start:  "09:00",
 				End:    "09:30",
 				TaskID: task.ID,
-				Status: models.SlotStatusAccepted,
+				Status: constants.SlotStatusAccepted,
 			},
 		},
 	}
@@ -95,7 +96,7 @@ func TestRegenerateAcceptedPlanCreatesRevision2(t *testing.T) {
 				Start:  "09:00",
 				End:    "09:30",
 				TaskID: task.ID,
-				Status: models.SlotStatusAccepted,
+				Status: constants.SlotStatusAccepted,
 			},
 		},
 	}
@@ -114,7 +115,7 @@ func TestRegenerateAcceptedPlanCreatesRevision2(t *testing.T) {
 				Start:  "10:00",
 				End:    "10:30",
 				TaskID: task.ID,
-				Status: models.SlotStatusPlanned,
+				Status: constants.SlotStatusPlanned,
 			},
 		},
 	}
@@ -187,7 +188,7 @@ func TestRegenerateUnacceptedPlanOverwrites(t *testing.T) {
 				Start:  "09:00",
 				End:    "09:30",
 				TaskID: task.ID,
-				Status: models.SlotStatusPlanned,
+				Status: constants.SlotStatusPlanned,
 			},
 		},
 	}
@@ -206,7 +207,7 @@ func TestRegenerateUnacceptedPlanOverwrites(t *testing.T) {
 				Start:  "10:00",
 				End:    "10:30",
 				TaskID: task.ID,
-				Status: models.SlotStatusPlanned,
+				Status: constants.SlotStatusPlanned,
 			},
 		},
 	}
@@ -263,7 +264,7 @@ func TestGetLatestPlanRevision(t *testing.T) {
 					Start:  "09:00",
 					End:    "09:30",
 					TaskID: task.ID,
-					Status: models.SlotStatusAccepted,
+					Status: constants.SlotStatusAccepted,
 				},
 			},
 		}
@@ -315,7 +316,7 @@ func TestFeedbackAttachesToLatestRevision(t *testing.T) {
 				Start:  "09:00",
 				End:    "09:30",
 				TaskID: task.ID,
-				Status: models.SlotStatusAccepted,
+				Status: constants.SlotStatusAccepted,
 			},
 		},
 	}
@@ -335,7 +336,7 @@ func TestFeedbackAttachesToLatestRevision(t *testing.T) {
 				Start:  "10:00",
 				End:    "10:30",
 				TaskID: task.ID,
-				Status: models.SlotStatusAccepted,
+				Status: constants.SlotStatusAccepted,
 			},
 		},
 	}
@@ -355,10 +356,10 @@ func TestFeedbackAttachesToLatestRevision(t *testing.T) {
 
 	// Add feedback to the latest revision
 	latest.Slots[0].Feedback = &models.Feedback{
-		Rating: models.FeedbackOnTrack,
+		Rating: constants.FeedbackOnTrack,
 		Note:   "Great!",
 	}
-	latest.Slots[0].Status = models.SlotStatusDone
+	latest.Slots[0].Status = constants.SlotStatusDone
 
 	if err := store.SavePlan(latest); err != nil {
 		t.Fatalf("failed to save plan with feedback: %v", err)
@@ -374,7 +375,7 @@ func TestFeedbackAttachesToLatestRevision(t *testing.T) {
 		t.Fatal("feedback not saved on revision 2")
 	}
 
-	if rev2.Slots[0].Feedback.Rating != models.FeedbackOnTrack {
+	if rev2.Slots[0].Feedback.Rating != constants.FeedbackOnTrack {
 		t.Error("feedback rating incorrect")
 	}
 

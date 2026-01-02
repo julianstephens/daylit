@@ -3,30 +3,32 @@ package models
 import (
 	"fmt"
 	"time"
+
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 )
 
 type TaskKind string
 
 const (
-	TaskKindAppointment TaskKind = "appointment"
-	TaskKindFlexible    TaskKind = "flexible"
+	TaskKindAppointment TaskKind = constants.TaskKindAppointment
+	TaskKindFlexible    TaskKind = constants.TaskKindFlexible
 )
 
 type RecurrenceType string
 
 const (
-	RecurrenceDaily  RecurrenceType = "daily"
-	RecurrenceWeekly RecurrenceType = "weekly"
-	RecurrenceNDays  RecurrenceType = "n_days"
-	RecurrenceAdHoc  RecurrenceType = "ad_hoc"
+	RecurrenceDaily  RecurrenceType = constants.RecurrenceDaily
+	RecurrenceWeekly RecurrenceType = constants.RecurrenceWeekly
+	RecurrenceNDays  RecurrenceType = constants.RecurrenceNDays
+	RecurrenceAdHoc  RecurrenceType = constants.RecurrenceAdHoc
 )
 
 type EnergyBand string
 
 const (
-	EnergyLow    EnergyBand = "low"
-	EnergyMedium EnergyBand = "medium"
-	EnergyHigh   EnergyBand = "high"
+	EnergyLow    EnergyBand = constants.EnergyLow
+	EnergyMedium EnergyBand = constants.EnergyMedium
+	EnergyHigh   EnergyBand = constants.EnergyHigh
 )
 
 type Recurrence struct {
@@ -66,10 +68,10 @@ func (t *Task) Validate() error {
 	}
 
 	// Recurrence validation
-	if t.Recurrence.Type == RecurrenceNDays && t.Recurrence.IntervalDays < 1 {
+	if t.Recurrence.Type == constants.RecurrenceNDays && t.Recurrence.IntervalDays < 1 {
 		return fmt.Errorf("interval must be at least 1 for n_days recurrence")
 	}
-	if t.Recurrence.Type == RecurrenceWeekly && len(t.Recurrence.WeekdayMask) == 0 {
+	if t.Recurrence.Type == constants.RecurrenceWeekly && len(t.Recurrence.WeekdayMask) == 0 {
 		return fmt.Errorf("weekdays must be specified for weekly recurrence")
 	}
 

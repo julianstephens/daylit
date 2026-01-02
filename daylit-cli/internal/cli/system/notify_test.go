@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
 )
@@ -78,7 +79,7 @@ func TestNotifyCmd_Idempotency(t *testing.T) {
 				Start:  startTime,
 				End:    endTime,
 				TaskID: task.ID,
-				Status: models.SlotStatusAccepted,
+				Status: constants.SlotStatusAccepted,
 			},
 		},
 	}
@@ -198,7 +199,7 @@ func TestNotifyCmd_GracePeriod(t *testing.T) {
 					Start:  startTime,
 					End:    endTime,
 					TaskID: task.ID,
-					Status: models.SlotStatusAccepted,
+					Status: constants.SlotStatusAccepted,
 				},
 			},
 		}
@@ -248,7 +249,7 @@ func TestNotifyCmd_GracePeriod(t *testing.T) {
 					Start:  startTime,
 					End:    endTime,
 					TaskID: task.ID,
-					Status: models.SlotStatusAccepted,
+					Status: constants.SlotStatusAccepted,
 				},
 			},
 		}
@@ -319,7 +320,7 @@ func TestNotifyCmd_NoNotificationBeforeTime(t *testing.T) {
 				Start:  startTime,
 				End:    endTime,
 				TaskID: task.ID,
-				Status: models.SlotStatusAccepted,
+				Status: constants.SlotStatusAccepted,
 			},
 		},
 	}
@@ -397,7 +398,7 @@ func TestNotifyCmd_DisabledNotifications(t *testing.T) {
 				Start:  startTime,
 				End:    endTime,
 				TaskID: task.ID,
-				Status: models.SlotStatusAccepted,
+				Status: constants.SlotStatusAccepted,
 			},
 		},
 	}
@@ -458,7 +459,7 @@ func TestUpdateSlotNotificationTimestamp(t *testing.T) {
 				Start:  "09:00",
 				End:    "09:30",
 				TaskID: task.ID,
-				Status: models.SlotStatusAccepted,
+				Status: constants.SlotStatusAccepted,
 			},
 		},
 	}
@@ -606,7 +607,7 @@ func TestNotifyCmd_BothStartAndEndNotifications(t *testing.T) {
 				Start:  startTime,
 				End:    endTime,
 				TaskID: task.ID,
-				Status: models.SlotStatusAccepted,
+				Status: constants.SlotStatusAccepted,
 			},
 		},
 	}
@@ -697,13 +698,13 @@ func TestNotifyCmd_OnlyAcceptedOrDoneSlots(t *testing.T) {
 				Start:  startTime,
 				End:    endTime,
 				TaskID: task1.ID,
-				Status: models.SlotStatusAccepted,
+				Status: constants.SlotStatusAccepted,
 			},
 			{
 				Start:  startTime,
 				End:    endTime,
 				TaskID: task2.ID,
-				Status: models.SlotStatusPlanned,
+				Status: constants.SlotStatusPlanned,
 			},
 		},
 	}

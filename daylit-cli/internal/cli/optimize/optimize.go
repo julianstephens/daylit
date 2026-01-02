@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/huh"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/optimizer"
 )
@@ -133,15 +134,15 @@ func displayOptimization(num int, opt optimizer.Optimization) {
 
 	var typeIcon string
 	switch opt.Type {
-	case optimizer.OptimizationReduceDuration:
+	case constants.OptimizationReduceDuration:
 		typeIcon = "⏱️  Reduce Duration"
-	case optimizer.OptimizationIncreaseDuration:
+	case constants.OptimizationIncreaseDuration:
 		typeIcon = "⏱️  Increase Duration"
-	case optimizer.OptimizationSplitTask:
+	case constants.OptimizationSplitTask:
 		typeIcon = "✂️  Split Task"
-	case optimizer.OptimizationRemoveTask:
+	case constants.OptimizationRemoveTask:
 		typeIcon = "🗑️  Remove Task"
-	case optimizer.OptimizationReduceFrequency:
+	case constants.OptimizationReduceFrequency:
 		typeIcon = "📉 Reduce Frequency"
 	default:
 		typeIcon = "🔧 Optimize"
@@ -189,7 +190,7 @@ func applyOptimization(ctx *cli.Context, opt optimizer.Optimization) error {
 
 	// Apply the optimization based on type
 	switch opt.Type {
-	case optimizer.OptimizationReduceDuration:
+	case constants.OptimizationReduceDuration:
 		if suggestedMap, ok := opt.SuggestedValue.(map[string]interface{}); ok {
 			if newDuration, ok := suggestedMap["duration_min"].(int); ok {
 				task.DurationMin = newDuration
@@ -200,7 +201,7 @@ func applyOptimization(ctx *cli.Context, opt optimizer.Optimization) error {
 			return fmt.Errorf("invalid suggested value format")
 		}
 
-	case optimizer.OptimizationIncreaseDuration:
+	case constants.OptimizationIncreaseDuration:
 		if suggestedMap, ok := opt.SuggestedValue.(map[string]interface{}); ok {
 			if newDuration, ok := suggestedMap["duration_min"].(int); ok {
 				task.DurationMin = newDuration
@@ -211,7 +212,7 @@ func applyOptimization(ctx *cli.Context, opt optimizer.Optimization) error {
 			return fmt.Errorf("invalid suggested value format")
 		}
 
-	case optimizer.OptimizationReduceFrequency:
+	case constants.OptimizationReduceFrequency:
 		if suggestedMap, ok := opt.SuggestedValue.(map[string]interface{}); ok {
 			// Check if this is a recurrence type change (e.g., daily to n_days)
 			if recurrence, ok := suggestedMap["recurrence"].(string); ok && recurrence == "n_days" {
@@ -231,11 +232,11 @@ func applyOptimization(ctx *cli.Context, opt optimizer.Optimization) error {
 			return fmt.Errorf("invalid suggested value format")
 		}
 
-	case optimizer.OptimizationRemoveTask:
+	case constants.OptimizationRemoveTask:
 		// Mark task as inactive instead of deleting
 		task.Active = false
 
-	case optimizer.OptimizationSplitTask:
+	case constants.OptimizationSplitTask:
 		// For split task, we just print a message since it requires manual intervention
 		fmt.Println("   ℹ️  Task splitting requires manual action:")
 		fmt.Printf("      1. Create new smaller tasks to replace '%s'\n", task.Name)

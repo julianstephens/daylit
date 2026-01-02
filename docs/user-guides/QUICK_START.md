@@ -100,6 +100,8 @@ daylit debug info
 daylit validate
 ```
 
+For more detailed information on debugging and troubleshooting, see the [Debugging Guide](DEBUGGING.md).
+
 ## Advanced: Migration
 
 To migrate existing data from SQLite to PostgreSQL, use the `--source` flag during initialization:

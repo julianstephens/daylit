@@ -305,9 +305,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	// Handle Editing State
-	if m.state == StateEditing {
+	if m.state == constants.StateEditing {
 		if msg, ok := msg.(tea.KeyMsg); ok && msg.Type == tea.KeyEsc {
-			m.state = StateTasks
+			m.state = constants.StateTasks
 			return m, nil
 		}
 
@@ -356,17 +356,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				m.updateValidationStatus()
 			}
-			m.state = StateTasks
+			m.state = constants.StateTasks
 		case huh.StateAborted:
-			m.state = StateTasks
+			m.state = constants.StateTasks
 		}
 		return m, tea.Batch(cmds...)
 	}
 
 	// Handle Add Habit State
-	if m.state == StateAddHabit {
+	if m.state == constants.StateAddHabit {
 		if msg, ok := msg.(tea.KeyMsg); ok && msg.Type == tea.KeyEsc {
-			m.state = StateHabits
+			m.state = constants.StateHabits
 			return m, nil
 		}
 
@@ -390,22 +390,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				habitsList, _ := m.store.GetAllHabits(false, true)
 				habitEntries, _ := m.store.GetHabitEntriesForDay(today)
 				m.habitsModel.SetHabits(habitsList, habitEntries)
-				m.state = StateHabits
+				m.state = constants.StateHabits
 			} else {
 				// Stay in form state on error to allow retry
 				// The form will display, user can cancel with ESC or retry
 				m.form.State = huh.StateNormal
 			}
 		case huh.StateAborted:
-			m.state = StateHabits
+			m.state = constants.StateHabits
 		}
 		return m, tea.Batch(cmds...)
 	}
 
 	// Handle Add Alert State
-	if m.state == StateAddAlert {
+	if m.state == constants.StateAddAlert {
 		if msg, ok := msg.(tea.KeyMsg); ok && msg.Type == tea.KeyEsc {
-			m.state = StateAlerts
+			m.state = constants.StateAlerts
 			return m, nil
 		}
 
@@ -459,23 +459,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				alertsList, _ := m.store.GetAllAlerts()
 				m.alertsModel.SetAlerts(alertsList)
 				m.formError = "" // Clear any previous errors
-				m.state = StateAlerts
+				m.state = constants.StateAlerts
 			} else {
 				// Store error and stay in form state to allow retry
 				m.formError = fmt.Sprintf("Failed to add alert: %v", err)
 				m.form.State = huh.StateNormal
 			}
 		case huh.StateAborted:
-			m.state = StateAlerts
+			m.state = constants.StateAlerts
 		}
 		return m, tea.Batch(cmds...)
 	}
 
 	// Handle Edit OT State
-	if m.state == StateEditOT {
+	if m.state == constants.StateEditOT {
 		if msg, ok := msg.(tea.KeyMsg); ok && msg.Type == tea.KeyEsc {
 			m.formError = "" // Clear error on cancel
-			m.state = StateOT
+			m.state = constants.StateOT
 			return m, nil
 		}
 
@@ -541,18 +541,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 			m.formError = "" // Clear any previous errors
-			m.state = StateOT
+			m.state = constants.StateOT
 		case huh.StateAborted:
 			m.formError = "" // Clear error on abort
-			m.state = StateOT
+			m.state = constants.StateOT
 		}
 		return m, tea.Batch(cmds...)
 	}
 
 	// Handle Edit Settings State
-	if m.state == StateEditSettings {
+	if m.state == constants.StateEditSettings {
 		if msg, ok := msg.(tea.KeyMsg); ok && msg.Type == tea.KeyEsc {
-			m.state = StateSettings
+			m.state = constants.StateSettings
 			return m, nil
 		}
 
@@ -622,24 +622,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			// Refresh settings view only after successful save
 			m.settingsModel.SetSettings(settings, otSettings)
-			m.state = StateSettings
+			m.state = constants.StateSettings
 		case huh.StateAborted:
-			m.state = StateSettings
+			m.state = constants.StateSettings
 		}
 		return m, tea.Batch(cmds...)
 	}
 
 	// Handle Feedback State
-	if m.state == StateFeedback {
+	if m.state == constants.StateFeedback {
 		if msg, ok := msg.(tea.KeyMsg); ok {
 			var rating models.FeedbackRating
 			switch msg.String() {
 			case "1":
-				rating = models.FeedbackOnTrack
+				rating = constants.FeedbackOnTrack
 			case "2":
-				rating = models.FeedbackTooMuch
+				rating = constants.FeedbackTooMuch
 			case "3":
-				rating = models.FeedbackUnnecessary
+				rating = constants.FeedbackUnnecessary
 			case "q", "esc":
 				m.state = m.previousState
 				return m, nil
@@ -655,7 +655,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				slot.Feedback = &models.Feedback{
 					Rating: rating,
 				}
-				slot.Status = models.SlotStatusDone
+				slot.Status = constants.SlotStatusDone
 
 				// Save plan first to ensure feedback is persisted
 				if err := m.store.SavePlan(plan); err != nil {
@@ -668,7 +668,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				task, err := m.store.GetTask(slot.TaskID)
 				if err == nil {
 					switch rating {
-					case models.FeedbackOnTrack:
+					case constants.FeedbackOnTrack:
 						slotDuration := calculateSlotDuration(*slot)
 						if slotDuration > 0 {
 							if task.AvgActualDurationMin <= 0 {
@@ -677,12 +677,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 								task.AvgActualDurationMin = (task.AvgActualDurationMin * constants.FeedbackExistingWeight) + (float64(slotDuration) * constants.FeedbackNewWeight)
 							}
 						}
-					case models.FeedbackTooMuch:
+					case constants.FeedbackTooMuch:
 						task.DurationMin = int(float64(task.DurationMin) * constants.FeedbackTooMuchReductionFactor)
 						if task.DurationMin < constants.MinTaskDurationMin {
 							task.DurationMin = constants.MinTaskDurationMin
 						}
-					case models.FeedbackUnnecessary:
+					case constants.FeedbackUnnecessary:
 						if task.Recurrence.Type == models.RecurrenceNDays {
 							task.Recurrence.IntervalDays++
 						}
@@ -714,13 +714,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// Handle Confirm Delete State
-	if m.state == StateConfirmDelete {
+	if m.state == constants.StateConfirmDelete {
 		if msg, ok := msg.(tea.KeyMsg); ok {
 			switch msg.String() {
 			case "y", "Y":
 				if err := m.store.DeleteTask(m.taskToDeleteID); err != nil {
 					// On error, silently return to tasks view
-					m.state = StateTasks
+					m.state = constants.StateTasks
 					m.taskToDeleteID = ""
 					return m, nil
 				}
@@ -730,10 +730,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.taskList.SetTasks(tasks)
 				}
 				m.updateValidationStatus()
-				m.state = StateTasks
+				m.state = constants.StateTasks
 				m.taskToDeleteID = ""
 			case "n", "N", "esc", "q":
-				m.state = StateTasks
+				m.state = constants.StateTasks
 				m.taskToDeleteID = ""
 			}
 		}
@@ -741,14 +741,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// Handle Confirm Restore State
-	if m.state == StateConfirmRestore {
+	if m.state == constants.StateConfirmRestore {
 		if msg, ok := msg.(tea.KeyMsg); ok {
 			switch msg.String() {
 			case "y", "Y":
 				if m.taskToRestoreID != "" {
 					if err := m.store.RestoreTask(m.taskToRestoreID); err != nil {
 						// On error, silently return to tasks view
-						m.state = StateTasks
+						m.state = constants.StateTasks
 						m.taskToRestoreID = ""
 						return m, nil
 					}
@@ -758,12 +758,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.taskList.SetTasks(tasks)
 					}
 					m.updateValidationStatus()
-					m.state = StateTasks
+					m.state = constants.StateTasks
 					m.taskToRestoreID = ""
 				} else if m.planToRestoreDate != "" {
 					if err := m.store.RestorePlan(m.planToRestoreDate); err != nil {
 						// On error, silently return to plan view
-						m.state = StatePlan
+						m.state = constants.StatePlan
 						m.planToRestoreDate = ""
 						return m, nil
 					}
@@ -776,14 +776,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.nowModel.SetPlan(plan, tasks)
 					}
 					m.updateValidationStatus()
-					m.state = StatePlan
+					m.state = constants.StatePlan
 					m.planToRestoreDate = ""
 				}
 			case "n", "N", "esc", "q":
 				if m.planToRestoreDate != "" {
-					m.state = StatePlan
+					m.state = constants.StatePlan
 				} else {
-					m.state = StateTasks
+					m.state = constants.StateTasks
 				}
 				m.taskToRestoreID = ""
 				m.planToRestoreDate = ""
@@ -793,7 +793,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// Handle Confirm Overwrite State
-	if m.state == StateConfirmOverwrite {
+	if m.state == constants.StateConfirmOverwrite {
 		if msg, ok := msg.(tea.KeyMsg); ok {
 			switch msg.String() {
 			case "y", "Y":
@@ -820,10 +820,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.updateValidationStatus()
 					}
 				}
-				m.state = StatePlan
+				m.state = constants.StatePlan
 				m.planToOverwriteDate = ""
 			case "n", "N", "esc", "q":
-				m.state = StatePlan
+				m.state = constants.StatePlan
 				m.planToOverwriteDate = ""
 			}
 		}
@@ -831,12 +831,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// Handle Confirm Archive State
-	if m.state == StateConfirmArchive {
+	if m.state == constants.StateConfirmArchive {
 		if msg, ok := msg.(tea.KeyMsg); ok {
 			switch msg.String() {
 			case "y", "Y":
 				if err := m.store.ArchiveHabit(m.habitToArchiveID); err != nil {
-					m.state = StateHabits
+					m.state = constants.StateHabits
 					m.habitToArchiveID = ""
 					return m, nil
 				}
@@ -845,10 +845,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				habitsList, _ := m.store.GetAllHabits(false, true)
 				habitEntries, _ := m.store.GetHabitEntriesForDay(today)
 				m.habitsModel.SetHabits(habitsList, habitEntries)
-				m.state = StateHabits
+				m.state = constants.StateHabits
 				m.habitToArchiveID = ""
 			case "n", "N", "esc", "q":
-				m.state = StateHabits
+				m.state = constants.StateHabits
 				m.habitToArchiveID = ""
 			}
 		}
@@ -874,12 +874,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tasklist.DeleteTaskMsg:
 		m.taskToDeleteID = msg.ID
-		m.state = StateConfirmDelete
+		m.state = constants.StateConfirmDelete
 		return m, nil
 
 	case tasklist.RestoreTaskMsg:
 		m.taskToRestoreID = msg.ID
-		m.state = StateConfirmRestore
+		m.state = constants.StateConfirmRestore
 		return m, nil
 
 	case tasklist.AddTaskMsg:
@@ -904,7 +904,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Active:     task.Active,
 		}
 		m.form = newEditForm(m.taskForm)
-		m.state = StateEditing
+		m.state = constants.StateEditing
 		return m, m.form.Init()
 
 	case tasklist.EditTaskMsg:
@@ -918,7 +918,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Active:     msg.Task.Active,
 		}
 		m.form = newEditForm(m.taskForm)
-		m.state = StateEditing
+		m.state = constants.StateEditing
 		return m, m.form.Init()
 
 	// Handle habit messages
@@ -927,7 +927,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Name: "",
 		}
 		m.form = newHabitForm(m.habitForm)
-		m.state = StateAddHabit
+		m.state = constants.StateAddHabit
 		return m, m.form.Init()
 
 	case habits.MarkHabitMsg:
@@ -960,7 +960,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case habits.ArchiveHabitMsg:
 		m.habitToArchiveID = msg.ID
-		m.state = StateConfirmArchive
+		m.state = constants.StateConfirmArchive
 		return m, nil
 
 	case habits.DeleteHabitMsg:
@@ -992,7 +992,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Weekdays:   "",
 		}
 		m.form = newAlertForm(m.alertForm)
-		m.state = StateAddAlert
+		m.state = constants.StateAddAlert
 		return m, m.form.Init()
 
 	case alerts.DeleteAlertMsg:
@@ -1020,7 +1020,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			BlockEndOffsetMin:    strconv.Itoa(currentSettings.BlockEndOffsetMin),
 		}
 		m.form = newSettingsForm(m.settingsForm)
-		m.state = StateEditSettings
+		m.state = constants.StateEditSettings
 		return m, m.form.Init()
 
 	// Handle OT messages
@@ -1050,7 +1050,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Note:  existingEntry.Note,
 		}
 		m.form = newOTForm(m.otForm)
-		m.state = StateEditOT
+		m.state = constants.StateEditOT
 		return m, m.form.Init()
 
 	case tea.KeyMsg:
@@ -1059,10 +1059,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.quitting = true
 			return m, tea.Quit
 		case key.Matches(msg, m.keys.Tab, m.keys.Right):
-			m.state = (m.state + 1) % NumMainTabs
+			m.state = (m.state + 1) % constants.NumMainTabs
 			return m, nil
 		case key.Matches(msg, m.keys.ShiftTab, m.keys.Left):
-			m.state = (m.state - 1 + NumMainTabs) % NumMainTabs
+			m.state = (m.state - 1 + constants.NumMainTabs) % constants.NumMainTabs
 			return m, nil
 		case key.Matches(msg, m.keys.Help):
 			m.help.ShowAll = !m.help.ShowAll
@@ -1078,7 +1078,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				for i := len(plan.Slots) - 1; i >= 0; i-- {
 					slot := &plan.Slots[i]
-					if (slot.Status == models.SlotStatusAccepted || slot.Status == models.SlotStatusDone) &&
+					if (slot.Status == constants.SlotStatusAccepted || slot.Status == constants.SlotStatusDone) &&
 						slot.Feedback == nil {
 						endMinutes, err := utils.ParseTimeToMinutes(slot.End)
 						if err == nil && endMinutes <= currentMinutes {
@@ -1090,7 +1090,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				if targetSlotIdx != -1 {
 					m.previousState = m.state
-					m.state = StateFeedback
+					m.state = constants.StateFeedback
 					m.feedbackSlotID = targetSlotIdx
 					return m, nil
 				}
@@ -1104,10 +1104,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds = append(cmds, cmd)
 
 	switch m.state {
-	case StateTasks:
+	case constants.StateTasks:
 		m.taskList, cmd = m.taskList.Update(msg)
 		cmds = append(cmds, cmd)
-	case StatePlan:
+	case constants.StatePlan:
 		if msg, ok := msg.(tea.KeyMsg); ok && key.Matches(msg, m.keys.Generate) {
 			// Generate plan
 			today := time.Now().Format(constants.DateFormat)
@@ -1117,7 +1117,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if err == nil {
 				// Plan exists, ask for confirmation
 				m.planToOverwriteDate = today
-				m.state = StateConfirmOverwrite
+				m.state = constants.StateConfirmOverwrite
 				return m, nil
 			}
 
@@ -1144,19 +1144,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.planModel, cmd = m.planModel.Update(msg)
 		cmds = append(cmds, cmd)
-	case StateHabits:
+	case constants.StateHabits:
 		m.habitsModel, cmd = m.habitsModel.Update(msg)
 		cmds = append(cmds, cmd)
-	case StateOT:
+	case constants.StateOT:
 		m.otModel, cmd = m.otModel.Update(msg)
 		cmds = append(cmds, cmd)
-	case StateAlerts:
+	case constants.StateAlerts:
 		m.alertsModel, cmd = m.alertsModel.Update(msg)
 		cmds = append(cmds, cmd)
-	case StateSettings:
+	case constants.StateSettings:
 		m.settingsModel, cmd = m.settingsModel.Update(msg)
 		cmds = append(cmds, cmd)
-	case StateNow:
+	case constants.StateNow:
 		// nowModel is already updated above, but if we add specific keys for Now view, handle them here
 	}
 

@@ -10,19 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/logger"
 	_ "modernc.org/sqlite"
-)
-
-const (
-	// MaxBackups is the maximum number of backups to keep
-	MaxBackups = 14
-	// BackupDirName is the name of the backup directory
-	BackupDirName = "backups"
-	// BackupFilePrefix is the prefix for backup files
-	BackupFilePrefix = "daylit-"
-	// BackupFileSuffix is the suffix for backup files
-	BackupFileSuffix = ".db"
 )
 
 // BackupInfo contains information about a backup file
@@ -41,7 +31,7 @@ type Manager struct {
 // NewManager creates a new backup manager
 func NewManager(dbPath string) *Manager {
 	configDir := filepath.Dir(dbPath)
-	backupDir := filepath.Join(configDir, BackupDirName)
+	backupDir := filepath.Join(configDir, constants.BackupDirName)
 	return &Manager{
 		dbPath:    dbPath,
 		backupDir: backupDir,
@@ -79,13 +69,13 @@ func (m *Manager) createBackup(isPreRestoreBackup bool) (string, error) {
 	// Generate backup filename with timestamp
 	// Try with minute precision first
 	timestamp := time.Now().Format("20060102-1504")
-	backupName := fmt.Sprintf("%s%s%s", BackupFilePrefix, timestamp, BackupFileSuffix)
+	backupName := fmt.Sprintf("%s%s%s", constants.BackupFilePrefix, timestamp, constants.BackupFileSuffix)
 	backupPath := filepath.Join(m.backupDir, backupName)
 
 	// If a backup with the same name exists, add seconds
 	if _, err := os.Stat(backupPath); err == nil {
 		timestamp = time.Now().Format("20060102-150405")
-		backupName = fmt.Sprintf("%s%s%s", BackupFilePrefix, timestamp, BackupFileSuffix)
+		backupName = fmt.Sprintf("%s%s%s", constants.BackupFilePrefix, timestamp, constants.BackupFileSuffix)
 		backupPath = filepath.Join(m.backupDir, backupName)
 
 		// If still exists, add a counter
@@ -94,15 +84,16 @@ func (m *Manager) createBackup(isPreRestoreBackup bool) (string, error) {
 			if _, err := os.Stat(backupPath); os.IsNotExist(err) {
 				break
 			}
-			backupName = fmt.Sprintf("%s%s-%d%s", BackupFilePrefix, timestamp, counter, BackupFileSuffix)
+			backupName = fmt.Sprintf("%s%s-%d%s", constants.BackupFilePrefix, timestamp, counter, constants.BackupFileSuffix)
 			backupPath = filepath.Join(m.backupDir, backupName)
 			counter++
 			if counter > 100 {
 				// Fallback: use a high-entropy suffix to avoid unexpected failures
 				fallbackSuffix := time.Now().UnixNano()
-				backupName = fmt.Sprintf("%s%s-%d%s", BackupFilePrefix, timestamp, fallbackSuffix, BackupFileSuffix)
+				backupName = fmt.Sprintf("%s%s-%d%s", constants.BackupFilePrefix, timestamp, fallbackSuffix, constants.BackupFileSuffix)
 				backupPath = filepath.Join(m.backupDir, backupName)
 				// Final check - if this still fails, give up with informative error
+
 				if _, err := os.Stat(backupPath); err == nil {
 					return "", fmt.Errorf("failed to generate unique backup filename after %d attempts; please check the backup directory for conflicting files", counter)
 				}
@@ -222,15 +213,16 @@ func (m *Manager) ListBackups() ([]BackupInfo, error) {
 		}
 
 		name := entry.Name()
-		if !strings.HasPrefix(name, BackupFilePrefix) || !strings.HasSuffix(name, BackupFileSuffix) {
+		if !strings.HasPrefix(name, constants.BackupFilePrefix) || !strings.HasSuffix(name, constants.BackupFileSuffix) {
 			continue
 		}
 
 		// Parse timestamp from filename
-		timestampStr := strings.TrimPrefix(name, BackupFilePrefix)
-		timestampStr = strings.TrimSuffix(timestampStr, BackupFileSuffix)
+		timestampStr := strings.TrimPrefix(name, constants.BackupFilePrefix)
+		timestampStr = strings.TrimSuffix(timestampStr, constants.BackupFileSuffix)
 
 		// Remove counter suffix if present (format: YYYYMMDD-HHMM-N or YYYYMMDD-HHMMSS-N)
+
 		// Counter is always after the last hyphen and is all digits
 		parts := strings.Split(timestampStr, "-")
 		if len(parts) > 2 {
@@ -303,12 +295,12 @@ func (m *Manager) rotateBackups() error {
 		return err
 	}
 
-	if len(backups) <= MaxBackups {
+	if len(backups) <= constants.MaxBackups {
 		return nil
 	}
 
 	// Delete oldest backups
-	for i := MaxBackups; i < len(backups); i++ {
+	for i := constants.MaxBackups; i < len(backups); i++ {
 		if err := os.Remove(backups[i].Path); err != nil {
 			return fmt.Errorf("failed to remove old backup %s: %w", backups[i].Path, err)
 		}

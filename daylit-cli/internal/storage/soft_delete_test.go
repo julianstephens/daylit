@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 )
 
@@ -160,7 +161,7 @@ func TestPlanSoftDelete(t *testing.T) {
 				Start:  "09:00",
 				End:    "09:30",
 				TaskID: task.ID,
-				Status: models.SlotStatusPlanned,
+				Status: constants.SlotStatusPlanned,
 			},
 		},
 	}
@@ -219,7 +220,7 @@ func TestPlanRestore(t *testing.T) {
 				Start:  "10:00",
 				End:    "10:30",
 				TaskID: task.ID,
-				Status: models.SlotStatusPlanned,
+				Status: constants.SlotStatusPlanned,
 			},
 		},
 	}
@@ -285,7 +286,7 @@ func TestCannotAddSlotsToDeletedPlan(t *testing.T) {
 				Start:  "11:00",
 				End:    "11:30",
 				TaskID: task.ID,
-				Status: models.SlotStatusPlanned,
+				Status: constants.SlotStatusPlanned,
 			},
 		},
 	}
@@ -306,7 +307,7 @@ func TestCannotAddSlotsToDeletedPlan(t *testing.T) {
 				Start:  "12:00",
 				End:    "12:30",
 				TaskID: task.ID,
-				Status: models.SlotStatusPlanned,
+				Status: constants.SlotStatusPlanned,
 			},
 		},
 	}
@@ -532,7 +533,7 @@ func TestDeleteAlreadyDeletedPlan(t *testing.T) {
 				Start:  "09:00",
 				End:    "09:30",
 				TaskID: task.ID,
-				Status: models.SlotStatusPlanned,
+				Status: constants.SlotStatusPlanned,
 			},
 		},
 	}
@@ -581,7 +582,7 @@ func TestRestoreNonDeletedPlan(t *testing.T) {
 				Start:  "10:00",
 				End:    "10:30",
 				TaskID: task.ID,
-				Status: models.SlotStatusPlanned,
+				Status: constants.SlotStatusPlanned,
 			},
 		},
 	}
@@ -625,13 +626,13 @@ func TestRestorePlanTimestampMatching(t *testing.T) {
 				Start:  "09:00",
 				End:    "09:30",
 				TaskID: task.ID,
-				Status: models.SlotStatusPlanned,
+				Status: constants.SlotStatusPlanned,
 			},
 			{
 				Start:  "10:00",
 				End:    "10:30",
 				TaskID: task.ID,
-				Status: models.SlotStatusPlanned,
+				Status: constants.SlotStatusPlanned,
 			},
 		},
 	}

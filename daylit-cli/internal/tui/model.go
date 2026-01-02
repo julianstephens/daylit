@@ -23,31 +23,6 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/validation"
 )
 
-type SessionState int
-
-const (
-	StateNow SessionState = iota
-	StatePlan
-	StateTasks
-	StateHabits
-	StateOT
-	StateAlerts
-	StateSettings
-	StateFeedback
-	StateEditing
-	StateConfirmDelete
-	StateConfirmRestore
-	StateConfirmOverwrite
-	StateConfirmArchive
-	StateAddHabit
-	StateAddAlert
-	StateEditOT
-	StateEditSettings
-)
-
-// NumMainTabs is the number of main navigation tabs in the TUI
-const NumMainTabs = 7 // Now, Plan, Tasks, Habits, OT, Alerts, Settings
-
 type TaskFormModel struct {
 	Name       string
 	Duration   string
@@ -92,8 +67,8 @@ type AlertFormModel struct {
 type Model struct {
 	store               storage.Provider
 	scheduler           *scheduler.Scheduler
-	state               SessionState
-	previousState       SessionState
+	state               constants.SessionState
+	previousState       constants.SessionState
 	keys                KeyMap
 	help                help.Model
 	taskList            tasklist.Model
@@ -164,7 +139,7 @@ func NewModel(store storage.Provider, sched *scheduler.Scheduler) Model {
 	m := Model{
 		store:         store,
 		scheduler:     sched,
-		state:         StateNow,
+		state:         constants.StateNow,
 		keys:          DefaultKeyMap(),
 		help:          help.New(),
 		taskList:      tasklist.New(tasks, 0, 0),
@@ -185,11 +160,11 @@ func NewModel(store storage.Provider, sched *scheduler.Scheduler) Model {
 func (m Model) ShortHelp() []key.Binding {
 	keys := []key.Binding{m.keys.Tab, m.keys.Quit, m.keys.Help}
 	switch m.state {
-	case StateTasks:
+	case constants.StateTasks:
 		keys = append(keys, m.keys.Add, m.keys.Edit, m.keys.Delete)
-	case StatePlan:
+	case constants.StatePlan:
 		keys = append(keys, m.keys.Generate)
-	case StateHabits:
+	case constants.StateHabits:
 		keys = append(keys, m.keys.Add)
 	}
 	keys = append(keys, m.keys.Feedback)
@@ -202,11 +177,11 @@ func (m Model) FullHelp() [][]key.Binding {
 
 	var actions []key.Binding
 	switch m.state {
-	case StateTasks:
+	case constants.StateTasks:
 		actions = []key.Binding{m.keys.Add, m.keys.Edit, m.keys.Delete}
-	case StatePlan:
+	case constants.StatePlan:
 		actions = []key.Binding{m.keys.Generate}
-	case StateHabits:
+	case constants.StateHabits:
 		actions = []key.Binding{m.keys.Add}
 	}
 

@@ -13,6 +13,8 @@ import (
 	"strings"
 
 	"github.com/mitchellh/go-ps"
+
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 )
 
 var (
@@ -27,12 +29,6 @@ type WebhookPayload struct {
 	DurationMs uint32 `json:"duration_ms"`
 }
 
-const (
-	NotifierLockfileName   = "daylit-tray.lock"
-	NotificationDurationMs = 5000
-	TrayAppIdentifier      = "com.daylit.daylit-tray"
-)
-
 func New() *Notifier {
 	return &Notifier{}
 }
@@ -43,14 +39,14 @@ func (n *Notifier) Notify(text string) error {
 		return err
 	}
 
-	port, secret, err := findAndValidateTrayProcess(filepath.Join(trayAppConfigPath, NotifierLockfileName))
+	port, secret, err := findAndValidateTrayProcess(filepath.Join(trayAppConfigPath, constants.NotifierLockfileName))
 	if err != nil {
 		return err
 	}
 
 	payload := WebhookPayload{
 		Text:       text,
-		DurationMs: NotificationDurationMs,
+		DurationMs: constants.NotificationDurationMs,
 	}
 
 	if err := sendNotification(port, secret, payload); err != nil {
@@ -67,7 +63,7 @@ func GetTrayAppConfigDir() (string, error) {
 		return "", fmt.Errorf("failed to get user config dir: %w", err)
 	}
 
-	trayConfigDir := filepath.Join(configDir, TrayAppIdentifier)
+	trayConfigDir := filepath.Join(configDir, constants.TrayAppIdentifier)
 
 	// Check for settings.json to see if a custom lockfile dir is set
 	settingsPath := filepath.Join(trayConfigDir, "settings.json")

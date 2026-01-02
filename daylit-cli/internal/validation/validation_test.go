@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 )
 
@@ -26,7 +27,7 @@ func TestValidateTasks_DuplicateNames(t *testing.T) {
 
 	found := false
 	for _, conflict := range result.Conflicts {
-		if conflict.Type == ConflictDuplicateTaskName {
+		if conflict.Type == constants.ConflictDuplicateTaskName {
 			found = true
 			break
 		}
@@ -71,7 +72,7 @@ func TestValidateTasks_InvalidTimeFormat(t *testing.T) {
 
 	invalidTimeCount := 0
 	for _, conflict := range result.Conflicts {
-		if conflict.Type == ConflictInvalidDateTime {
+		if conflict.Type == constants.ConflictInvalidDateTime {
 			invalidTimeCount++
 		}
 	}
@@ -110,7 +111,7 @@ func TestValidateTasks_OverlappingFixedAppointments(t *testing.T) {
 
 	found := false
 	for _, conflict := range result.Conflicts {
-		if conflict.Type == ConflictOverlappingFixedTasks {
+		if conflict.Type == constants.ConflictOverlappingFixedTasks {
 			found = true
 			if len(conflict.Items) != 2 {
 				t.Errorf("Expected 2 items in conflict, got %d", len(conflict.Items))
@@ -168,8 +169,8 @@ func TestValidatePlan_OverlappingSlots(t *testing.T) {
 	plan := models.DayPlan{
 		Date: "2025-01-15",
 		Slots: []models.Slot{
-			{Start: "09:00", End: "10:00", TaskID: "task1", Status: models.SlotStatusPlanned},
-			{Start: "09:30", End: "10:30", TaskID: "task2", Status: models.SlotStatusPlanned},
+			{Start: "09:00", End: "10:00", TaskID: "task1", Status: constants.SlotStatusPlanned},
+			{Start: "09:30", End: "10:30", TaskID: "task2", Status: constants.SlotStatusPlanned},
 		},
 	}
 
@@ -181,7 +182,7 @@ func TestValidatePlan_OverlappingSlots(t *testing.T) {
 
 	found := false
 	for _, conflict := range result.Conflicts {
-		if conflict.Type == ConflictOverlappingSlots {
+		if conflict.Type == constants.ConflictOverlappingSlots {
 			found = true
 		}
 	}
@@ -200,8 +201,8 @@ func TestValidatePlan_MissingTaskID(t *testing.T) {
 	plan := models.DayPlan{
 		Date: "2025-01-15",
 		Slots: []models.Slot{
-			{Start: "09:00", End: "10:00", TaskID: "task1", Status: models.SlotStatusPlanned},
-			{Start: "10:00", End: "11:00", TaskID: "nonexistent", Status: models.SlotStatusPlanned},
+			{Start: "09:00", End: "10:00", TaskID: "task1", Status: constants.SlotStatusPlanned},
+			{Start: "10:00", End: "11:00", TaskID: "nonexistent", Status: constants.SlotStatusPlanned},
 		},
 	}
 
@@ -213,7 +214,7 @@ func TestValidatePlan_MissingTaskID(t *testing.T) {
 
 	found := false
 	for _, conflict := range result.Conflicts {
-		if conflict.Type == ConflictMissingTaskID {
+		if conflict.Type == constants.ConflictMissingTaskID {
 			found = true
 		}
 	}
@@ -236,9 +237,9 @@ func TestValidatePlan_ExceedsWakingWindow(t *testing.T) {
 	plan := models.DayPlan{
 		Date: "2025-01-15",
 		Slots: []models.Slot{
-			{Start: "08:00", End: "12:00", TaskID: "task1", Status: models.SlotStatusPlanned}, // 4h
-			{Start: "12:00", End: "16:00", TaskID: "task2", Status: models.SlotStatusPlanned}, // 4h
-			{Start: "16:00", End: "19:00", TaskID: "task3", Status: models.SlotStatusPlanned}, // 3h (exceeds 18:00)
+			{Start: "08:00", End: "12:00", TaskID: "task1", Status: constants.SlotStatusPlanned}, // 4h
+			{Start: "12:00", End: "16:00", TaskID: "task2", Status: constants.SlotStatusPlanned}, // 4h
+			{Start: "16:00", End: "19:00", TaskID: "task3", Status: constants.SlotStatusPlanned}, // 3h (exceeds 18:00)
 		},
 	}
 
@@ -250,7 +251,7 @@ func TestValidatePlan_ExceedsWakingWindow(t *testing.T) {
 
 	found := false
 	for _, conflict := range result.Conflicts {
-		if conflict.Type == ConflictExceedsWakingWindow {
+		if conflict.Type == constants.ConflictExceedsWakingWindow {
 			found = true
 		}
 	}
@@ -272,8 +273,8 @@ func TestValidatePlan_Overcommitted(t *testing.T) {
 	plan := models.DayPlan{
 		Date: "2025-01-15",
 		Slots: []models.Slot{
-			{Start: "08:00", End: "12:30", TaskID: "task1", Status: models.SlotStatusPlanned}, // 4.5h
-			{Start: "12:30", End: "17:00", TaskID: "task2", Status: models.SlotStatusPlanned}, // 4.5h
+			{Start: "08:00", End: "12:30", TaskID: "task1", Status: constants.SlotStatusPlanned}, // 4.5h
+			{Start: "12:30", End: "17:00", TaskID: "task2", Status: constants.SlotStatusPlanned}, // 4.5h
 		},
 	}
 
@@ -285,7 +286,7 @@ func TestValidatePlan_Overcommitted(t *testing.T) {
 
 	found := false
 	for _, conflict := range result.Conflicts {
-		if conflict.Type == ConflictOvercommitted {
+		if conflict.Type == constants.ConflictOvercommitted {
 			found = true
 		}
 	}
@@ -304,7 +305,7 @@ func TestValidatePlan_InvalidDate(t *testing.T) {
 	plan := models.DayPlan{
 		Date: "invalid-date",
 		Slots: []models.Slot{
-			{Start: "09:00", End: "10:00", TaskID: "task1", Status: models.SlotStatusPlanned},
+			{Start: "09:00", End: "10:00", TaskID: "task1", Status: constants.SlotStatusPlanned},
 		},
 	}
 
@@ -316,7 +317,7 @@ func TestValidatePlan_InvalidDate(t *testing.T) {
 
 	found := false
 	for _, conflict := range result.Conflicts {
-		if conflict.Type == ConflictInvalidDateTime {
+		if conflict.Type == constants.ConflictInvalidDateTime {
 			found = true
 		}
 	}
@@ -336,8 +337,8 @@ func TestValidatePlan_NoConflicts(t *testing.T) {
 	plan := models.DayPlan{
 		Date: "2025-01-15",
 		Slots: []models.Slot{
-			{Start: "09:00", End: "10:00", TaskID: "task1", Status: models.SlotStatusPlanned},
-			{Start: "10:00", End: "11:00", TaskID: "task2", Status: models.SlotStatusPlanned},
+			{Start: "09:00", End: "10:00", TaskID: "task1", Status: constants.SlotStatusPlanned},
+			{Start: "10:00", End: "11:00", TaskID: "task2", Status: constants.SlotStatusPlanned},
 		},
 	}
 
@@ -380,11 +381,11 @@ func TestValidationResult_FormatReport(t *testing.T) {
 	result := ValidationResult{
 		Conflicts: []Conflict{
 			{
-				Type:        ConflictOverlappingSlots,
+				Type:        constants.ConflictOverlappingSlots,
 				Description: "Mon: 09:00-10:00 \"Task A\" overlaps \"Task B\"",
 			},
 			{
-				Type:        ConflictExceedsWakingWindow,
+				Type:        constants.ConflictExceedsWakingWindow,
 				Description: "Mon: 11.0h scheduled exceeds 10.0h waking window",
 			},
 		},
@@ -437,8 +438,8 @@ func TestValidatePlan_SkipsDeletedSlots(t *testing.T) {
 	plan := models.DayPlan{
 		Date: "2025-01-15",
 		Slots: []models.Slot{
-			{Start: "09:00", End: "10:00", TaskID: "task1", Status: models.SlotStatusPlanned},
-			{Start: "09:30", End: "10:30", TaskID: "task2", Status: models.SlotStatusPlanned, DeletedAt: &deleted}, // Deleted overlap
+			{Start: "09:00", End: "10:00", TaskID: "task1", Status: constants.SlotStatusPlanned},
+			{Start: "09:30", End: "10:30", TaskID: "task2", Status: constants.SlotStatusPlanned, DeletedAt: &deleted}, // Deleted overlap
 		},
 	}
 
@@ -463,7 +464,7 @@ func TestValidateTasks_EmptyNames(t *testing.T) {
 
 	// Should not report duplicates for empty names
 	for _, conflict := range result.Conflicts {
-		if conflict.Type == ConflictDuplicateTaskName {
+		if conflict.Type == constants.ConflictDuplicateTaskName {
 			t.Error("Should not flag empty task names as duplicates")
 		}
 	}
@@ -521,7 +522,7 @@ func TestValidateTasks_NegativeDuration(t *testing.T) {
 
 	found := false
 	for _, conflict := range result.Conflicts {
-		if conflict.Type == ConflictInvalidDateTime {
+		if conflict.Type == constants.ConflictInvalidDateTime {
 			found = true
 			break
 		}
@@ -541,7 +542,7 @@ func TestValidatePlan_NegativeSlotDuration(t *testing.T) {
 	plan := models.DayPlan{
 		Date: "2025-01-15",
 		Slots: []models.Slot{
-			{Start: "10:00", End: "09:00", TaskID: "task1", Status: models.SlotStatusPlanned}, // End before start
+			{Start: "10:00", End: "09:00", TaskID: "task1", Status: constants.SlotStatusPlanned}, // End before start
 		},
 	}
 
@@ -553,7 +554,7 @@ func TestValidatePlan_NegativeSlotDuration(t *testing.T) {
 
 	found := false
 	for _, conflict := range result.Conflicts {
-		if conflict.Type == ConflictInvalidDateTime {
+		if conflict.Type == constants.ConflictInvalidDateTime {
 			found = true
 			break
 		}
@@ -574,7 +575,7 @@ func TestAutoFixDuplicateTasks(t *testing.T) {
 	// Create conflicts
 	conflicts := []Conflict{
 		{
-			Type:        ConflictDuplicateTaskName,
+			Type:        constants.ConflictDuplicateTaskName,
 			Description: "Duplicate task name: \"Task A\" (IDs: [1 3 4])",
 			Items:       []string{"Task A"},
 			TaskIDs:     []string{"1", "3", "4"},
@@ -643,7 +644,7 @@ func TestAutoFixDuplicateTasks_OnlyNonDuplicateConflicts(t *testing.T) {
 
 	conflicts := []Conflict{
 		{
-			Type:        ConflictInvalidDateTime,
+			Type:        constants.ConflictInvalidDateTime,
 			Description: "Invalid time",
 			Items:       []string{"Task A"},
 		},
@@ -672,7 +673,7 @@ func TestAutoFixDuplicateTasks_SkipsAlreadyDeleted(t *testing.T) {
 
 	conflicts := []Conflict{
 		{
-			Type:        ConflictDuplicateTaskName,
+			Type:        constants.ConflictDuplicateTaskName,
 			Description: "Duplicate task name: \"Task A\" (IDs: [1 2 3])",
 			Items:       []string{"Task A"},
 			TaskIDs:     []string{"1", "2", "3"},
@@ -712,7 +713,7 @@ func TestAutoFixDuplicateTasks_HandlesDeleteErrors(t *testing.T) {
 
 	conflicts := []Conflict{
 		{
-			Type:        ConflictDuplicateTaskName,
+			Type:        constants.ConflictDuplicateTaskName,
 			Description: "Duplicate task name: \"Task A\" (IDs: [1 2 3])",
 			Items:       []string{"Task A"},
 			TaskIDs:     []string{"1", "2", "3"},
@@ -755,7 +756,7 @@ func TestAutoFixDuplicateTasks_HandlesOrphanedConflictReferences(t *testing.T) {
 
 	conflicts := []Conflict{
 		{
-			Type:        ConflictDuplicateTaskName,
+			Type:        constants.ConflictDuplicateTaskName,
 			Description: "Duplicate task name: \"Task A\" (IDs: [1 2 3])",
 			Items:       []string{"Task A"},
 			TaskIDs:     []string{"1", "2", "3"}, // ID "2" doesn't exist in tasks
@@ -970,7 +971,7 @@ func TestValidateTasksForDate_NDaysRecurrence(t *testing.T) {
 	// Verify the conflict is about overlapping appointments
 	foundOverlap := false
 	for _, conflict := range result.Conflicts {
-		if conflict.Type == ConflictOverlappingFixedTasks {
+		if conflict.Type == constants.ConflictOverlappingFixedTasks {
 			foundOverlap = true
 			break
 		}

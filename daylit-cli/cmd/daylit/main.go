@@ -19,7 +19,7 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli/settings"
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli/system"
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli/tasks"
-	_ "github.com/julianstephens/daylit/daylit-cli/internal/constants"
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/keyring"
 	"github.com/julianstephens/daylit/daylit-cli/internal/logger"
 	"github.com/julianstephens/daylit/daylit-cli/internal/scheduler"
@@ -27,14 +27,13 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage/postgres"
 )
 
-const defaultConfigPath = "~/.config/daylit/daylit.db"
-
 type CLI struct {
 	Version   kong.VersionFlag
 	DebugMode bool   `help:"Enable debug logging." name:"debug"`
 	Config    string `help:"Config file path or PostgreSQL connection string. When passing a PostgreSQL connection string via command-line flags, credentials must NOT be embedded. Use environment variables or a .pgpass file for command-line usage, or store a connection string with embedded credentials securely in the OS keyring via the 'keyring' commands." type:"string" default:"~/.config/daylit/daylit.db" env:"DAYLIT_CONFIG"`
 
-	Init     system.InitCmd       `cmd:"" help:"Initialize daylit storage."`
+	Init system.InitCmd `cmd:"" help:"Initialize daylit storage."`
+
 	Migrate  system.MigrateCmd    `cmd:"" help:"Run database migrations."`
 	Doctor   system.DoctorCmd     `cmd:"" help:"Run health checks and diagnostics."`
 	Tui      system.TuiCmd        `cmd:"" help:"Launch the interactive TUI." default:"1"`
@@ -85,7 +84,7 @@ type CLI struct {
 func (c *CLI) AfterApply(ctx *kong.Context) error {
 	// Determine config directory for logger initialization
 	configPath := c.Config
-	if configPath == defaultConfigPath {
+	if configPath == constants.DefaultConfigPath {
 		configPath = os.ExpandEnv(configPath)
 	}
 	configDir := filepath.Dir(configPath)
@@ -115,7 +114,7 @@ func (c *CLI) AfterApply(ctx *kong.Context) error {
 
 	// If config is still the default SQLite path and no DAYLIT_CONFIG env var is set,
 	// try to retrieve from keyring
-	if configToUse == defaultConfigPath && os.Getenv("DAYLIT_CONFIG") == "" {
+	if configToUse == constants.DefaultConfigPath && os.Getenv("DAYLIT_CONFIG") == "" {
 		keyringConnStr, err := keyring.GetConnectionString()
 		if err == nil {
 			// Successfully retrieved from keyring

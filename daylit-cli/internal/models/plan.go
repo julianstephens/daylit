@@ -2,20 +2,7 @@ package models
 
 type SlotStatus string
 
-const (
-	SlotStatusPlanned  SlotStatus = "planned"
-	SlotStatusAccepted SlotStatus = "accepted"
-	SlotStatusDone     SlotStatus = "done"
-	SlotStatusSkipped  SlotStatus = "skipped"
-)
-
 type FeedbackRating string
-
-const (
-	FeedbackOnTrack     FeedbackRating = "on_track"
-	FeedbackTooMuch     FeedbackRating = "too_much"
-	FeedbackUnnecessary FeedbackRating = "unnecessary"
-)
 
 type Feedback struct {
 	Rating FeedbackRating `json:"rating"`
