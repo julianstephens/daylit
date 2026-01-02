@@ -266,16 +266,16 @@ func TestParseTimeInLocation(t *testing.T) {
 			wantErr:  false,
 		},
 		{
-			name:     "invalid format",
-			timeStr:  "25:00",
-			loc:      utc,
-			wantErr:  true,
+			name:    "invalid format",
+			timeStr: "25:00",
+			loc:     utc,
+			wantErr: true,
 		},
 		{
-			name:     "invalid format with text",
-			timeStr:  "noon",
-			loc:      utc,
-			wantErr:  true,
+			name:    "invalid format with text",
+			timeStr: "noon",
+			loc:     utc,
+			wantErr: true,
 		},
 	}
 
@@ -333,16 +333,16 @@ func TestParseDateInLocation(t *testing.T) {
 			wantErr:   false,
 		},
 		{
-			name:     "invalid format",
-			dateStr:  "2026/01/15",
-			loc:      utc,
-			wantErr:  true,
+			name:    "invalid format",
+			dateStr: "2026/01/15",
+			loc:     utc,
+			wantErr: true,
 		},
 		{
-			name:     "invalid date",
-			dateStr:  "2026-13-01",
-			loc:      utc,
-			wantErr:  true,
+			name:    "invalid date",
+			dateStr: "2026-13-01",
+			loc:     utc,
+			wantErr: true,
 		},
 	}
 
@@ -428,18 +428,18 @@ func TestCombineDateAndTime(t *testing.T) {
 			wantErr:  false,
 		},
 		{
-			name:     "invalid date format",
-			dateStr:  "2026/01/15",
-			timeStr:  "14:30",
-			loc:      utc,
-			wantErr:  true,
+			name:    "invalid date format",
+			dateStr: "2026/01/15",
+			timeStr: "14:30",
+			loc:     utc,
+			wantErr: true,
 		},
 		{
-			name:     "invalid time format",
-			dateStr:  "2026-01-15",
-			timeStr:  "25:00",
-			loc:      utc,
-			wantErr:  true,
+			name:    "invalid time format",
+			dateStr: "2026-01-15",
+			timeStr: "25:00",
+			loc:     utc,
+			wantErr: true,
 		},
 	}
 
