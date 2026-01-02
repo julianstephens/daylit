@@ -4,16 +4,18 @@ import (
 	"fmt"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
+	"github.com/julianstephens/daylit/daylit-cli/internal/utils"
 )
 
 type SettingsCmd struct {
 	List bool `help:"List current settings."`
 
-	NotificationsEnabled *bool `help:"Enable or disable notifications."`
-	NotifyBlockStart     *bool `help:"Notify on block start."`
-	NotifyBlockEnd       *bool `help:"Notify on block end."`
-	BlockStartOffsetMin  *int  `help:"Minutes before block start to notify."`
-	BlockEndOffsetMin    *int  `help:"Minutes before block end to notify."`
+	Timezone             *string `help:"Set timezone (IANA name, e.g., 'America/New_York', 'Europe/London', or 'Local')."`
+	NotificationsEnabled *bool   `help:"Enable or disable notifications."`
+	NotifyBlockStart     *bool   `help:"Notify on block start."`
+	NotifyBlockEnd       *bool   `help:"Notify on block end."`
+	BlockStartOffsetMin  *int    `help:"Minutes before block start to notify."`
+	BlockEndOffsetMin    *int    `help:"Minutes before block end to notify."`
 
 	OTPromptOnEmpty  *bool `help:"OT: Prompt when no entry exists for today."`
 	OTStrictMode     *bool `help:"OT: Strict mode - only one entry per day."`
@@ -36,6 +38,7 @@ func (c *SettingsCmd) Run(ctx *cli.Context) error {
 		fmt.Printf("  Day Start:             %s\n", settings.DayStart)
 		fmt.Printf("  Day End:               %s\n", settings.DayEnd)
 		fmt.Printf("  Default Block Min:     %d\n", settings.DefaultBlockMin)
+		fmt.Printf("  Timezone:              %s\n", settings.Timezone)
 		fmt.Println("\nOnce Today (OT) Settings:")
 		fmt.Printf("  Prompt On Empty:       %v\n", otSettings.PromptOnEmpty)
 		fmt.Printf("  Strict Mode:           %v\n", otSettings.StrictMode)
@@ -51,6 +54,14 @@ func (c *SettingsCmd) Run(ctx *cli.Context) error {
 
 	updated := false
 	otUpdated := false
+
+	if c.Timezone != nil {
+		if !utils.ValidateTimezone(*c.Timezone) {
+			return fmt.Errorf("invalid timezone: %s (use IANA timezone name like 'America/New_York' or 'Local')", *c.Timezone)
+		}
+		settings.Timezone = *c.Timezone
+		updated = true
+	}
 
 	if c.NotificationsEnabled != nil {
 		settings.NotificationsEnabled = *c.NotificationsEnabled
