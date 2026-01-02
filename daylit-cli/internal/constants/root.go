@@ -53,7 +53,7 @@ const (
 	NotifyRetryDelay       = 100 * time.Millisecond
 	NotifierLockfileName   = "daylit-notifier.lock"
 	NotificationDurationMs = 5000
-	TrayAppIdentifier      = "com.julianstephens.daylit"
+	TrayAppIdentifier      = "com.daylit.daylit-tray"
 
 	// Slot Status constants
 	SlotStatusPlanned  = "planned"
