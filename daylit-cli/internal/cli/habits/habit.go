@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
 )
@@ -27,10 +29,6 @@ type HabitAddCmd struct {
 }
 
 func (c *HabitAddCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	// Check if habit with same name already exists
 	_, err := ctx.Store.GetHabitByName(c.Name)
 	if err == nil {
@@ -57,10 +55,6 @@ type HabitListCmd struct {
 }
 
 func (c *HabitListCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	habits, err := ctx.Store.GetAllHabits(c.Archived, c.Deleted)
 	if err != nil {
 		return err
@@ -91,10 +85,6 @@ type HabitMarkCmd struct {
 }
 
 func (c *HabitMarkCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	// Get the habit
 	habit, err := ctx.Store.GetHabitByName(c.Name)
 	if err != nil {
@@ -104,10 +94,10 @@ func (c *HabitMarkCmd) Run(ctx *cli.Context) error {
 	// Determine the date
 	day := c.Date
 	if day == "" {
-		day = time.Now().Format("2006-01-02")
+		day = time.Now().Format(constants.DateFormat)
 	} else {
 		// Validate date format
-		if _, err := time.Parse("2006-01-02", day); err != nil {
+		if _, err := time.Parse(constants.DateFormat, day); err != nil {
 			return fmt.Errorf("invalid date format: %s (expected YYYY-MM-DD)", day)
 		}
 	}
@@ -144,10 +134,6 @@ func (c *HabitMarkCmd) Run(ctx *cli.Context) error {
 type HabitTodayCmd struct{}
 
 func (c *HabitTodayCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	habits, err := ctx.Store.GetAllHabits(false, false)
 	if err != nil {
 		return err
@@ -201,10 +187,6 @@ type HabitLogCmd struct {
 }
 
 func (c *HabitLogCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	habits, err := ctx.Store.GetAllHabits(false, false)
 	if err != nil {
 		return err
@@ -314,10 +296,6 @@ type HabitArchiveCmd struct {
 }
 
 func (c *HabitArchiveCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	habit, err := ctx.Store.GetHabitByName(c.Name)
 	if err != nil {
 		return fmt.Errorf("habit %q not found", c.Name)
@@ -343,10 +321,6 @@ type HabitDeleteCmd struct {
 }
 
 func (c *HabitDeleteCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	habit, err := ctx.Store.GetHabitByName(c.Name)
 	if err != nil {
 		return fmt.Errorf("habit %q not found", c.Name)
@@ -366,10 +340,6 @@ type HabitRestoreCmd struct {
 }
 
 func (c *HabitRestoreCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	// Get habit including deleted ones
 	habits, err := ctx.Store.GetAllHabits(true, true)
 	if err != nil {

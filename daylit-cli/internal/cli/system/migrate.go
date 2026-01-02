@@ -13,10 +13,6 @@ import (
 type MigrateCmd struct{}
 
 func (c *MigrateCmd) Run(ctx *cli.Context) error {
-	// Load the database
-	if err := ctx.Store.Load(); err != nil {
-		return fmt.Errorf("failed to load database: %w", err)
-	}
 	defer ctx.Store.Close()
 
 	// Get database connection for SQLite stores

@@ -8,6 +8,7 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/notifier"
+	"github.com/julianstephens/daylit/daylit-cli/internal/utils"
 )
 
 type NotifyCmd struct {
@@ -84,11 +85,11 @@ func (c *NotifyCmd) runWithRetry(ctx *cli.Context) error {
 			continue
 		}
 
-		startMinutes, err := cli.ParseTimeToMinutes(slot.Start)
+		startMinutes, err := utils.ParseTimeToMinutes(slot.Start)
 		if err != nil {
 			continue
 		}
-		endMinutes, err := cli.ParseTimeToMinutes(slot.End)
+		endMinutes, err := utils.ParseTimeToMinutes(slot.End)
 		if err != nil {
 			continue
 		}

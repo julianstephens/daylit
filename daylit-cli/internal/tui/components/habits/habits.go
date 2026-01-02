@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 )
 
@@ -113,7 +114,7 @@ type Model struct {
 }
 
 func New(habits []models.Habit, entries []models.HabitEntry, width, height int) Model {
-	today := time.Now().Format("2006-01-02")
+	today := time.Now().Format(constants.DateFormat)
 	markedHabits := make(map[string]bool)
 	for _, entry := range entries {
 		markedHabits[entry.HabitID] = true
@@ -152,7 +153,7 @@ func New(habits []models.Habit, entries []models.HabitEntry, width, height int) 
 }
 
 func (m *Model) SetHabits(habits []models.Habit, entries []models.HabitEntry) {
-	m.today = time.Now().Format("2006-01-02")
+	m.today = time.Now().Format(constants.DateFormat)
 	m.markedHabits = make(map[string]bool)
 	for _, entry := range entries {
 		m.markedHabits[entry.HabitID] = true

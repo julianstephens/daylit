@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
@@ -25,10 +26,6 @@ type OTCmd struct {
 type OTInitCmd struct{}
 
 func (c *OTInitCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	// Check if settings already exist
 	_, err := ctx.Store.GetOTSettings()
 	if err == nil {
@@ -61,10 +58,6 @@ type OTSettingsCmd struct {
 }
 
 func (c *OTSettingsCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	settings, err := ctx.Store.GetOTSettings()
 	if err != nil {
 		return fmt.Errorf("OT settings not found. Run 'daylit ot init' first")
@@ -111,10 +104,6 @@ type OTSetCmd struct {
 }
 
 func (c *OTSetCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	// Determine the date
 	day := c.Day
 	if day == "" {
@@ -165,10 +154,6 @@ type OTShowCmd struct {
 }
 
 func (c *OTShowCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	if c.Days > 0 {
 		// Show last N days
 		endDay := time.Now()
@@ -243,10 +228,6 @@ func (c *OTShowCmd) Run(ctx *cli.Context) error {
 type OTNudgeCmd struct{}
 
 func (c *OTNudgeCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	today := time.Now().Format("2006-01-02")
 	entry, err := ctx.Store.GetOTEntry(today)
 	if err == nil {
@@ -277,10 +258,6 @@ func (c *OTNudgeCmd) Run(ctx *cli.Context) error {
 type OTDoctorCmd struct{}
 
 func (c *OTDoctorCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	fmt.Println("Running OT diagnostics...")
 	fmt.Println()
 
@@ -383,10 +360,6 @@ type OTDeleteCmd struct {
 }
 
 func (c *OTDeleteCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	day := c.Day
 	if day == "" {
 		day = time.Now().Format("2006-01-02")
@@ -411,10 +384,6 @@ type OTRestoreCmd struct {
 }
 
 func (c *OTRestoreCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	day := c.Day
 	if day == "" {
 		day = time.Now().Format("2006-01-02")

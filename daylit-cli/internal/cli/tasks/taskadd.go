@@ -2,11 +2,11 @@ package tasks
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
+	"github.com/julianstephens/daylit/daylit-cli/internal/utils"
 )
 
 type TaskAddCmd struct {
@@ -45,30 +45,30 @@ func (c *TaskAddCmd) Validate() error {
 
 	// Validate time formats
 	if c.Earliest != "" {
-		if _, err := time.Parse("15:04", c.Earliest); err != nil {
+		if _, err := utils.ParseTime(c.Earliest); err != nil {
 			return fmt.Errorf("invalid Earliest time format (expected HH:MM): %w", err)
 		}
 	}
 	if c.Latest != "" {
-		if _, err := time.Parse("15:04", c.Latest); err != nil {
+		if _, err := utils.ParseTime(c.Latest); err != nil {
 			return fmt.Errorf("invalid Latest time format (expected HH:MM): %w", err)
 		}
 	}
 	if c.FixedStart != "" {
-		if _, err := time.Parse("15:04", c.FixedStart); err != nil {
+		if _, err := utils.ParseTime(c.FixedStart); err != nil {
 			return fmt.Errorf("invalid FixedStart time format (expected HH:MM): %w", err)
 		}
 	}
 	if c.FixedEnd != "" {
-		if _, err := time.Parse("15:04", c.FixedEnd); err != nil {
+		if _, err := utils.ParseTime(c.FixedEnd); err != nil {
 			return fmt.Errorf("invalid FixedEnd time format (expected HH:MM): %w", err)
 		}
 	}
 
 	// Validate FixedStart comes before FixedEnd
 	if c.FixedStart != "" && c.FixedEnd != "" {
-		start, _ := time.Parse("15:04", c.FixedStart) // Already validated above, won't fail
-		end, _ := time.Parse("15:04", c.FixedEnd)     // Already validated above, won't fail
+		start, _ := utils.ParseTime(c.FixedStart) // Already validated above, won't fail
+		end, _ := utils.ParseTime(c.FixedEnd)     // Already validated above, won't fail
 		if !start.Before(end) {
 			return fmt.Errorf("fixedStart must be before FixedEnd")
 		}
@@ -76,8 +76,8 @@ func (c *TaskAddCmd) Validate() error {
 
 	// Validate Earliest comes before Latest
 	if c.Earliest != "" && c.Latest != "" {
-		earliest, _ := time.Parse("15:04", c.Earliest) // Already validated above, won't fail
-		latest, _ := time.Parse("15:04", c.Latest)     // Already validated above, won't fail
+		earliest, _ := utils.ParseTime(c.Earliest) // Already validated above, won't fail
+		latest, _ := utils.ParseTime(c.Latest)     // Already validated above, won't fail
 		if !earliest.Before(latest) {
 			return fmt.Errorf("earliest must be before Latest")
 		}
@@ -93,10 +93,6 @@ func (c *TaskAddCmd) Validate() error {
 }
 
 func (c *TaskAddCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	// Determine task kind
 	taskKind := models.TaskKindFlexible
 	if c.FixedStart != "" && c.FixedEnd != "" {
@@ -147,6 +143,10 @@ func (c *TaskAddCmd) Run(ctx *cli.Context) error {
 		Active:               true,
 		SuccessStreak:        0,
 		AvgActualDurationMin: float64(c.Duration),
+	}
+
+	if err := task.Validate(); err != nil {
+		return fmt.Errorf("invalid task: %w", err)
 	}
 
 	if err := ctx.Store.AddTask(task); err != nil {

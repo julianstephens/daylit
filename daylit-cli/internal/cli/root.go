@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/backup"
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/scheduler"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
@@ -91,31 +92,14 @@ func FormatRecurrence(rec models.Recurrence) string {
 	}
 }
 
-// ParseTimeToMinutes parses a "HH:MM" string into minutes from midnight
-func ParseTimeToMinutes(timeStr string) (int, error) {
-	parts := strings.Split(timeStr, ":")
-	if len(parts) != 2 {
-		return 0, fmt.Errorf("invalid time format: %q", timeStr)
-	}
-	hour, err := strconv.Atoi(parts[0])
-	if err != nil {
-		return 0, fmt.Errorf("invalid hour in %q: %w", timeStr, err)
-	}
-	minute, err := strconv.Atoi(parts[1])
-	if err != nil {
-		return 0, fmt.Errorf("invalid minute in %q: %w", timeStr, err)
-	}
-	return hour*60 + minute, nil
-}
-
 // CalculateSlotDuration returns the duration of a slot in minutes.
 // Returns 0 if the time format is invalid (which the caller should check).
 func CalculateSlotDuration(slot models.Slot) int {
-	start, err := time.Parse("15:04", slot.Start)
+	start, err := time.Parse(constants.TimeFormat, slot.Start)
 	if err != nil {
 		return 0
 	}
-	end, err := time.Parse("15:04", slot.End)
+	end, err := time.Parse(constants.TimeFormat, slot.End)
 	if err != nil {
 		return 0
 	}

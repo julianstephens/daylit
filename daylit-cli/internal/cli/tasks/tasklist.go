@@ -13,10 +13,6 @@ type TaskListCmd struct {
 }
 
 func (c *TaskListCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	tasks, err := ctx.Store.GetAllTasks()
 	if err != nil {
 		return fmt.Errorf("failed to get tasks: %w", err)

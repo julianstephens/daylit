@@ -13,10 +13,6 @@ type DayCmd struct {
 }
 
 func (c *DayCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	// Parse date
 	var planDate time.Time
 	if c.Date == "today" {

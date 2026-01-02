@@ -2,10 +2,10 @@ package tasks
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
+	"github.com/julianstephens/daylit/daylit-cli/internal/utils"
 )
 
 type TaskEditCmd struct {
@@ -24,10 +24,6 @@ type TaskEditCmd struct {
 }
 
 func (c *TaskEditCmd) Run(ctx *cli.Context) error {
-	if err := ctx.Store.Load(); err != nil {
-		return err
-	}
-
 	task, err := ctx.Store.GetTask(c.ID)
 	if err != nil {
 		return fmt.Errorf("failed to find task: %w", err)
@@ -85,25 +81,25 @@ func (c *TaskEditCmd) Run(ctx *cli.Context) error {
 
 	// Update time constraints
 	if c.Earliest != nil {
-		if _, err := time.Parse("15:04", *c.Earliest); err != nil {
+		if _, err := utils.ParseTime(*c.Earliest); err != nil {
 			return fmt.Errorf("invalid earliest time: %w", err)
 		}
 		task.EarliestStart = *c.Earliest
 	}
 	if c.Latest != nil {
-		if _, err := time.Parse("15:04", *c.Latest); err != nil {
+		if _, err := utils.ParseTime(*c.Latest); err != nil {
 			return fmt.Errorf("invalid latest time: %w", err)
 		}
 		task.LatestEnd = *c.Latest
 	}
 	if c.FixedStart != nil {
-		if _, err := time.Parse("15:04", *c.FixedStart); err != nil {
+		if _, err := utils.ParseTime(*c.FixedStart); err != nil {
 			return fmt.Errorf("invalid fixed start time: %w", err)
 		}
 		task.FixedStart = *c.FixedStart
 	}
 	if c.FixedEnd != nil {
-		if _, err := time.Parse("15:04", *c.FixedEnd); err != nil {
+		if _, err := utils.ParseTime(*c.FixedEnd); err != nil {
 			return fmt.Errorf("invalid fixed end time: %w", err)
 		}
 		task.FixedEnd = *c.FixedEnd
@@ -114,6 +110,10 @@ func (c *TaskEditCmd) Run(ctx *cli.Context) error {
 		task.Kind = models.TaskKindAppointment
 	} else {
 		task.Kind = models.TaskKindFlexible
+	}
+
+	if err := task.Validate(); err != nil {
+		return fmt.Errorf("invalid task: %w", err)
 	}
 
 	if err := ctx.Store.UpdateTask(task); err != nil {

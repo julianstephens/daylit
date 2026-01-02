@@ -19,9 +19,10 @@ import (
 	_ "github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/scheduler"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
+	"github.com/julianstephens/daylit/daylit-cli/internal/storage/postgres"
 )
 
-var CLI struct {
+type CLI struct {
 	Version kong.VersionFlag
 	Config  string `help:"Config file path or PostgreSQL connection string. For PostgreSQL, credentials must NOT be embedded in the connection string. Use environment variables or a .pgpass file instead." type:"string" default:"~/.config/daylit/daylit.db" env:"DAYLIT_CONFIG"`
 
@@ -57,42 +58,33 @@ var CLI struct {
 	OT       ot.OTCmd             `cmd:"" help:"Manage Once-Today (OT) intentions."`
 	Settings settings.SettingsCmd `cmd:"" help:"Manage application settings."`
 	Notify   system.NotifyCmd     `cmd:"" hidden:"" help:"Send a notification (used internally)."`
+
+	store storage.Provider
 }
 
-func main() {
-	ctx := kong.Parse(&CLI,
-		kong.Name("daylit"),
-		kong.Description("Daily structure scheduler / time-blocking companion"),
-		kong.UsageOnError(),
-		kong.ConfigureHelp(kong.HelpOptions{
-			Compact:             true,
-			NoExpandSubcommands: true,
-		}),
-		kong.Vars{"version": "v0.4.0"},
-	)
-
+func (c *CLI) AfterApply(ctx *kong.Context) error {
 	// Initialize storage based on config format
 	var store storage.Provider
 
 	// Check for Postgres URL or DSN format
-	isPostgres := strings.HasPrefix(CLI.Config, "postgres://") ||
-		strings.HasPrefix(CLI.Config, "postgresql://") ||
+	isPostgres := strings.HasPrefix(c.Config, "postgres://") ||
+		strings.HasPrefix(c.Config, "postgresql://") ||
 		// Simple DSN heuristic: contains space and common keys
-		(strings.Contains(CLI.Config, " ") &&
-			(strings.Contains(CLI.Config, "host=") ||
-				strings.Contains(CLI.Config, "dbname=") ||
-				strings.Contains(CLI.Config, "user=") ||
-				strings.Contains(CLI.Config, "sslmode=")))
+		(strings.Contains(c.Config, " ") &&
+			(strings.Contains(c.Config, "host=") ||
+				strings.Contains(c.Config, "dbname=") ||
+				strings.Contains(c.Config, "user=") ||
+				strings.Contains(c.Config, "sslmode=")))
 
 	if isPostgres {
 		// PostgreSQL connection string detected - validate for embedded credentials
 		// We only enforce this check if the config was NOT sourced from the environment
 		// (e.g. came from command line flags, which are visible in the process list).
 		envConfig := os.Getenv("DAYLIT_CONFIG")
-		configFromEnv := envConfig != "" && envConfig == CLI.Config
+		configFromEnv := envConfig != "" && envConfig == c.Config
 
-		_, err := storage.ValidatePostgresConnString(CLI.Config)
-		hasPasswordError := err != nil && errors.Is(err, storage.ErrEmbeddedCredentials)
+		_, err := postgres.ValidateConnString(c.Config)
+		hasPasswordError := err != nil && errors.Is(err, postgres.ErrEmbeddedCredentials)
 
 		if !configFromEnv && hasPasswordError {
 			fmt.Fprintf(os.Stderr, "❌ Error: PostgreSQL connection strings with embedded credentials are NOT allowed via command line flags.\n")
@@ -106,23 +98,39 @@ func main() {
 			fmt.Fprintf(os.Stderr, "⚠️  Warning: Using embedded credentials in DAYLIT_CONFIG environment variable.\n")
 			fmt.Fprintf(os.Stderr, "            Consider using a .pgpass file for better security.\n")
 		}
-		store = storage.NewPostgresStore(CLI.Config)
+		store = postgres.New(c.Config)
 	} else {
 		// Default to SQLite
-		store = storage.NewSQLiteStore(CLI.Config)
+		store = storage.NewSQLiteStore(c.Config)
 	}
 
-	appCtx := &cli.Context{
-		Store:     store,
-		Scheduler: scheduler.New(),
-	}
+	c.store = store
 
 	// Load the store before running the command (Init command will handle its own loading)
-	if !CLI.Init.Force && ctx.Selected() != nil && ctx.Selected().Name != "init" {
+	if !c.Init.Force && ctx.Command() != "init" {
 		if err := store.Load(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+			return err
 		}
+	}
+	return nil
+}
+
+func main() {
+	kongCLI := CLI{}
+	ctx := kong.Parse(&kongCLI,
+		kong.Name("daylit"),
+		kong.Description("Daily structure scheduler / time-blocking companion"),
+		kong.UsageOnError(),
+		kong.ConfigureHelp(kong.HelpOptions{
+			Compact:             true,
+			NoExpandSubcommands: true,
+		}),
+		kong.Vars{"version": "v0.4.0"},
+	)
+
+	appCtx := &cli.Context{
+		Store:     kongCLI.store,
+		Scheduler: scheduler.New(),
 	}
 
 	err := ctx.Run(appCtx)

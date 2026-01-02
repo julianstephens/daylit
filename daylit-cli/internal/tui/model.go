@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/scheduler"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
@@ -97,7 +98,7 @@ type Model struct {
 }
 
 func NewModel(store storage.Provider, sched *scheduler.Scheduler) Model {
-	today := time.Now().Format("2006-01-02")
+	today := time.Now().Format(constants.DateFormat)
 	planData, planErr := store.GetPlan(today)
 	pm := plan.New(0, 0)
 	nm := now.New()
@@ -196,7 +197,7 @@ func (m *Model) updateValidationStatus() {
 	}
 
 	// Get today's plan
-	today := time.Now().Format("2006-01-02")
+	today := time.Now().Format(constants.DateFormat)
 	plan, err := m.store.GetPlan(today)
 
 	validator := validation.New()

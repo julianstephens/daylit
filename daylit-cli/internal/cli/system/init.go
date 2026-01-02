@@ -9,6 +9,7 @@ import (
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
+	"github.com/julianstephens/daylit/daylit-cli/internal/storage/postgres"
 )
 
 type InitCmd struct {
@@ -71,14 +72,14 @@ func (c *InitCmd) migrateData(ctx *cli.Context, sourcePath string) error {
 	var sourceStore storage.Provider
 	if strings.HasPrefix(sourcePath, "postgres://") || strings.HasPrefix(sourcePath, "postgresql://") {
 		// Validate source connection string for embedded credentials
-		if valid, err := storage.ValidatePostgresConnString(sourcePath); !valid {
-			if errors.Is(err, storage.ErrEmbeddedCredentials) {
+		if valid, err := postgres.ValidateConnString(sourcePath); !valid {
+			if errors.Is(err, postgres.ErrEmbeddedCredentials) {
 				return fmt.Errorf("PostgreSQL source connection string contains embedded credentials. Use environment variables or .pgpass instead")
 			}
 			// For other validation errors, we can return them or proceed (and likely fail later).
 			return err
 		}
-		sourceStore = storage.NewPostgresStore(sourcePath)
+		sourceStore = postgres.New(sourcePath)
 	} else {
 		// Default to SQLite for file paths
 		sourceStore = storage.NewSQLiteStore(sourcePath)
