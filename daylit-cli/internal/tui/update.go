@@ -14,6 +14,7 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/tui/components/habits"
+	"github.com/julianstephens/daylit/daylit-cli/internal/tui/components/ot"
 	"github.com/julianstephens/daylit/daylit-cli/internal/tui/components/settings"
 	"github.com/julianstephens/daylit/daylit-cli/internal/tui/components/tasklist"
 	"github.com/julianstephens/daylit/daylit-cli/internal/utils"
@@ -189,6 +190,25 @@ func newSettingsForm(fm *SettingsFormModel) *huh.Form {
 	).WithTheme(huh.ThemeDracula())
 }
 
+func newOTForm(fm *OTFormModel) *huh.Form {
+	return huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("One Thing Title").
+				Value(&fm.Title).
+				Validate(func(s string) error {
+					if strings.TrimSpace(s) == "" {
+						return fmt.Errorf("title cannot be empty")
+					}
+					return nil
+				}),
+			huh.NewText().
+				Title("Note (optional)").
+				Value(&fm.Note),
+		),
+	).WithTheme(huh.ThemeDracula())
+}
+
 func calculateSlotDuration(slot models.Slot) int {
 	start, err := time.Parse(constants.TimeFormat, slot.Start)
 	if err != nil {
@@ -298,6 +318,61 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case huh.StateAborted:
 			m.state = StateHabits
+		}
+		return m, tea.Batch(cmds...)
+	}
+
+	// Handle Edit OT State
+	if m.state == StateEditOT {
+		if msg, ok := msg.(tea.KeyMsg); ok && msg.Type == tea.KeyEsc {
+			m.state = StateOT
+			return m, nil
+		}
+
+		form, cmd := m.form.Update(msg)
+		if f, ok := form.(*huh.Form); ok {
+			m.form = f
+		}
+		cmds = append(cmds, cmd)
+
+		switch m.form.State {
+		case huh.StateCompleted:
+			// Save or update OT entry
+			today := time.Now().Format(constants.DateFormat)
+			
+			// Check if entry exists for today
+			existingEntry, err := m.store.GetOTEntry(today)
+			if err == nil && existingEntry.ID != "" {
+				// Update existing entry
+				existingEntry.Title = m.otForm.Title
+				existingEntry.Note = m.otForm.Note
+				existingEntry.UpdatedAt = time.Now()
+				if err := m.store.UpdateOTEntry(existingEntry); err != nil {
+					// Stay in form state on error
+					m.form.State = huh.StateNormal
+					return m, tea.Batch(cmds...)
+				}
+				m.otModel.SetEntry(&existingEntry)
+			} else {
+				// Create new entry
+				newEntry := models.OTEntry{
+					ID:        uuid.New().String(),
+					Day:       today,
+					Title:     m.otForm.Title,
+					Note:      m.otForm.Note,
+					CreatedAt: time.Now(),
+					UpdatedAt: time.Now(),
+				}
+				if err := m.store.AddOTEntry(newEntry); err != nil {
+					// Stay in form state on error
+					m.form.State = huh.StateNormal
+					return m, tea.Batch(cmds...)
+				}
+				m.otModel.SetEntry(&newEntry)
+			}
+			m.state = StateOT
+		case huh.StateAborted:
+			m.state = StateOT
 		}
 		return m, tea.Batch(cmds...)
 	}
@@ -621,6 +696,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.planModel.SetSize(msg.Width-h, listHeight-v)
 		m.nowModel.SetSize(msg.Width, listHeight)
 		m.habitsModel.SetSize(msg.Width-h, listHeight-v)
+		m.otModel.SetSize(msg.Width-h, listHeight-v)
 		m.settingsModel.SetSize(msg.Width-h, listHeight-v)
 
 	case tasklist.DeleteTaskMsg:
@@ -753,16 +829,29 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.state = StateEditSettings
 		return m, m.form.Init()
 
+	// Handle OT messages
+	case ot.EditOTMsg:
+		today := time.Now().Format(constants.DateFormat)
+		existingEntry, _ := m.store.GetOTEntry(today)
+		
+		m.otForm = &OTFormModel{
+			Title: existingEntry.Title,
+			Note:  existingEntry.Note,
+		}
+		m.form = newOTForm(m.otForm)
+		m.state = StateEditOT
+		return m, m.form.Init()
+
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, m.keys.Quit):
 			m.quitting = true
 			return m, tea.Quit
 		case key.Matches(msg, m.keys.Tab, m.keys.Right):
-			m.state = (m.state + 1) % 5 // Cycle through 5 main tabs
+			m.state = (m.state + 1) % 6 // Cycle through 6 main tabs
 			return m, nil
 		case key.Matches(msg, m.keys.ShiftTab, m.keys.Left):
-			m.state = (m.state - 1 + 5) % 5
+			m.state = (m.state - 1 + 6) % 6
 			return m, nil
 		case key.Matches(msg, m.keys.Help):
 			m.help.ShowAll = !m.help.ShowAll
@@ -846,6 +935,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	case StateHabits:
 		m.habitsModel, cmd = m.habitsModel.Update(msg)
+		cmds = append(cmds, cmd)
+	case StateOT:
+		m.otModel, cmd = m.otModel.Update(msg)
 		cmds = append(cmds, cmd)
 	case StateSettings:
 		m.settingsModel, cmd = m.settingsModel.Update(msg)

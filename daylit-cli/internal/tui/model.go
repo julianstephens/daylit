@@ -15,6 +15,7 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
 	"github.com/julianstephens/daylit/daylit-cli/internal/tui/components/habits"
 	"github.com/julianstephens/daylit/daylit-cli/internal/tui/components/now"
+	"github.com/julianstephens/daylit/daylit-cli/internal/tui/components/ot"
 	"github.com/julianstephens/daylit/daylit-cli/internal/tui/components/plan"
 	"github.com/julianstephens/daylit/daylit-cli/internal/tui/components/settings"
 	"github.com/julianstephens/daylit/daylit-cli/internal/tui/components/tasklist"
@@ -28,6 +29,7 @@ const (
 	StatePlan
 	StateTasks
 	StateHabits
+	StateOT
 	StateSettings
 	StateFeedback
 	StateEditing
@@ -36,6 +38,7 @@ const (
 	StateConfirmOverwrite
 	StateConfirmArchive
 	StateAddHabit
+	StateEditOT
 	StateEditSettings
 )
 
@@ -66,6 +69,11 @@ type SettingsFormModel struct {
 	BlockEndOffsetMin    string
 }
 
+type OTFormModel struct {
+	Title string
+	Note  string
+}
+
 type Model struct {
 	store               storage.Provider
 	scheduler           *scheduler.Scheduler
@@ -77,10 +85,12 @@ type Model struct {
 	planModel           plan.Model
 	nowModel            now.Model
 	habitsModel         habits.Model
+	otModel             ot.Model
 	settingsModel       settings.Model
 	form                *huh.Form
 	taskForm            *TaskFormModel
 	habitForm           *HabitFormModel
+	otForm              *OTFormModel
 	settingsForm        *SettingsFormModel
 	editingTask         *models.Task
 	quitting            bool
@@ -117,6 +127,14 @@ func NewModel(store storage.Provider, sched *scheduler.Scheduler) Model {
 	habitEntries, _ := store.GetHabitEntriesForDay(today)
 	hm := habits.New(habitsList, habitEntries, 0, 0)
 
+	// Initialize OT
+	otEntry, _ := store.GetOTEntry(today)
+	var otEntryPtr *models.OTEntry
+	if otEntry.ID != "" {
+		otEntryPtr = &otEntry
+	}
+	om := ot.New(otEntryPtr, 0, 0)
+
 	// Initialize settings
 	currentSettings, _ := store.GetSettings()
 	otSettings, _ := store.GetOTSettings()
@@ -132,6 +150,7 @@ func NewModel(store storage.Provider, sched *scheduler.Scheduler) Model {
 		planModel:     pm,
 		nowModel:      nm,
 		habitsModel:   hm,
+		otModel:       om,
 		settingsModel: sm,
 	}
 
