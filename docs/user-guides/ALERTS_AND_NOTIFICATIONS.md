@@ -53,7 +53,7 @@ In addition to automatic schedule notifications, you can set up custom one-time 
 
 ```bash
 # Add a one-time alert for a specific date and time
-daylit alert add "Doctor's Appointment" --time 14:30 --date 2024-03-20
+daylit alert add "Doctor's Appointment" --time 14:30 --date 2026-03-20
 
 # Add a daily recurring alert
 daylit alert add "Drink Water" --time 10:00 --recurrence daily
