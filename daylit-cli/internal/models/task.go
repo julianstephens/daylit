@@ -11,10 +11,10 @@ type Recurrence struct {
 	Type             constants.RecurrenceType `json:"type"`
 	IntervalDays     int                      `json:"interval_days,omitempty"`
 	WeekdayMask      []time.Weekday           `json:"weekday_mask,omitempty"`
-	MonthDay         int                      `json:"month_day,omitempty"`          // Day of month (1-31) for monthly_date
-	WeekOccurrence   int                      `json:"week_occurrence,omitempty"`    // Week occurrence (-1=last, 1=first, 2=second, etc.) for monthly_day
-	Month            int                      `json:"month,omitempty"`              // Month (1-12) for yearly
-	DayOfWeekInMonth time.Weekday            `json:"day_of_week_in_month,omitempty"` // Weekday for monthly_day (e.g., Friday for "last Friday")
+	MonthDay         int                      `json:"month_day,omitempty"`            // Day of month (1-31) for monthly_date
+	WeekOccurrence   int                      `json:"week_occurrence,omitempty"`      // Week occurrence (-1=last, 1=first, 2=second, etc.) for monthly_day
+	Month            int                      `json:"month,omitempty"`                // Month (1-12) for yearly
+	DayOfWeekInMonth time.Weekday             `json:"day_of_week_in_month,omitempty"` // Weekday for monthly_day (e.g., Friday for "last Friday")
 }
 
 type Task struct {
