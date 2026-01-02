@@ -484,3 +484,23 @@ func (s *Store) GetTaskFeedbackHistory(taskID string, limit int) ([]models.TaskF
 
 	return entries, nil
 }
+
+func (s *Store) ArchivePlan(date string) error {
+	return s.DeletePlan(date)
+}
+
+func (s *Store) UpdateSlotFeedback(date string, revision int, startTime string, taskID string, rating string, note string) error {
+	query := "UPDATE slots SET feedback_rating = $1, feedback_note = $2 WHERE plan_date = $3 AND plan_revision = $4 AND start_time = $5 AND task_id = $6 AND deleted_at IS NULL"
+	result, err := s.db.Exec(query, rating, note, date, revision, startTime, taskID)
+	if err != nil {
+		return fmt.Errorf("failed to update slot feedback: %w", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return fmt.Errorf("slot not found or already deleted")
+	}
+	return nil
+}

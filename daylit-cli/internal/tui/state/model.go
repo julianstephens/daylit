@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/help"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
@@ -51,6 +52,18 @@ type SettingsFormModel struct {
 	BlockEndOffsetMin    string
 }
 
+// FeedbackFormModel represents the form model for feedback
+type FeedbackFormModel struct {
+	Rating  string
+	Comment string
+}
+
+// ConfirmationFormModel represents the form model for confirmation
+type ConfirmationFormModel struct {
+	Message   string
+	Confirmed bool
+}
+
 // OTFormModel represents the form model for One Thing
 type OTFormModel struct {
 	Title string
@@ -88,6 +101,9 @@ type Model struct {
 	OTForm              *OTFormModel
 	AlertForm           *AlertFormModel
 	SettingsForm        *SettingsFormModel
+	FeedbackForm        *FeedbackFormModel
+	ConfirmationForm    *ConfirmationFormModel
+	PendingAction       func() tea.Cmd
 	EditingTask         *models.Task
 	Quitting            bool
 	Width               int

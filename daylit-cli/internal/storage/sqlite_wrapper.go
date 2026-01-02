@@ -96,8 +96,12 @@ func (s *SQLiteStore) GetPlanRevision(date string, revision int) (models.DayPlan
 }
 func (s *SQLiteStore) DeletePlan(date string) error  { return s.store.DeletePlan(date) }
 func (s *SQLiteStore) RestorePlan(date string) error { return s.store.RestorePlan(date) }
+func (s *SQLiteStore) ArchivePlan(date string) error { return s.store.ArchivePlan(date) }
 func (s *SQLiteStore) UpdateSlotNotificationTimestamp(date string, revision int, startTime string, taskID string, notificationType string, timestamp string) error {
 	return s.store.UpdateSlotNotificationTimestamp(date, revision, startTime, taskID, notificationType, timestamp)
+}
+func (s *SQLiteStore) UpdateSlotFeedback(date string, revision int, startTime string, taskID string, rating string, note string) error {
+	return s.store.UpdateSlotFeedback(date, revision, startTime, taskID, rating, note)
 }
 
 // Habit methods

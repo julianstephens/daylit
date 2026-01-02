@@ -307,3 +307,36 @@ func NewOTForm(fm *state.OTFormModel) *huh.Form {
 		),
 	).WithTheme(huh.ThemeDracula())
 }
+
+// NewConfirmationForm creates a new form for confirmation
+func NewConfirmationForm(fm *state.ConfirmationFormModel) *huh.Form {
+	return huh.NewForm(
+		huh.NewGroup(
+			huh.NewNote().
+				Title("Confirmation").
+				Description(fm.Message),
+			huh.NewConfirm().
+				Title("Are you sure?").
+				Value(&fm.Confirmed),
+		),
+	).WithTheme(huh.ThemeDracula())
+}
+
+// NewFeedbackForm creates a new form for feedback
+func NewFeedbackForm(fm *state.FeedbackFormModel) *huh.Form {
+	return huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title("Rating").
+				Options(
+					huh.NewOption("On Track", constants.FeedbackOnTrack),
+					huh.NewOption("Too Much", constants.FeedbackTooMuch),
+					huh.NewOption("Unnecessary", constants.FeedbackUnnecessary),
+				).
+				Value(&fm.Rating),
+			huh.NewInput().
+				Title("Comment").
+				Value(&fm.Comment),
+		),
+	).WithTheme(huh.ThemeDracula())
+}

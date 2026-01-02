@@ -1,9 +1,6 @@
 package tui
 
 import (
-	"fmt"
-	"time"
-
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -11,7 +8,6 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/scheduler"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
 	"github.com/julianstephens/daylit/daylit-cli/internal/tui/state"
-	"github.com/julianstephens/daylit/daylit-cli/internal/validation"
 )
 
 // Model wraps the state.Model and adds TUI-specific methods
@@ -26,7 +22,7 @@ func NewModel(store storage.Provider, sched *scheduler.Scheduler) Model {
 	}
 
 	// Run validation on initialization
-	m.updateValidationStatus()
+	m.UpdateValidationStatus()
 
 	return m
 }
@@ -67,52 +63,4 @@ func (m Model) FullHelp() [][]key.Binding {
 // Init initializes the model
 func (m Model) Init() tea.Cmd {
 	return m.NowModel.Init()
-}
-
-// updateValidationStatus runs validation and updates the warning message
-func (m *Model) updateValidationStatus() {
-	// Get all tasks
-	tasks, err := m.Store.GetAllTasks()
-	if err != nil {
-		// Store errors prevent validation - show generic message
-		m.ValidationWarning = "⚠ Validation unavailable"
-		m.ValidationConflicts = nil
-		return
-	}
-
-	// Get settings
-	settings, err := m.Store.GetSettings()
-	if err != nil {
-		// Store errors prevent validation - show generic message
-		m.ValidationWarning = "⚠ Validation unavailable"
-		m.ValidationConflicts = nil
-		return
-	}
-
-	// Get today's plan
-	today := time.Now().Format(constants.DateFormat)
-	todayDate := time.Now()
-	plan, err := m.Store.GetPlan(today)
-
-	validator := validation.New()
-
-	// Validate tasks first - scoped to today's date
-	taskResult := validator.ValidateTasksForDate(tasks, &todayDate)
-
-	// Validate plan if it exists
-	var planResult validation.ValidationResult
-	if err == nil && len(plan.Slots) > 0 {
-		planResult = validator.ValidatePlan(plan, tasks, settings.DayStart, settings.DayEnd)
-	}
-
-	// Combine conflicts
-	allConflicts := append(taskResult.Conflicts, planResult.Conflicts...)
-	m.ValidationConflicts = allConflicts
-
-	if len(allConflicts) > 0 {
-		// Show count of conflicts
-		m.ValidationWarning = fmt.Sprintf("⚠ %d validation warning(s)", len(allConflicts))
-	} else {
-		m.ValidationWarning = ""
-	}
 }

@@ -50,7 +50,11 @@ func (m *mockStore) GetLatestPlanRevision(date string) (models.DayPlan, error) {
 }
 func (m *mockStore) DeletePlan(date string) error  { return nil }
 func (m *mockStore) RestorePlan(date string) error { return nil }
+func (m *mockStore) ArchivePlan(date string) error { return nil }
 func (m *mockStore) UpdateSlotNotificationTimestamp(date string, revision int, startTime string, taskID string, notificationType string, timestamp string) error {
+	return nil
+}
+func (m *mockStore) UpdateSlotFeedback(date string, revision int, startTime string, taskID string, rating string, note string) error {
 	return nil
 }
 func (m *mockStore) AddHabit(models.Habit) error                      { return nil }

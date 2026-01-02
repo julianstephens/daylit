@@ -1,6 +1,10 @@
 package constants
 
-import "time"
+import (
+	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
+)
 
 // ConflictType represents the type of validation conflict
 type ConflictType string
@@ -16,6 +20,15 @@ type RecurrenceType string
 
 // EnergyBand represents the energy band of a task
 type EnergyBand string
+
+// ConfirmationMsg is a message to trigger a confirmation dialog
+type ConfirmationMsg struct {
+	Message string
+	Action  func() tea.Cmd
+}
+
+// FeedbackMsg is a message to trigger feedback
+type FeedbackMsg struct{}
 
 const (
 	AppName            = "daylit"
@@ -36,8 +49,11 @@ const (
 	BackupFileSuffix = ".db"
 
 	// Notify constants
-	NotifyMaxRetries = 3
-	NotifyRetryDelay = 100 * time.Millisecond
+	NotifyMaxRetries       = 3
+	NotifyRetryDelay       = 100 * time.Millisecond
+	NotifierLockfileName   = "daylit-notifier.lock"
+	NotificationDurationMs = 5000
+	TrayAppIdentifier      = "com.julianstephens.daylit"
 
 	// Slot Status constants
 	SlotStatusPlanned  = "planned"
@@ -49,54 +65,47 @@ const (
 	TaskKindAppointment TaskKind = "appointment"
 	TaskKindFlexible    TaskKind = "flexible"
 
-	// Recurrence Type constants
+	// Recurrence constants
+	RecurrenceAdHoc       RecurrenceType = "ad-hoc"
 	RecurrenceDaily       RecurrenceType = "daily"
 	RecurrenceWeekly      RecurrenceType = "weekly"
-	RecurrenceNDays       RecurrenceType = "n_days"
-	RecurrenceAdHoc       RecurrenceType = "ad_hoc"
-	RecurrenceMonthlyDate RecurrenceType = "monthly_date" // e.g., 15th of every month
-	RecurrenceMonthlyDay  RecurrenceType = "monthly_day"  // e.g., last Friday of the month
-	RecurrenceYearly      RecurrenceType = "yearly"       // e.g., every year on January 1st
-	RecurrenceWeekdays    RecurrenceType = "weekdays"     // every weekday (Mon-Fri)
+	RecurrenceNDays       RecurrenceType = "n-days"
+	RecurrenceMonthlyDate RecurrenceType = "monthly-date"
+	RecurrenceMonthlyDay  RecurrenceType = "monthly-day"
+	RecurrenceYearly      RecurrenceType = "yearly"
+	RecurrenceWeekdays    RecurrenceType = "weekdays"
 
 	// Energy Band constants
-	EnergyLow    EnergyBand = "low"
-	EnergyMedium EnergyBand = "medium"
 	EnergyHigh   EnergyBand = "high"
-
-	// Notification constants
-	NotifierLockfileName   = "daylit-tray.lock"
-	NotificationDurationMs = 5000
-	TrayAppIdentifier      = "com.daylit.daylit-tray"
-
-	// NumMainTabs is the number of main navigation tabs in the TUI
-	NumMainTabs = 7 // Now, Plan, Tasks, Habits, OT, Alerts, Settings
+	EnergyMedium EnergyBand = "medium"
+	EnergyLow    EnergyBand = "low"
 
 	// Conflict Types
+	ConflictDuplicateTaskName     ConflictType = "duplicate_task_name"
+	ConflictInvalidDateTime       ConflictType = "invalid_date_time"
 	ConflictOverlappingFixedTasks ConflictType = "overlapping_fixed_tasks"
+	ConflictMissingTaskID         ConflictType = "missing_task_id"
 	ConflictOverlappingSlots      ConflictType = "overlapping_slots"
 	ConflictExceedsWakingWindow   ConflictType = "exceeds_waking_window"
 	ConflictOvercommitted         ConflictType = "overcommitted"
-	ConflictMissingTaskID         ConflictType = "missing_task_id"
-	ConflictDuplicateTaskName     ConflictType = "duplicate_task_name"
-	ConflictInvalidDateTime       ConflictType = "invalid_datetime"
 
-	// TUI Session States
-	StateNow SessionState = iota
+	// Session States
+	StateTasks SessionState = iota
 	StatePlan
-	StateTasks
+	StateNow
 	StateHabits
 	StateOT
 	StateAlerts
 	StateSettings
-	StateFeedback
 	StateEditing
-	StateConfirmDelete
-	StateConfirmRestore
-	StateConfirmOverwrite
-	StateConfirmArchive
 	StateAddHabit
 	StateAddAlert
 	StateEditOT
 	StateEditSettings
+	StateFeedback
+	StateConfirmation
+	StateConfirmDelete
+	StateConfirmRestore
+	StateConfirmOverwrite
+	StateConfirmArchive
 )
