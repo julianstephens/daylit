@@ -62,12 +62,24 @@ func TestNotifyCmd_Idempotency(t *testing.T) {
 	now := time.Now()
 	currentMinutes := now.Hour()*60 + now.Minute()
 
-	// Create a slot that should have triggered 2 minutes ago (within grace period)
-	triggerMinutes := currentMinutes - 2
-	startHour := triggerMinutes / 60
-	startMin := triggerMinutes % 60
+	// We want a slot that triggers a notification.
+	// Default offset is 5 min, grace period is 10 min.
+	// If we set startTime = currentMinutes + 3:
+	// triggerTime = (currentMinutes + 3) - 5 = currentMinutes - 2
+	// minutesLate = currentMinutes - (currentMinutes - 2) = 2
+	// 2 <= 10 (grace period), so it should trigger.
+	startMinutes := currentMinutes + 3
+
+	// Skip if near end of day to avoid crossing midnight (which would make startTime invalid for today)
+	// We also need endTime (start + 30) to be valid.
+	if startMinutes+30 >= 24*60 {
+		t.Skip("Skipping test near end of day")
+	}
+
+	startHour := startMinutes / 60
+	startMin := startMinutes % 60
 	startTime := fmt.Sprintf("%02d:%02d", startHour, startMin)
-	endTime := calculateEndTime(triggerMinutes, 30)
+	endTime := calculateEndTime(startMinutes, 30)
 
 	nowStr := time.Now().UTC().Format(time.RFC3339)
 	plan := models.DayPlan{
@@ -181,13 +193,20 @@ func TestNotifyCmd_GracePeriod(t *testing.T) {
 	now := time.Now()
 	currentMinutes := now.Hour()*60 + now.Minute()
 
+	// Skip test if running near midnight to avoid crossing day boundary with invalid times (e.g. 24:xx)
+	if currentMinutes >= 24*60-35 {
+		t.Skip("Skipping test near end of day to avoid invalid time generation")
+	}
+
 	// Test 1: Notification within grace period (5 minutes late)
 	t.Run("WithinGracePeriod", func(t *testing.T) {
-		triggerMinutes := currentMinutes - 5
-		startHour := triggerMinutes / 60
-		startMin := triggerMinutes % 60
+		// Set start time to now. With 5 min offset, notification should have happened 5 mins ago.
+		// This is within the 10 min grace period.
+		startMinutes := currentMinutes
+		startHour := startMinutes / 60
+		startMin := startMinutes % 60
 		startTime := fmt.Sprintf("%02d:%02d", startHour, startMin)
-		endTime := calculateEndTime(triggerMinutes, 30)
+		endTime := calculateEndTime(startMinutes, 30)
 
 		nowStr := time.Now().UTC().Format(time.RFC3339)
 		plan := models.DayPlan{
@@ -303,6 +322,11 @@ func TestNotifyCmd_NoNotificationBeforeTime(t *testing.T) {
 	now := time.Now()
 	currentMinutes := now.Hour()*60 + now.Minute()
 
+	// Skip test if running near midnight to avoid crossing day boundary with invalid times
+	if currentMinutes >= 24*60-40 {
+		t.Skip("Skipping test near end of day to avoid invalid time generation")
+	}
+
 	// Create a slot that should trigger 10 minutes from now
 	triggerMinutes := currentMinutes + 10
 	startHour := triggerMinutes / 60
@@ -382,6 +406,12 @@ func TestNotifyCmd_DisabledNotifications(t *testing.T) {
 
 	now := time.Now()
 	currentMinutes := now.Hour()*60 + now.Minute()
+
+	// Skip test if running near start of day to avoid negative time calculations
+	if currentMinutes < 5 {
+		t.Skip("Skipping test near start of day to avoid invalid time generation")
+	}
+
 	triggerMinutes := currentMinutes - 2
 	startHour := triggerMinutes / 60
 	startMin := triggerMinutes % 60
@@ -682,11 +712,19 @@ func TestNotifyCmd_OnlyAcceptedOrDoneSlots(t *testing.T) {
 
 	now := time.Now()
 	currentMinutes := now.Hour()*60 + now.Minute()
-	triggerMinutes := currentMinutes - 2
-	startHour := triggerMinutes / 60
-	startMin := triggerMinutes % 60
+
+	// Skip test if running near midnight to avoid crossing day boundary with invalid times (e.g. 24:xx)
+	if currentMinutes >= 24*60-35 {
+		t.Skip("Skipping test near end of day to avoid invalid time generation")
+	}
+
+	// Set start time to now. With 5 min offset, notification should have happened 5 mins ago.
+	// This is within the 10 min grace period.
+	startMinutes := currentMinutes
+	startHour := startMinutes / 60
+	startMin := startMinutes % 60
 	startTime := fmt.Sprintf("%02d:%02d", startHour, startMin)
-	endTime := calculateEndTime(triggerMinutes, 30)
+	endTime := calculateEndTime(startMinutes, 30)
 
 	nowStr := time.Now().UTC().Format(time.RFC3339)
 	plan := models.DayPlan{

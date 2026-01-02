@@ -19,6 +19,7 @@ The algorithm prioritizes predictability over optimization.
 ### Task Template
 
 Each task has:
+
 - Unique ID
 - Name
 - Kind: `appointment` (fixed time) or `flexible`
@@ -32,6 +33,7 @@ Each task has:
 ### Day Plan
 
 For each date:
+
 - Revision number (tracks changes to the plan)
 - List of time slots
 - Each slot has:
@@ -60,10 +62,10 @@ The system learns from user feedback to improve future plans.
     - Tasks with frequent `unnecessary` feedback (≥3 instances or >40%) receive suggestions to reduce frequency or remove the task
     - Optimizations can be reviewed in dry-run mode, applied selectively in interactive mode, or auto-applied
 
-
 ### Habit
 
 A recurring practice to track (boolean completion):
+
 - Unique ID
 - Name
 - Creation timestamp
@@ -74,6 +76,7 @@ A recurring practice to track (boolean completion):
 ### One Thing (OT)
 
 A single, primary intention for the day:
+
 - Unique ID
 - Date
 - Title (the intention)
@@ -87,23 +90,28 @@ The soft delete feature allows you to delete tasks and plans without permanently
 ### Commands
 
 #### Restore a Task
+
 ```bash
 daylit restore task <task-id>
 ```
 
 #### Restore a Plan
+
 ```bash
 daylit restore plan <date>
 ```
 
 ### Behavior
+
 - Deleted tasks are hidden from listings and the TUI (not shown, not visually indicated as deleted)
 - Deleted tasks won't be scheduled in daily plans
 - All data is preserved and can be restored
 - Foreign key relationships remain intact
 
 ### Technical Details
+
 Soft delete is implemented via `deleted_at` timestamp columns on tasks, plans, and slots tables.
+
 ## Timezone Handling
 
 Daylit supports timezone-aware scheduling and time tracking to ensure consistent behavior when traveling or working across different timezones.
@@ -111,10 +119,12 @@ Daylit supports timezone-aware scheduling and time tracking to ensure consistent
 ### Configuration
 
 Users can configure their timezone preference through:
+
 - The TUI Settings tab (press 'e' to edit, navigate to the Timezone field)
 - The CLI: `daylit settings --timezone="America/New_York"`
 
 The timezone can be set to:
+
 - `Local` (default): Uses the system's local timezone
 - Any valid IANA timezone name (e.g., `America/New_York`, `Europe/London`, `Asia/Tokyo`, `UTC`)
 
@@ -138,6 +148,7 @@ Once fully integrated, the timezone setting will enable:
 ### Current Status
 
 The timezone setting is **stored and configurable** but not yet integrated into the application logic. The infrastructure is in place with utility functions ready for integration:
+
 - `GetTodayInTimezone(timezone)` - determines "today" in the configured timezone
 - `NowInTimezone(timezone)` - gets current time in the configured timezone
 - `ParseDateInLocation()`, `CombineDateAndTime()` - timezone-aware parsing functions

@@ -9,13 +9,13 @@ import (
 )
 
 func (m Model) View() string {
-	if m.quitting {
+	if m.Quitting {
 		return ""
 	}
 
 	var content string
 
-	switch m.state {
+	switch m.State {
 	case constants.StateNow:
 		content = m.viewNow()
 	case constants.StatePlan:
@@ -33,14 +33,14 @@ func (m Model) View() string {
 	case constants.StateFeedback:
 		content = m.viewFeedback()
 	case constants.StateEditing, constants.StateAddHabit, constants.StateAddAlert, constants.StateEditOT, constants.StateEditSettings:
-		formContent := m.form.View()
-		if m.formError != "" {
+		formContent := m.Form.View()
+		if m.FormError != "" {
 			errorStyle := lipgloss.NewStyle().
 				Foreground(lipgloss.Color("196")).
 				Bold(true).
 				Padding(1, 0)
 			formContent = lipgloss.JoinVertical(lipgloss.Left,
-				errorStyle.Render("Error: "+m.formError),
+				errorStyle.Render("Error: "+m.FormError),
 				formContent,
 			)
 		}
@@ -56,7 +56,7 @@ func (m Model) View() string {
 	}
 
 	var banner string
-	if len(m.validationConflicts) > 0 && m.state == constants.StatePlan {
+	if len(m.ValidationConflicts) > 0 && m.State == constants.StatePlan {
 		banner = m.viewConflictBanner()
 	}
 
@@ -65,7 +65,7 @@ func (m Model) View() string {
 		m.viewTabs(),
 		banner,
 		content,
-		m.help.View(m),
+		m.Help.View(m),
 	)
 
 	// If we are already filling the screen (which we are, because components are sized to full width/height),
@@ -79,7 +79,7 @@ func (m Model) viewTabs() string {
 	var tabs []string
 	tabTitles := []string{"Now", "Plan", "Tasks", "Habits", "OT", "Alerts", "Settings"}
 	for i, title := range tabTitles {
-		if m.state == constants.SessionState(i) {
+		if m.State == constants.SessionState(i) {
 			tabs = append(tabs, activeTabStyle.Render(title))
 		} else {
 			tabs = append(tabs, inactiveTabStyle.Render(title))
@@ -89,35 +89,35 @@ func (m Model) viewTabs() string {
 }
 
 func (m Model) viewNow() string {
-	return m.nowModel.View()
+	return m.NowModel.View()
 }
 
 func (m Model) viewPlan() string {
-	return docStyle.Render(m.planModel.View())
+	return docStyle.Render(m.PlanModel.View())
 }
 
 func (m Model) viewTasks() string {
-	return docStyle.Render(m.taskList.View())
+	return docStyle.Render(m.TaskList.View())
 }
 
 func (m Model) viewHabits() string {
-	return docStyle.Render(m.habitsModel.View())
+	return docStyle.Render(m.HabitsModel.View())
 }
 
 func (m Model) viewOT() string {
-	return docStyle.Render(m.otModel.View())
+	return docStyle.Render(m.OTModel.View())
 }
 
 func (m Model) viewAlerts() string {
-	return docStyle.Render(m.alertsModel.View())
+	return docStyle.Render(m.AlertsModel.View())
 }
 
 func (m Model) viewSettings() string {
-	return docStyle.Render(m.settingsModel.View())
+	return docStyle.Render(m.SettingsModel.View())
 }
 
 func (m Model) viewFeedback() string {
-	return lipgloss.Place(m.width, m.height-4,
+	return lipgloss.Place(m.Width, m.Height-4,
 		lipgloss.Center, lipgloss.Center,
 		lipgloss.JoinVertical(lipgloss.Center,
 			"Rate the last completed task:",
@@ -132,7 +132,7 @@ func (m Model) viewFeedback() string {
 }
 
 func (m Model) viewConfirmDelete() string {
-	return lipgloss.Place(m.width, m.height-4,
+	return lipgloss.Place(m.Width, m.Height-4,
 		lipgloss.Center, lipgloss.Center,
 		lipgloss.JoinVertical(lipgloss.Center,
 			dangerStyle.Render("Are you sure you want to delete this task?"),
@@ -145,12 +145,12 @@ func (m Model) viewConfirmDelete() string {
 
 func (m Model) viewConfirmRestore() string {
 	itemType := "task"
-	itemID := m.taskToRestoreID
-	if m.planToRestoreDate != "" {
+	itemID := m.TaskToRestoreID
+	if m.PlanToRestoreDate != "" {
 		itemType = "plan"
-		itemID = m.planToRestoreDate
+		itemID = m.PlanToRestoreDate
 	}
-	return lipgloss.Place(m.width, m.height-4,
+	return lipgloss.Place(m.Width, m.Height-4,
 		lipgloss.Center, lipgloss.Center,
 		lipgloss.JoinVertical(lipgloss.Center,
 			warningStyle.Render(fmt.Sprintf("Restore deleted %s: %s?", itemType, itemID)),
@@ -162,10 +162,10 @@ func (m Model) viewConfirmRestore() string {
 }
 
 func (m Model) viewConfirmOverwrite() string {
-	return lipgloss.Place(m.width, m.height-4,
+	return lipgloss.Place(m.Width, m.Height-4,
 		lipgloss.Center, lipgloss.Center,
 		lipgloss.JoinVertical(lipgloss.Center,
-			dangerStyle.Render(fmt.Sprintf("Overwrite existing plan for %s?", m.planToOverwriteDate)),
+			dangerStyle.Render(fmt.Sprintf("Overwrite existing plan for %s?", m.PlanToOverwriteDate)),
 			"This will create a new revision.",
 			"",
 			"[y] Yes",
@@ -175,7 +175,7 @@ func (m Model) viewConfirmOverwrite() string {
 }
 
 func (m Model) viewConflictBanner() string {
-	if len(m.validationConflicts) == 0 {
+	if len(m.ValidationConflicts) == 0 {
 		return ""
 	}
 
@@ -185,12 +185,12 @@ func (m Model) viewConflictBanner() string {
 		Bold(true).
 		Padding(0, 1)
 
-	bannerText := fmt.Sprintf("⚠ %d CONFLICT(S) DETECTED", len(m.validationConflicts))
+	bannerText := fmt.Sprintf("⚠ %d CONFLICT(S) DETECTED", len(m.ValidationConflicts))
 	return bannerStyle.Render(bannerText)
 }
 
 func (m Model) viewConfirmArchive() string {
-	return lipgloss.Place(m.width, m.height-4,
+	return lipgloss.Place(m.Width, m.Height-4,
 		lipgloss.Center, lipgloss.Center,
 		lipgloss.JoinVertical(lipgloss.Center,
 			warningStyle.Render("Are you sure you want to archive this habit?"),

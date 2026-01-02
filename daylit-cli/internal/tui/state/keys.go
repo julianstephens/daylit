@@ -1,7 +1,8 @@
-package tui
+package state
 
 import "github.com/charmbracelet/bubbles/key"
 
+// KeyMap defines the key bindings for the TUI
 type KeyMap struct {
 	Tab      key.Binding
 	ShiftTab key.Binding
@@ -19,10 +20,12 @@ type KeyMap struct {
 	Delete   key.Binding
 }
 
+// ShortHelp returns the short help key bindings
 func (k KeyMap) ShortHelp() []key.Binding {
 	return []key.Binding{k.Tab, k.Quit, k.Help}
 }
 
+// FullHelp returns the full help key bindings
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Tab, k.ShiftTab, k.Quit},
@@ -30,6 +33,7 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 	}
 }
 
+// DefaultKeyMap returns the default key bindings
 func DefaultKeyMap() KeyMap {
 	return KeyMap{
 		Tab: key.NewBinding(
