@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
-	"github.com/julianstephens/daylit/daylit-cli/internal/models"
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 )
 
 type DayCmd struct {
@@ -48,17 +48,17 @@ func (c *DayCmd) Run(ctx *cli.Context) error {
 
 		statusStr := ""
 		switch slot.Status {
-		case models.SlotStatusPlanned:
+		case constants.SlotStatusPlanned:
 			statusStr = "[planned]"
-		case models.SlotStatusAccepted:
+		case constants.SlotStatusAccepted:
 			statusStr = "[accepted]"
-		case models.SlotStatusDone:
+		case constants.SlotStatusDone:
 			if slot.Feedback != nil {
 				statusStr = fmt.Sprintf("[done, %s]", slot.Feedback.Rating)
 			} else {
 				statusStr = "[done]"
 			}
-		case models.SlotStatusSkipped:
+		case constants.SlotStatusSkipped:
 			statusStr = "[skipped]"
 		}
 

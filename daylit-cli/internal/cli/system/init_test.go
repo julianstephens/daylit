@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/scheduler"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
@@ -36,13 +37,13 @@ func createTestTask(id, name string) models.Task {
 	return models.Task{
 		ID:          id,
 		Name:        name,
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 60,
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceAdHoc,
+			Type: constants.RecurrenceAdHoc,
 		},
 		Priority:   1,
-		EnergyBand: models.EnergyMedium,
+		EnergyBand: constants.EnergyMedium,
 		Active:     true,
 	}
 }
@@ -60,7 +61,7 @@ func createTestPlan(date string, revision int, taskIDs []string) models.DayPlan 
 			Start:  fmt.Sprintf("%02d:00", startHour),
 			End:    fmt.Sprintf("%02d:30", startHour),
 			TaskID: taskID,
-			Status: models.SlotStatusPlanned,
+			Status: constants.SlotStatusPlanned,
 		}
 		plan.Slots = append(plan.Slots, slot)
 		startHour++

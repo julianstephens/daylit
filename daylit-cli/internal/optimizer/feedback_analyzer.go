@@ -2,31 +2,21 @@ package optimizer
 
 import (
 	"fmt"
-	"log"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
+	"github.com/julianstephens/daylit/daylit-cli/internal/logger"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
 )
 
-// OptimizationType represents the type of optimization suggested
-type OptimizationType string
-
-const (
-	OptimizationReduceDuration   OptimizationType = "reduce_duration"
-	OptimizationIncreaseDuration OptimizationType = "increase_duration"
-	OptimizationSplitTask        OptimizationType = "split_task"
-	OptimizationRemoveTask       OptimizationType = "remove_task"
-	OptimizationReduceFrequency  OptimizationType = "reduce_frequency"
-)
-
 // Optimization represents a suggested optimization for a task
 type Optimization struct {
-	TaskID         string           `json:"task_id"`
-	TaskName       string           `json:"task_name"`
-	Type           OptimizationType `json:"type"`
-	Reason         string           `json:"reason"`
-	CurrentValue   interface{}      `json:"current_value,omitempty"`
-	SuggestedValue interface{}      `json:"suggested_value,omitempty"`
+	TaskID         string                     `json:"task_id"`
+	TaskName       string                     `json:"task_name"`
+	Type           constants.OptimizationType `json:"type"`
+	Reason         string                     `json:"reason"`
+	CurrentValue   interface{}                `json:"current_value,omitempty"`
+	SuggestedValue interface{}                `json:"suggested_value,omitempty"`
 }
 
 // FeedbackAnalyzer analyzes task feedback and suggests optimizations
@@ -65,9 +55,9 @@ func (fa *FeedbackAnalyzer) AnalyzeTask(task models.Task, feedbackLimit int) ([]
 
 	for _, entry := range feedbackHistory {
 		switch entry.Rating {
-		case models.FeedbackTooMuch:
+		case constants.FeedbackTooMuch:
 			tooMuchCount++
-		case models.FeedbackUnnecessary:
+		case constants.FeedbackUnnecessary:
 			unnecessaryCount++
 		}
 	}
@@ -87,7 +77,7 @@ func (fa *FeedbackAnalyzer) AnalyzeTask(task models.Task, feedbackLimit int) ([]
 			optimizations = append(optimizations, Optimization{
 				TaskID:   task.ID,
 				TaskName: task.Name,
-				Type:     OptimizationSplitTask,
+				Type:     constants.OptimizationSplitTask,
 				Reason:   fmt.Sprintf("%.0f%% of recent feedback indicates task is overwhelming (too_much)", tooMuchPercent),
 				CurrentValue: map[string]interface{}{
 					"duration_min": task.DurationMin,
@@ -101,7 +91,7 @@ func (fa *FeedbackAnalyzer) AnalyzeTask(task models.Task, feedbackLimit int) ([]
 			optimizations = append(optimizations, Optimization{
 				TaskID:   task.ID,
 				TaskName: task.Name,
-				Type:     OptimizationReduceDuration,
+				Type:     constants.OptimizationReduceDuration,
 				Reason:   fmt.Sprintf("%.0f%% of recent feedback indicates task takes too long (too_much)", tooMuchPercent),
 				CurrentValue: map[string]interface{}{
 					"duration_min": task.DurationMin,
@@ -117,12 +107,12 @@ func (fa *FeedbackAnalyzer) AnalyzeTask(task models.Task, feedbackLimit int) ([]
 	if unnecessaryCount >= 3 || unnecessaryPercent > 40 {
 		// If it's a recurring task, suggest reducing frequency
 		switch task.Recurrence.Type {
-		case models.RecurrenceNDays:
+		case constants.RecurrenceNDays:
 			newInterval := task.Recurrence.IntervalDays + 2
 			optimizations = append(optimizations, Optimization{
 				TaskID:   task.ID,
 				TaskName: task.Name,
-				Type:     OptimizationReduceFrequency,
+				Type:     constants.OptimizationReduceFrequency,
 				Reason:   fmt.Sprintf("%.0f%% of recent feedback indicates task is unnecessary", unnecessaryPercent),
 				CurrentValue: map[string]interface{}{
 					"interval_days": task.Recurrence.IntervalDays,
@@ -131,11 +121,11 @@ func (fa *FeedbackAnalyzer) AnalyzeTask(task models.Task, feedbackLimit int) ([]
 					"interval_days": newInterval,
 				},
 			})
-		case models.RecurrenceDaily:
+		case constants.RecurrenceDaily:
 			optimizations = append(optimizations, Optimization{
 				TaskID:   task.ID,
 				TaskName: task.Name,
-				Type:     OptimizationReduceFrequency,
+				Type:     constants.OptimizationReduceFrequency,
 				Reason:   fmt.Sprintf("%.0f%% of recent feedback indicates task is unnecessary", unnecessaryPercent),
 				CurrentValue: map[string]interface{}{
 					"recurrence": "daily",
@@ -150,7 +140,7 @@ func (fa *FeedbackAnalyzer) AnalyzeTask(task models.Task, feedbackLimit int) ([]
 			optimizations = append(optimizations, Optimization{
 				TaskID:   task.ID,
 				TaskName: task.Name,
-				Type:     OptimizationRemoveTask,
+				Type:     constants.OptimizationRemoveTask,
 				Reason:   fmt.Sprintf("%.0f%% of recent feedback indicates task is unnecessary", unnecessaryPercent),
 			})
 		}
@@ -175,7 +165,7 @@ func (fa *FeedbackAnalyzer) AnalyzeAllTasks(feedbackLimit int) ([]Optimization, 
 		opts, err := fa.AnalyzeTask(task, feedbackLimit)
 		if err != nil {
 			// Log error but continue with other tasks
-			log.Printf("Warning: Failed to analyze task %s (%s): %v", task.Name, task.ID, err)
+			logger.Warn("Failed to analyze task", "task", task.Name, "id", task.ID, "error", err)
 			continue
 		}
 		allOptimizations = append(allOptimizations, opts...)

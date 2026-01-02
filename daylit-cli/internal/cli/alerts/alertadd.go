@@ -5,7 +5,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/utils"
 )
@@ -85,7 +87,7 @@ func (c *AlertAddCmd) Run(ctx *cli.Context) error {
 
 	// Set recurrence if not one-time
 	if c.Date == "" {
-		alert.Recurrence.Type = models.RecurrenceType(c.Recurrence)
+		alert.Recurrence.Type = constants.RecurrenceType(c.Recurrence)
 		alert.Recurrence.IntervalDays = c.Interval
 
 		// Parse weekdays for weekly recurrence

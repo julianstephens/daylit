@@ -11,6 +11,8 @@ import (
 	"testing"
 
 	ps "github.com/mitchellh/go-ps"
+
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 )
 
 // Mock Process
@@ -47,7 +49,7 @@ func TestGetTrayAppConfigDir(t *testing.T) {
 	}
 
 	// Test 1: Default
-	expectedDefault := filepath.Join(tempDir, TrayAppIdentifier)
+	expectedDefault := filepath.Join(tempDir, constants.TrayAppIdentifier)
 	dir, err := GetTrayAppConfigDir()
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
@@ -57,7 +59,7 @@ func TestGetTrayAppConfigDir(t *testing.T) {
 	}
 
 	// Test 2: Custom setting
-	trayConfigDir := filepath.Join(tempDir, TrayAppIdentifier)
+	trayConfigDir := filepath.Join(tempDir, constants.TrayAppIdentifier)
 	err = os.MkdirAll(trayConfigDir, 0755)
 	if err != nil {
 		t.Fatal(err)
@@ -90,7 +92,7 @@ func TestFindAndValidateTrayProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(tempDir)
-	lockfilePath := filepath.Join(tempDir, NotifierLockfileName)
+	lockfilePath := filepath.Join(tempDir, constants.NotifierLockfileName)
 
 	// Test 1: Lockfile missing
 	_, _, err = findAndValidateTrayProcess(lockfilePath)

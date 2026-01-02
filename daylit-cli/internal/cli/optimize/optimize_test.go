@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/optimizer"
 	"github.com/julianstephens/daylit/daylit-cli/internal/scheduler"
@@ -137,7 +138,7 @@ func TestApplyOptimization_ReduceDuration(t *testing.T) {
 	opt := optimizer.Optimization{
 		TaskID:   "task-1",
 		TaskName: "Test Task",
-		Type:     optimizer.OptimizationReduceDuration,
+		Type:     constants.OptimizationReduceDuration,
 		SuggestedValue: map[string]interface{}{
 			"duration_min": 45,
 		},
@@ -168,7 +169,7 @@ func TestApplyOptimization_ReduceFrequency(t *testing.T) {
 				Priority:    3,
 				Active:      true,
 				Recurrence: models.Recurrence{
-					Type:         models.RecurrenceNDays,
+					Type:         constants.RecurrenceNDays,
 					IntervalDays: 1,
 				},
 			},
@@ -182,7 +183,7 @@ func TestApplyOptimization_ReduceFrequency(t *testing.T) {
 	opt := optimizer.Optimization{
 		TaskID:   "task-1",
 		TaskName: "Test Task",
-		Type:     optimizer.OptimizationReduceFrequency,
+		Type:     constants.OptimizationReduceFrequency,
 		SuggestedValue: map[string]interface{}{
 			"interval_days": 3,
 		},
@@ -224,7 +225,7 @@ func TestApplyOptimization_InvalidTypeAssertion(t *testing.T) {
 	opt := optimizer.Optimization{
 		TaskID:   "task-1",
 		TaskName: "Test Task",
-		Type:     optimizer.OptimizationReduceDuration,
+		Type:     constants.OptimizationReduceDuration,
 		SuggestedValue: map[string]interface{}{
 			"duration_min": "invalid",
 		},

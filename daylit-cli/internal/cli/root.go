@@ -2,13 +2,13 @@ package cli
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/backup"
 	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
+	"github.com/julianstephens/daylit/daylit-cli/internal/logger"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/scheduler"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
@@ -24,8 +24,8 @@ func (c *Context) PerformAutomaticBackup() {
 	mgr := backup.NewManager(c.Store.GetConfigPath())
 	_, err := mgr.CreateBackup()
 	if err != nil {
-		// Silently fail - don't interrupt user workflow
-		fmt.Fprintf(os.Stderr, "Warning: automatic backup failed: %v\n", err)
+		// Log warning but don't interrupt user workflow
+		logger.Warn("Automatic backup failed", "error", err)
 	}
 }
 
@@ -72,9 +72,9 @@ func ParseWeekdays(s string) ([]time.Weekday, error) {
 // FormatRecurrence formats a recurrence rule into a human-readable string
 func FormatRecurrence(rec models.Recurrence) string {
 	switch rec.Type {
-	case models.RecurrenceDaily:
+	case constants.RecurrenceDaily:
 		return "daily"
-	case models.RecurrenceWeekly:
+	case constants.RecurrenceWeekly:
 		if len(rec.WeekdayMask) > 0 {
 			var days []string
 			for _, wd := range rec.WeekdayMask {
@@ -83,9 +83,9 @@ func FormatRecurrence(rec models.Recurrence) string {
 			return fmt.Sprintf("weekly on %s", strings.Join(days, ","))
 		}
 		return "weekly"
-	case models.RecurrenceNDays:
+	case constants.RecurrenceNDays:
 		return fmt.Sprintf("every %d days", rec.IntervalDays)
-	case models.RecurrenceAdHoc:
+	case constants.RecurrenceAdHoc:
 		return "ad-hoc"
 	default:
 		return "unknown"

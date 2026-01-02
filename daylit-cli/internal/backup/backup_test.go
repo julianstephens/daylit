@@ -8,6 +8,8 @@ import (
 	"time"
 
 	_ "modernc.org/sqlite"
+
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 )
 
 func setupTestDB(t *testing.T) (string, func()) {
@@ -90,7 +92,7 @@ func TestBackupRotation(t *testing.T) {
 	mgr := NewManager(dbPath)
 
 	// Create more than MaxBackups backups
-	numBackups := MaxBackups + 5
+	numBackups := constants.MaxBackups + 5
 	for i := 0; i < numBackups; i++ {
 		_, err := mgr.CreateBackup()
 		if err != nil {
@@ -106,8 +108,8 @@ func TestBackupRotation(t *testing.T) {
 		t.Fatalf("ListBackups failed: %v", err)
 	}
 
-	if len(backups) != MaxBackups {
-		t.Errorf("expected %d backups after rotation, got %d", MaxBackups, len(backups))
+	if len(backups) != constants.MaxBackups {
+		t.Errorf("expected %d backups after rotation, got %d", constants.MaxBackups, len(backups))
 	}
 
 	// Verify backups are sorted newest first

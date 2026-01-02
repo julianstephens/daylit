@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 )
 
@@ -13,9 +14,9 @@ func TestValidateTasks_DuplicateNames(t *testing.T) {
 	validator := New()
 
 	tasks := []models.Task{
-		{ID: "1", Name: "Task A", Active: true, Kind: models.TaskKindFlexible},
-		{ID: "2", Name: "Task B", Active: true, Kind: models.TaskKindFlexible},
-		{ID: "3", Name: "Task A", Active: true, Kind: models.TaskKindFlexible}, // Duplicate
+		{ID: "1", Name: "Task A", Active: true, Kind: constants.TaskKindFlexible},
+		{ID: "2", Name: "Task B", Active: true, Kind: constants.TaskKindFlexible},
+		{ID: "3", Name: "Task A", Active: true, Kind: constants.TaskKindFlexible}, // Duplicate
 	}
 
 	result := validator.ValidateTasks(tasks)
@@ -26,7 +27,7 @@ func TestValidateTasks_DuplicateNames(t *testing.T) {
 
 	found := false
 	for _, conflict := range result.Conflicts {
-		if conflict.Type == ConflictDuplicateTaskName {
+		if conflict.Type == constants.ConflictDuplicateTaskName {
 			found = true
 			break
 		}
@@ -44,21 +45,21 @@ func TestValidateTasks_InvalidTimeFormat(t *testing.T) {
 			ID:            "1",
 			Name:          "Task A",
 			Active:        true,
-			Kind:          models.TaskKindFlexible,
+			Kind:          constants.TaskKindFlexible,
 			EarliestStart: "25:00", // Invalid hour
 		},
 		{
 			ID:        "2",
 			Name:      "Task B",
 			Active:    true,
-			Kind:      models.TaskKindFlexible,
+			Kind:      constants.TaskKindFlexible,
 			LatestEnd: "12:70", // Invalid minute
 		},
 		{
 			ID:         "3",
 			Name:       "Task C",
 			Active:     true,
-			Kind:       models.TaskKindAppointment,
+			Kind:       constants.TaskKindAppointment,
 			FixedStart: "not-a-time", // Invalid format
 		},
 	}
@@ -71,7 +72,7 @@ func TestValidateTasks_InvalidTimeFormat(t *testing.T) {
 
 	invalidTimeCount := 0
 	for _, conflict := range result.Conflicts {
-		if conflict.Type == ConflictInvalidDateTime {
+		if conflict.Type == constants.ConflictInvalidDateTime {
 			invalidTimeCount++
 		}
 	}
@@ -88,7 +89,7 @@ func TestValidateTasks_OverlappingFixedAppointments(t *testing.T) {
 			ID:         "1",
 			Name:       "Meeting 1",
 			Active:     true,
-			Kind:       models.TaskKindAppointment,
+			Kind:       constants.TaskKindAppointment,
 			FixedStart: "09:00",
 			FixedEnd:   "10:00",
 		},
@@ -96,7 +97,7 @@ func TestValidateTasks_OverlappingFixedAppointments(t *testing.T) {
 			ID:         "2",
 			Name:       "Meeting 2",
 			Active:     true,
-			Kind:       models.TaskKindAppointment,
+			Kind:       constants.TaskKindAppointment,
 			FixedStart: "09:30",
 			FixedEnd:   "10:30",
 		},
@@ -110,7 +111,7 @@ func TestValidateTasks_OverlappingFixedAppointments(t *testing.T) {
 
 	found := false
 	for _, conflict := range result.Conflicts {
-		if conflict.Type == ConflictOverlappingFixedTasks {
+		if conflict.Type == constants.ConflictOverlappingFixedTasks {
 			found = true
 			if len(conflict.Items) != 2 {
 				t.Errorf("Expected 2 items in conflict, got %d", len(conflict.Items))
@@ -130,13 +131,13 @@ func TestValidateTasks_NoConflicts(t *testing.T) {
 			ID:     "1",
 			Name:   "Task A",
 			Active: true,
-			Kind:   models.TaskKindFlexible,
+			Kind:   constants.TaskKindFlexible,
 		},
 		{
 			ID:         "2",
 			Name:       "Task B",
 			Active:     true,
-			Kind:       models.TaskKindAppointment,
+			Kind:       constants.TaskKindAppointment,
 			FixedStart: "09:00",
 			FixedEnd:   "10:00",
 		},
@@ -144,7 +145,7 @@ func TestValidateTasks_NoConflicts(t *testing.T) {
 			ID:         "3",
 			Name:       "Task C",
 			Active:     true,
-			Kind:       models.TaskKindAppointment,
+			Kind:       constants.TaskKindAppointment,
 			FixedStart: "11:00",
 			FixedEnd:   "12:00",
 		},
@@ -168,8 +169,8 @@ func TestValidatePlan_OverlappingSlots(t *testing.T) {
 	plan := models.DayPlan{
 		Date: "2025-01-15",
 		Slots: []models.Slot{
-			{Start: "09:00", End: "10:00", TaskID: "task1", Status: models.SlotStatusPlanned},
-			{Start: "09:30", End: "10:30", TaskID: "task2", Status: models.SlotStatusPlanned},
+			{Start: "09:00", End: "10:00", TaskID: "task1", Status: constants.SlotStatusPlanned},
+			{Start: "09:30", End: "10:30", TaskID: "task2", Status: constants.SlotStatusPlanned},
 		},
 	}
 
@@ -181,7 +182,7 @@ func TestValidatePlan_OverlappingSlots(t *testing.T) {
 
 	found := false
 	for _, conflict := range result.Conflicts {
-		if conflict.Type == ConflictOverlappingSlots {
+		if conflict.Type == constants.ConflictOverlappingSlots {
 			found = true
 		}
 	}
@@ -200,8 +201,8 @@ func TestValidatePlan_MissingTaskID(t *testing.T) {
 	plan := models.DayPlan{
 		Date: "2025-01-15",
 		Slots: []models.Slot{
-			{Start: "09:00", End: "10:00", TaskID: "task1", Status: models.SlotStatusPlanned},
-			{Start: "10:00", End: "11:00", TaskID: "nonexistent", Status: models.SlotStatusPlanned},
+			{Start: "09:00", End: "10:00", TaskID: "task1", Status: constants.SlotStatusPlanned},
+			{Start: "10:00", End: "11:00", TaskID: "nonexistent", Status: constants.SlotStatusPlanned},
 		},
 	}
 
@@ -213,7 +214,7 @@ func TestValidatePlan_MissingTaskID(t *testing.T) {
 
 	found := false
 	for _, conflict := range result.Conflicts {
-		if conflict.Type == ConflictMissingTaskID {
+		if conflict.Type == constants.ConflictMissingTaskID {
 			found = true
 		}
 	}
@@ -236,9 +237,9 @@ func TestValidatePlan_ExceedsWakingWindow(t *testing.T) {
 	plan := models.DayPlan{
 		Date: "2025-01-15",
 		Slots: []models.Slot{
-			{Start: "08:00", End: "12:00", TaskID: "task1", Status: models.SlotStatusPlanned}, // 4h
-			{Start: "12:00", End: "16:00", TaskID: "task2", Status: models.SlotStatusPlanned}, // 4h
-			{Start: "16:00", End: "19:00", TaskID: "task3", Status: models.SlotStatusPlanned}, // 3h (exceeds 18:00)
+			{Start: "08:00", End: "12:00", TaskID: "task1", Status: constants.SlotStatusPlanned}, // 4h
+			{Start: "12:00", End: "16:00", TaskID: "task2", Status: constants.SlotStatusPlanned}, // 4h
+			{Start: "16:00", End: "19:00", TaskID: "task3", Status: constants.SlotStatusPlanned}, // 3h (exceeds 18:00)
 		},
 	}
 
@@ -250,7 +251,7 @@ func TestValidatePlan_ExceedsWakingWindow(t *testing.T) {
 
 	found := false
 	for _, conflict := range result.Conflicts {
-		if conflict.Type == ConflictExceedsWakingWindow {
+		if conflict.Type == constants.ConflictExceedsWakingWindow {
 			found = true
 		}
 	}
@@ -272,8 +273,8 @@ func TestValidatePlan_Overcommitted(t *testing.T) {
 	plan := models.DayPlan{
 		Date: "2025-01-15",
 		Slots: []models.Slot{
-			{Start: "08:00", End: "12:30", TaskID: "task1", Status: models.SlotStatusPlanned}, // 4.5h
-			{Start: "12:30", End: "17:00", TaskID: "task2", Status: models.SlotStatusPlanned}, // 4.5h
+			{Start: "08:00", End: "12:30", TaskID: "task1", Status: constants.SlotStatusPlanned}, // 4.5h
+			{Start: "12:30", End: "17:00", TaskID: "task2", Status: constants.SlotStatusPlanned}, // 4.5h
 		},
 	}
 
@@ -285,7 +286,7 @@ func TestValidatePlan_Overcommitted(t *testing.T) {
 
 	found := false
 	for _, conflict := range result.Conflicts {
-		if conflict.Type == ConflictOvercommitted {
+		if conflict.Type == constants.ConflictOvercommitted {
 			found = true
 		}
 	}
@@ -304,7 +305,7 @@ func TestValidatePlan_InvalidDate(t *testing.T) {
 	plan := models.DayPlan{
 		Date: "invalid-date",
 		Slots: []models.Slot{
-			{Start: "09:00", End: "10:00", TaskID: "task1", Status: models.SlotStatusPlanned},
+			{Start: "09:00", End: "10:00", TaskID: "task1", Status: constants.SlotStatusPlanned},
 		},
 	}
 
@@ -316,7 +317,7 @@ func TestValidatePlan_InvalidDate(t *testing.T) {
 
 	found := false
 	for _, conflict := range result.Conflicts {
-		if conflict.Type == ConflictInvalidDateTime {
+		if conflict.Type == constants.ConflictInvalidDateTime {
 			found = true
 		}
 	}
@@ -336,8 +337,8 @@ func TestValidatePlan_NoConflicts(t *testing.T) {
 	plan := models.DayPlan{
 		Date: "2025-01-15",
 		Slots: []models.Slot{
-			{Start: "09:00", End: "10:00", TaskID: "task1", Status: models.SlotStatusPlanned},
-			{Start: "10:00", End: "11:00", TaskID: "task2", Status: models.SlotStatusPlanned},
+			{Start: "09:00", End: "10:00", TaskID: "task1", Status: constants.SlotStatusPlanned},
+			{Start: "10:00", End: "11:00", TaskID: "task2", Status: constants.SlotStatusPlanned},
 		},
 	}
 
@@ -380,11 +381,11 @@ func TestValidationResult_FormatReport(t *testing.T) {
 	result := ValidationResult{
 		Conflicts: []Conflict{
 			{
-				Type:        ConflictOverlappingSlots,
+				Type:        constants.ConflictOverlappingSlots,
 				Description: "Mon: 09:00-10:00 \"Task A\" overlaps \"Task B\"",
 			},
 			{
-				Type:        ConflictExceedsWakingWindow,
+				Type:        constants.ConflictExceedsWakingWindow,
 				Description: "Mon: 11.0h scheduled exceeds 10.0h waking window",
 			},
 		},
@@ -413,8 +414,8 @@ func TestValidateTasks_SkipsDeletedTasks(t *testing.T) {
 
 	deleted := "2025-01-15T10:00:00Z"
 	tasks := []models.Task{
-		{ID: "1", Name: "Task A", Active: true, Kind: models.TaskKindFlexible},
-		{ID: "2", Name: "Task A", Active: true, Kind: models.TaskKindFlexible, DeletedAt: &deleted}, // Deleted duplicate
+		{ID: "1", Name: "Task A", Active: true, Kind: constants.TaskKindFlexible},
+		{ID: "2", Name: "Task A", Active: true, Kind: constants.TaskKindFlexible, DeletedAt: &deleted}, // Deleted duplicate
 	}
 
 	result := validator.ValidateTasks(tasks)
@@ -437,8 +438,8 @@ func TestValidatePlan_SkipsDeletedSlots(t *testing.T) {
 	plan := models.DayPlan{
 		Date: "2025-01-15",
 		Slots: []models.Slot{
-			{Start: "09:00", End: "10:00", TaskID: "task1", Status: models.SlotStatusPlanned},
-			{Start: "09:30", End: "10:30", TaskID: "task2", Status: models.SlotStatusPlanned, DeletedAt: &deleted}, // Deleted overlap
+			{Start: "09:00", End: "10:00", TaskID: "task1", Status: constants.SlotStatusPlanned},
+			{Start: "09:30", End: "10:30", TaskID: "task2", Status: constants.SlotStatusPlanned, DeletedAt: &deleted}, // Deleted overlap
 		},
 	}
 
@@ -454,16 +455,16 @@ func TestValidateTasks_EmptyNames(t *testing.T) {
 	validator := New()
 
 	tasks := []models.Task{
-		{ID: "1", Name: "", Active: true, Kind: models.TaskKindFlexible},
-		{ID: "2", Name: "", Active: true, Kind: models.TaskKindFlexible},
-		{ID: "3", Name: "Valid Task", Active: true, Kind: models.TaskKindFlexible},
+		{ID: "1", Name: "", Active: true, Kind: constants.TaskKindFlexible},
+		{ID: "2", Name: "", Active: true, Kind: constants.TaskKindFlexible},
+		{ID: "3", Name: "Valid Task", Active: true, Kind: constants.TaskKindFlexible},
 	}
 
 	result := validator.ValidateTasks(tasks)
 
 	// Should not report duplicates for empty names
 	for _, conflict := range result.Conflicts {
-		if conflict.Type == ConflictDuplicateTaskName {
+		if conflict.Type == constants.ConflictDuplicateTaskName {
 			t.Error("Should not flag empty task names as duplicates")
 		}
 	}
@@ -477,7 +478,7 @@ func TestValidateTasks_InactiveTasks(t *testing.T) {
 			ID:         "1",
 			Name:       "Active Meeting",
 			Active:     true,
-			Kind:       models.TaskKindAppointment,
+			Kind:       constants.TaskKindAppointment,
 			FixedStart: "09:00",
 			FixedEnd:   "10:00",
 		},
@@ -485,7 +486,7 @@ func TestValidateTasks_InactiveTasks(t *testing.T) {
 			ID:         "2",
 			Name:       "Inactive Meeting",
 			Active:     false, // Inactive
-			Kind:       models.TaskKindAppointment,
+			Kind:       constants.TaskKindAppointment,
 			FixedStart: "09:30",
 			FixedEnd:   "10:30",
 		},
@@ -507,7 +508,7 @@ func TestValidateTasks_NegativeDuration(t *testing.T) {
 			ID:         "1",
 			Name:       "Bad Appointment",
 			Active:     true,
-			Kind:       models.TaskKindAppointment,
+			Kind:       constants.TaskKindAppointment,
 			FixedStart: "10:00",
 			FixedEnd:   "09:00", // End before start
 		},
@@ -521,7 +522,7 @@ func TestValidateTasks_NegativeDuration(t *testing.T) {
 
 	found := false
 	for _, conflict := range result.Conflicts {
-		if conflict.Type == ConflictInvalidDateTime {
+		if conflict.Type == constants.ConflictInvalidDateTime {
 			found = true
 			break
 		}
@@ -541,7 +542,7 @@ func TestValidatePlan_NegativeSlotDuration(t *testing.T) {
 	plan := models.DayPlan{
 		Date: "2025-01-15",
 		Slots: []models.Slot{
-			{Start: "10:00", End: "09:00", TaskID: "task1", Status: models.SlotStatusPlanned}, // End before start
+			{Start: "10:00", End: "09:00", TaskID: "task1", Status: constants.SlotStatusPlanned}, // End before start
 		},
 	}
 
@@ -553,7 +554,7 @@ func TestValidatePlan_NegativeSlotDuration(t *testing.T) {
 
 	found := false
 	for _, conflict := range result.Conflicts {
-		if conflict.Type == ConflictInvalidDateTime {
+		if conflict.Type == constants.ConflictInvalidDateTime {
 			found = true
 			break
 		}
@@ -565,16 +566,16 @@ func TestValidatePlan_NegativeSlotDuration(t *testing.T) {
 
 func TestAutoFixDuplicateTasks(t *testing.T) {
 	tasks := []models.Task{
-		{ID: "1", Name: "Task A", Active: true, Kind: models.TaskKindFlexible},
-		{ID: "2", Name: "Task B", Active: true, Kind: models.TaskKindFlexible},
-		{ID: "3", Name: "Task A", Active: true, Kind: models.TaskKindFlexible}, // Duplicate
-		{ID: "4", Name: "Task A", Active: true, Kind: models.TaskKindFlexible}, // Another duplicate
+		{ID: "1", Name: "Task A", Active: true, Kind: constants.TaskKindFlexible},
+		{ID: "2", Name: "Task B", Active: true, Kind: constants.TaskKindFlexible},
+		{ID: "3", Name: "Task A", Active: true, Kind: constants.TaskKindFlexible}, // Duplicate
+		{ID: "4", Name: "Task A", Active: true, Kind: constants.TaskKindFlexible}, // Another duplicate
 	}
 
 	// Create conflicts
 	conflicts := []Conflict{
 		{
-			Type:        ConflictDuplicateTaskName,
+			Type:        constants.ConflictDuplicateTaskName,
 			Description: "Duplicate task name: \"Task A\" (IDs: [1 3 4])",
 			Items:       []string{"Task A"},
 			TaskIDs:     []string{"1", "3", "4"},
@@ -618,8 +619,8 @@ func TestAutoFixDuplicateTasks(t *testing.T) {
 
 func TestAutoFixDuplicateTasks_NoConflicts(t *testing.T) {
 	tasks := []models.Task{
-		{ID: "1", Name: "Task A", Active: true, Kind: models.TaskKindFlexible},
-		{ID: "2", Name: "Task B", Active: true, Kind: models.TaskKindFlexible},
+		{ID: "1", Name: "Task A", Active: true, Kind: constants.TaskKindFlexible},
+		{ID: "2", Name: "Task B", Active: true, Kind: constants.TaskKindFlexible},
 	}
 
 	conflicts := []Conflict{} // No conflicts
@@ -638,12 +639,12 @@ func TestAutoFixDuplicateTasks_NoConflicts(t *testing.T) {
 
 func TestAutoFixDuplicateTasks_OnlyNonDuplicateConflicts(t *testing.T) {
 	tasks := []models.Task{
-		{ID: "1", Name: "Task A", Active: true, Kind: models.TaskKindFlexible},
+		{ID: "1", Name: "Task A", Active: true, Kind: constants.TaskKindFlexible},
 	}
 
 	conflicts := []Conflict{
 		{
-			Type:        ConflictInvalidDateTime,
+			Type:        constants.ConflictInvalidDateTime,
 			Description: "Invalid time",
 			Items:       []string{"Task A"},
 		},
@@ -665,14 +666,14 @@ func TestAutoFixDuplicateTasks_SkipsAlreadyDeleted(t *testing.T) {
 	// Use a fixed timestamp for deterministic testing
 	deleted := time.Date(2024, 1, 15, 10, 0, 0, 0, time.UTC).Format(time.RFC3339)
 	tasks := []models.Task{
-		{ID: "1", Name: "Task A", Active: true, Kind: models.TaskKindFlexible},
-		{ID: "2", Name: "Task A", Active: true, Kind: models.TaskKindFlexible, DeletedAt: &deleted}, // Already deleted
-		{ID: "3", Name: "Task A", Active: true, Kind: models.TaskKindFlexible},
+		{ID: "1", Name: "Task A", Active: true, Kind: constants.TaskKindFlexible},
+		{ID: "2", Name: "Task A", Active: true, Kind: constants.TaskKindFlexible, DeletedAt: &deleted}, // Already deleted
+		{ID: "3", Name: "Task A", Active: true, Kind: constants.TaskKindFlexible},
 	}
 
 	conflicts := []Conflict{
 		{
-			Type:        ConflictDuplicateTaskName,
+			Type:        constants.ConflictDuplicateTaskName,
 			Description: "Duplicate task name: \"Task A\" (IDs: [1 2 3])",
 			Items:       []string{"Task A"},
 			TaskIDs:     []string{"1", "2", "3"},
@@ -705,14 +706,14 @@ func TestAutoFixDuplicateTasks_SkipsAlreadyDeleted(t *testing.T) {
 
 func TestAutoFixDuplicateTasks_HandlesDeleteErrors(t *testing.T) {
 	tasks := []models.Task{
-		{ID: "1", Name: "Task A", Active: true, Kind: models.TaskKindFlexible},
-		{ID: "2", Name: "Task A", Active: true, Kind: models.TaskKindFlexible},
-		{ID: "3", Name: "Task A", Active: true, Kind: models.TaskKindFlexible},
+		{ID: "1", Name: "Task A", Active: true, Kind: constants.TaskKindFlexible},
+		{ID: "2", Name: "Task A", Active: true, Kind: constants.TaskKindFlexible},
+		{ID: "3", Name: "Task A", Active: true, Kind: constants.TaskKindFlexible},
 	}
 
 	conflicts := []Conflict{
 		{
-			Type:        ConflictDuplicateTaskName,
+			Type:        constants.ConflictDuplicateTaskName,
 			Description: "Duplicate task name: \"Task A\" (IDs: [1 2 3])",
 			Items:       []string{"Task A"},
 			TaskIDs:     []string{"1", "2", "3"},
@@ -749,13 +750,13 @@ func TestAutoFixDuplicateTasks_HandlesDeleteErrors(t *testing.T) {
 func TestAutoFixDuplicateTasks_HandlesOrphanedConflictReferences(t *testing.T) {
 	// Test case where conflict.TaskIDs contains IDs that don't exist in tasks slice
 	tasks := []models.Task{
-		{ID: "1", Name: "Task A", Active: true, Kind: models.TaskKindFlexible},
-		{ID: "3", Name: "Task A", Active: true, Kind: models.TaskKindFlexible},
+		{ID: "1", Name: "Task A", Active: true, Kind: constants.TaskKindFlexible},
+		{ID: "3", Name: "Task A", Active: true, Kind: constants.TaskKindFlexible},
 	}
 
 	conflicts := []Conflict{
 		{
-			Type:        ConflictDuplicateTaskName,
+			Type:        constants.ConflictDuplicateTaskName,
 			Description: "Duplicate task name: \"Task A\" (IDs: [1 2 3])",
 			Items:       []string{"Task A"},
 			TaskIDs:     []string{"1", "2", "3"}, // ID "2" doesn't exist in tasks
@@ -802,11 +803,11 @@ func TestValidateTasksForDate_ScopeFiltering(t *testing.T) {
 		ID:         "1",
 		Name:       "Monday Meeting",
 		Active:     true,
-		Kind:       models.TaskKindAppointment,
+		Kind:       constants.TaskKindAppointment,
 		FixedStart: "09:00",
 		FixedEnd:   "10:00",
 		Recurrence: models.Recurrence{
-			Type:        models.RecurrenceWeekly,
+			Type:        constants.RecurrenceWeekly,
 			WeekdayMask: []time.Weekday{time.Monday},
 		},
 	}
@@ -816,11 +817,11 @@ func TestValidateTasksForDate_ScopeFiltering(t *testing.T) {
 		ID:         "2",
 		Name:       "Tuesday Meeting",
 		Active:     true,
-		Kind:       models.TaskKindAppointment,
+		Kind:       constants.TaskKindAppointment,
 		FixedStart: "09:00",
 		FixedEnd:   "10:00",
 		Recurrence: models.Recurrence{
-			Type:        models.RecurrenceWeekly,
+			Type:        constants.RecurrenceWeekly,
 			WeekdayMask: []time.Weekday{time.Tuesday},
 		},
 	}
@@ -845,11 +846,11 @@ func TestValidateTasksForDate_ScopeFiltering(t *testing.T) {
 		ID:         "3",
 		Name:       "Daily Meeting 1",
 		Active:     true,
-		Kind:       models.TaskKindAppointment,
+		Kind:       constants.TaskKindAppointment,
 		FixedStart: "09:00",
 		FixedEnd:   "10:00",
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 	}
 
@@ -857,11 +858,11 @@ func TestValidateTasksForDate_ScopeFiltering(t *testing.T) {
 		ID:         "4",
 		Name:       "Daily Meeting 2",
 		Active:     true,
-		Kind:       models.TaskKindAppointment,
+		Kind:       constants.TaskKindAppointment,
 		FixedStart: "09:30",
 		FixedEnd:   "10:30",
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 	}
 
@@ -888,11 +889,11 @@ func TestValidateTasksForDate_AdHocTasksExcluded(t *testing.T) {
 		ID:         "1",
 		Name:       "Ad-hoc Meeting 1",
 		Active:     true,
-		Kind:       models.TaskKindAppointment,
+		Kind:       constants.TaskKindAppointment,
 		FixedStart: "09:00",
 		FixedEnd:   "10:00",
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceAdHoc,
+			Type: constants.RecurrenceAdHoc,
 		},
 	}
 
@@ -900,11 +901,11 @@ func TestValidateTasksForDate_AdHocTasksExcluded(t *testing.T) {
 		ID:         "2",
 		Name:       "Ad-hoc Meeting 2",
 		Active:     true,
-		Kind:       models.TaskKindAppointment,
+		Kind:       constants.TaskKindAppointment,
 		FixedStart: "09:30",
 		FixedEnd:   "10:30",
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceAdHoc,
+			Type: constants.RecurrenceAdHoc,
 		},
 	}
 
@@ -934,12 +935,12 @@ func TestValidateTasksForDate_NDaysRecurrence(t *testing.T) {
 		ID:         "1",
 		Name:       "Every 3 Days Appointment",
 		Active:     true,
-		Kind:       models.TaskKindAppointment,
+		Kind:       constants.TaskKindAppointment,
 		FixedStart: "10:00",
 		FixedEnd:   "11:00",
 		LastDone:   lastDone,
 		Recurrence: models.Recurrence{
-			Type:         models.RecurrenceNDays,
+			Type:         constants.RecurrenceNDays,
 			IntervalDays: 3,
 		},
 	}
@@ -949,11 +950,11 @@ func TestValidateTasksForDate_NDaysRecurrence(t *testing.T) {
 		ID:         "2",
 		Name:       "Overlapping Appointment",
 		Active:     true,
-		Kind:       models.TaskKindAppointment,
+		Kind:       constants.TaskKindAppointment,
 		FixedStart: "10:30",
 		FixedEnd:   "11:30",
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 	}
 
@@ -970,7 +971,7 @@ func TestValidateTasksForDate_NDaysRecurrence(t *testing.T) {
 	// Verify the conflict is about overlapping appointments
 	foundOverlap := false
 	for _, conflict := range result.Conflicts {
-		if conflict.Type == ConflictOverlappingFixedTasks {
+		if conflict.Type == constants.ConflictOverlappingFixedTasks {
 			foundOverlap = true
 			break
 		}
@@ -985,12 +986,12 @@ func TestValidateTasksForDate_NDaysRecurrence(t *testing.T) {
 		ID:         "3",
 		Name:       "Every 7 Days Appointment",
 		Active:     true,
-		Kind:       models.TaskKindAppointment,
+		Kind:       constants.TaskKindAppointment,
 		FixedStart: "10:00",
 		FixedEnd:   "11:00",
 		LastDone:   recentLastDone,
 		Recurrence: models.Recurrence{
-			Type:         models.RecurrenceNDays,
+			Type:         constants.RecurrenceNDays,
 			IntervalDays: 7,
 		},
 	}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 )
 
@@ -34,8 +35,8 @@ func (s *Store) GetTask(id string) (models.Task, error) {
 		return models.Task{}, err
 	}
 
-	t.Recurrence.Type = models.RecurrenceType(recType)
-	t.EnergyBand = models.EnergyBand(energyBand)
+	t.Recurrence.Type = constants.RecurrenceType(recType)
+	t.EnergyBand = constants.EnergyBand(energyBand)
 	t.Active = active
 
 	if deletedAt.Valid {
@@ -81,8 +82,8 @@ func (s *Store) GetAllTasks() ([]models.Task, error) {
 			return nil, err
 		}
 
-		t.Recurrence.Type = models.RecurrenceType(recType)
-		t.EnergyBand = models.EnergyBand(energyBand)
+		t.Recurrence.Type = constants.RecurrenceType(recType)
+		t.EnergyBand = constants.EnergyBand(energyBand)
 		t.Active = active
 
 		if deletedAt.Valid {
@@ -149,10 +150,10 @@ func (s *Store) GetAllTasksIncludingDeleted() ([]models.Task, error) {
 			t.AvgActualDurationMin = avgActualDuration.Float64
 		}
 		if recType.Valid {
-			t.Recurrence.Type = models.RecurrenceType(recType.String)
+			t.Recurrence.Type = constants.RecurrenceType(recType.String)
 		}
 		if energyBand.Valid {
-			t.EnergyBand = models.EnergyBand(energyBand.String)
+			t.EnergyBand = constants.EnergyBand(energyBand.String)
 		}
 		if earliestStart.Valid {
 			t.EarliestStart = earliestStart.String

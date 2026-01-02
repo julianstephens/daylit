@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 )
 
 func (m Model) View() string {
@@ -14,23 +16,23 @@ func (m Model) View() string {
 	var content string
 
 	switch m.state {
-	case StateNow:
+	case constants.StateNow:
 		content = m.viewNow()
-	case StatePlan:
+	case constants.StatePlan:
 		content = m.viewPlan()
-	case StateTasks:
+	case constants.StateTasks:
 		content = m.viewTasks()
-	case StateHabits:
+	case constants.StateHabits:
 		content = m.viewHabits()
-	case StateOT:
+	case constants.StateOT:
 		content = m.viewOT()
-	case StateAlerts:
+	case constants.StateAlerts:
 		content = m.viewAlerts()
-	case StateSettings:
+	case constants.StateSettings:
 		content = m.viewSettings()
-	case StateFeedback:
+	case constants.StateFeedback:
 		content = m.viewFeedback()
-	case StateEditing, StateAddHabit, StateAddAlert, StateEditOT, StateEditSettings:
+	case constants.StateEditing, constants.StateAddHabit, constants.StateAddAlert, constants.StateEditOT, constants.StateEditSettings:
 		formContent := m.form.View()
 		if m.formError != "" {
 			errorStyle := lipgloss.NewStyle().
@@ -43,18 +45,18 @@ func (m Model) View() string {
 			)
 		}
 		content = formContent
-	case StateConfirmDelete:
+	case constants.StateConfirmDelete:
 		content = m.viewConfirmDelete()
-	case StateConfirmRestore:
+	case constants.StateConfirmRestore:
 		content = m.viewConfirmRestore()
-	case StateConfirmOverwrite:
+	case constants.StateConfirmOverwrite:
 		content = m.viewConfirmOverwrite()
-	case StateConfirmArchive:
+	case constants.StateConfirmArchive:
 		content = m.viewConfirmArchive()
 	}
 
 	var banner string
-	if len(m.validationConflicts) > 0 && m.state == StatePlan {
+	if len(m.validationConflicts) > 0 && m.state == constants.StatePlan {
 		banner = m.viewConflictBanner()
 	}
 
@@ -77,7 +79,7 @@ func (m Model) viewTabs() string {
 	var tabs []string
 	tabTitles := []string{"Now", "Plan", "Tasks", "Habits", "OT", "Alerts", "Settings"}
 	for i, title := range tabTitles {
-		if m.state == SessionState(i) {
+		if m.state == constants.SessionState(i) {
 			tabs = append(tabs, activeTabStyle.Render(title))
 		} else {
 			tabs = append(tabs, inactiveTabStyle.Render(title))

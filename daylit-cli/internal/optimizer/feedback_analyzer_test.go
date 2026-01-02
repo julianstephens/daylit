@@ -3,6 +3,7 @@ package optimizer
 import (
 	"testing"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 )
 
@@ -121,10 +122,10 @@ func TestAnalyzeTask_MostlyTooMuch(t *testing.T) {
 	store := &mockStore{
 		feedbackHistory: map[string][]models.TaskFeedbackEntry{
 			"task-1": {
-				{TaskID: "task-1", Rating: models.FeedbackTooMuch, ActualStart: "09:00", ActualEnd: "10:00"},
-				{TaskID: "task-1", Rating: models.FeedbackTooMuch, ActualStart: "09:00", ActualEnd: "10:00"},
-				{TaskID: "task-1", Rating: models.FeedbackTooMuch, ActualStart: "09:00", ActualEnd: "10:00"},
-				{TaskID: "task-1", Rating: models.FeedbackOnTrack, ActualStart: "09:00", ActualEnd: "10:00"},
+				{TaskID: "task-1", Rating: constants.FeedbackTooMuch, ActualStart: "09:00", ActualEnd: "10:00"},
+				{TaskID: "task-1", Rating: constants.FeedbackTooMuch, ActualStart: "09:00", ActualEnd: "10:00"},
+				{TaskID: "task-1", Rating: constants.FeedbackTooMuch, ActualStart: "09:00", ActualEnd: "10:00"},
+				{TaskID: "task-1", Rating: constants.FeedbackOnTrack, ActualStart: "09:00", ActualEnd: "10:00"},
 			},
 		},
 	}
@@ -147,7 +148,7 @@ func TestAnalyzeTask_MostlyTooMuch(t *testing.T) {
 	}
 
 	opt := optimizations[0]
-	if opt.Type != OptimizationReduceDuration {
+	if opt.Type != constants.OptimizationReduceDuration {
 		t.Errorf("expected OptimizationReduceDuration, got %v", opt.Type)
 	}
 
@@ -160,10 +161,10 @@ func TestAnalyzeTask_MostlyUnnecessary(t *testing.T) {
 	store := &mockStore{
 		feedbackHistory: map[string][]models.TaskFeedbackEntry{
 			"task-1": {
-				{TaskID: "task-1", Rating: models.FeedbackUnnecessary},
-				{TaskID: "task-1", Rating: models.FeedbackUnnecessary},
-				{TaskID: "task-1", Rating: models.FeedbackUnnecessary},
-				{TaskID: "task-1", Rating: models.FeedbackOnTrack},
+				{TaskID: "task-1", Rating: constants.FeedbackUnnecessary},
+				{TaskID: "task-1", Rating: constants.FeedbackUnnecessary},
+				{TaskID: "task-1", Rating: constants.FeedbackUnnecessary},
+				{TaskID: "task-1", Rating: constants.FeedbackOnTrack},
 			},
 		},
 	}
@@ -175,7 +176,7 @@ func TestAnalyzeTask_MostlyUnnecessary(t *testing.T) {
 		DurationMin: 60,
 		Active:      true,
 		Recurrence: models.Recurrence{
-			Type:         models.RecurrenceNDays,
+			Type:         constants.RecurrenceNDays,
 			IntervalDays: 1,
 		},
 	}
@@ -190,7 +191,7 @@ func TestAnalyzeTask_MostlyUnnecessary(t *testing.T) {
 	}
 
 	opt := optimizations[0]
-	if opt.Type != OptimizationReduceFrequency {
+	if opt.Type != constants.OptimizationReduceFrequency {
 		t.Errorf("expected OptimizationReduceFrequency, got %v", opt.Type)
 	}
 }
@@ -199,9 +200,9 @@ func TestAnalyzeTask_ShortTaskTooMuch(t *testing.T) {
 	store := &mockStore{
 		feedbackHistory: map[string][]models.TaskFeedbackEntry{
 			"task-1": {
-				{TaskID: "task-1", Rating: models.FeedbackTooMuch},
-				{TaskID: "task-1", Rating: models.FeedbackTooMuch},
-				{TaskID: "task-1", Rating: models.FeedbackTooMuch},
+				{TaskID: "task-1", Rating: constants.FeedbackTooMuch},
+				{TaskID: "task-1", Rating: constants.FeedbackTooMuch},
+				{TaskID: "task-1", Rating: constants.FeedbackTooMuch},
 			},
 		},
 	}
@@ -224,7 +225,7 @@ func TestAnalyzeTask_ShortTaskTooMuch(t *testing.T) {
 	}
 
 	opt := optimizations[0]
-	if opt.Type != OptimizationSplitTask {
+	if opt.Type != constants.OptimizationSplitTask {
 		t.Errorf("expected OptimizationSplitTask for short task, got %v", opt.Type)
 	}
 }
@@ -233,8 +234,8 @@ func TestAnalyzeAllTasks(t *testing.T) {
 	store := &mockStore{
 		feedbackHistory: map[string][]models.TaskFeedbackEntry{
 			"task-1": {
-				{TaskID: "task-1", Rating: models.FeedbackTooMuch},
-				{TaskID: "task-1", Rating: models.FeedbackTooMuch},
+				{TaskID: "task-1", Rating: constants.FeedbackTooMuch},
+				{TaskID: "task-1", Rating: constants.FeedbackTooMuch},
 			},
 		},
 		tasks: []models.Task{

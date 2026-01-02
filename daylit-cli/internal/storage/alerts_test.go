@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 )
 
@@ -19,7 +20,7 @@ func TestAlertCRUD(t *testing.T) {
 		Message: "Test alert",
 		Time:    "10:00",
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Active:    true,
 		CreatedAt: time.Now(),
@@ -86,7 +87,7 @@ func TestAlertGetAll(t *testing.T) {
 			Message: "Alert 1",
 			Time:    "08:00",
 			Recurrence: models.Recurrence{
-				Type: models.RecurrenceDaily,
+				Type: constants.RecurrenceDaily,
 			},
 			Active:    true,
 			CreatedAt: time.Now(),
@@ -104,7 +105,7 @@ func TestAlertGetAll(t *testing.T) {
 			Message: "Alert 3",
 			Time:    "18:00",
 			Recurrence: models.Recurrence{
-				Type:        models.RecurrenceWeekly,
+				Type:        constants.RecurrenceWeekly,
 				WeekdayMask: []time.Weekday{time.Monday, time.Friday},
 			},
 			Active:    false,
@@ -152,7 +153,7 @@ func TestAlertValidation(t *testing.T) {
 				Message: "Valid alert",
 				Time:    "10:00",
 				Recurrence: models.Recurrence{
-					Type: models.RecurrenceDaily,
+					Type: constants.RecurrenceDaily,
 				},
 				Active:    true,
 				CreatedAt: time.Now(),
@@ -188,7 +189,7 @@ func TestAlertValidation(t *testing.T) {
 				Message: "Weekly alert",
 				Time:    "10:00",
 				Recurrence: models.Recurrence{
-					Type:        models.RecurrenceWeekly,
+					Type:        constants.RecurrenceWeekly,
 					WeekdayMask: []time.Weekday{},
 				},
 				Active:    true,
@@ -218,7 +219,7 @@ func TestAlertRecurrence(t *testing.T) {
 		Message: "Weekly alert",
 		Time:    "10:00",
 		Recurrence: models.Recurrence{
-			Type:        models.RecurrenceWeekly,
+			Type:        constants.RecurrenceWeekly,
 			WeekdayMask: []time.Weekday{time.Monday, time.Wednesday, time.Friday},
 		},
 		Active:    true,
@@ -244,7 +245,7 @@ func TestAlertRecurrence(t *testing.T) {
 		Message: "Every 3 days",
 		Time:    "14:00",
 		Recurrence: models.Recurrence{
-			Type:         models.RecurrenceNDays,
+			Type:         constants.RecurrenceNDays,
 			IntervalDays: 3,
 		},
 		Active:    true,
@@ -274,7 +275,7 @@ func TestAlertLastSent(t *testing.T) {
 		Message: "Test alert",
 		Time:    "10:00",
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Active:    true,
 		CreatedAt: time.Now(),

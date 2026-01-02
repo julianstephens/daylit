@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
-	"github.com/julianstephens/daylit/daylit-cli/internal/models"
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 )
 
 type TaskListCmd struct {
@@ -42,7 +42,7 @@ func (c *TaskListCmd) Run(ctx *cli.Context) error {
 		fmt.Printf("  [%s] %s%s - %dm (%s, priority %d)\n",
 			status, task.Name, idStr, task.DurationMin, recStr, task.Priority)
 
-		if task.Kind == models.TaskKindAppointment {
+		if task.Kind == constants.TaskKindAppointment {
 			fmt.Printf("      Fixed: %s - %s\n", task.FixedStart, task.FixedEnd)
 		} else if task.EarliestStart != "" || task.LatestEnd != "" {
 			fmt.Printf("      Window: %s - %s\n", task.EarliestStart, task.LatestEnd)

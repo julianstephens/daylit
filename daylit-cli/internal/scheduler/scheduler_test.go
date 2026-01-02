@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 )
 
@@ -18,24 +19,24 @@ func TestGeneratePlan_RespectsWeekdaysForAppointments(t *testing.T) {
 		{
 			ID:         "task-sat",
 			Name:       "Saturday Task",
-			Kind:       models.TaskKindAppointment,
+			Kind:       constants.TaskKindAppointment,
 			FixedStart: "09:00",
 			FixedEnd:   "10:00",
 			Active:     true,
 			Recurrence: models.Recurrence{
-				Type:        models.RecurrenceWeekly,
+				Type:        constants.RecurrenceWeekly,
 				WeekdayMask: []time.Weekday{time.Saturday},
 			},
 		},
 		{
 			ID:         "task-wed",
 			Name:       "Wednesday Task",
-			Kind:       models.TaskKindAppointment,
+			Kind:       constants.TaskKindAppointment,
 			FixedStart: "10:00",
 			FixedEnd:   "11:00",
 			Active:     true,
 			Recurrence: models.Recurrence{
-				Type:        models.RecurrenceWeekly,
+				Type:        constants.RecurrenceWeekly,
 				WeekdayMask: []time.Weekday{time.Wednesday},
 			},
 		},
@@ -77,22 +78,22 @@ func TestGeneratePlan_FlexibleTaskRecurrence(t *testing.T) {
 		{
 			ID:          "flex-mon",
 			Name:        "Monday Flex",
-			Kind:        models.TaskKindFlexible,
+			Kind:        constants.TaskKindFlexible,
 			DurationMin: 60,
 			Active:      true,
 			Recurrence: models.Recurrence{
-				Type:        models.RecurrenceWeekly,
+				Type:        constants.RecurrenceWeekly,
 				WeekdayMask: []time.Weekday{time.Monday},
 			},
 		},
 		{
 			ID:          "flex-wed",
 			Name:        "Wednesday Flex",
-			Kind:        models.TaskKindFlexible,
+			Kind:        constants.TaskKindFlexible,
 			DurationMin: 60,
 			Active:      true,
 			Recurrence: models.Recurrence{
-				Type:        models.RecurrenceWeekly,
+				Type:        constants.RecurrenceWeekly,
 				WeekdayMask: []time.Weekday{time.Wednesday},
 			},
 		},
@@ -130,24 +131,24 @@ func TestGeneratePlan_NDaysRecurrence(t *testing.T) {
 		{
 			ID:          "task-due",
 			Name:        "Due Task",
-			Kind:        models.TaskKindFlexible,
+			Kind:        constants.TaskKindFlexible,
 			DurationMin: 60,
 			Active:      true,
 			LastDone:    "2025-12-25", // 6 days ago
 			Recurrence: models.Recurrence{
-				Type:         models.RecurrenceNDays,
+				Type:         constants.RecurrenceNDays,
 				IntervalDays: 5, // Should be due
 			},
 		},
 		{
 			ID:          "task-not-due",
 			Name:        "Not Due Task",
-			Kind:        models.TaskKindFlexible,
+			Kind:        constants.TaskKindFlexible,
 			DurationMin: 60,
 			Active:      true,
 			LastDone:    "2025-12-30", // 1 day ago
 			Recurrence: models.Recurrence{
-				Type:         models.RecurrenceNDays,
+				Type:         constants.RecurrenceNDays,
 				IntervalDays: 5, // Not due yet
 			},
 		},
@@ -185,21 +186,21 @@ func TestGeneratePlan_TimeConstraints(t *testing.T) {
 		{
 			ID:            "early-bird",
 			Name:          "Early Bird",
-			Kind:          models.TaskKindFlexible,
+			Kind:          constants.TaskKindFlexible,
 			DurationMin:   60,
 			Active:        true,
 			EarliestStart: "06:00",
 			LatestEnd:     "08:00", // Must be done by 8am
-			Recurrence:    models.Recurrence{Type: models.RecurrenceDaily},
+			Recurrence:    models.Recurrence{Type: constants.RecurrenceDaily},
 		},
 		{
 			ID:            "night-owl",
 			Name:          "Night Owl",
-			Kind:          models.TaskKindFlexible,
+			Kind:          constants.TaskKindFlexible,
 			DurationMin:   60,
 			Active:        true,
 			EarliestStart: "20:00", // Starts after work day
-			Recurrence:    models.Recurrence{Type: models.RecurrenceDaily},
+			Recurrence:    models.Recurrence{Type: constants.RecurrenceDaily},
 		},
 	}
 
@@ -251,31 +252,31 @@ func TestGeneratePlan_PriorityAndLateness(t *testing.T) {
 		{
 			ID:          "prio-1",
 			Name:        "High Priority",
-			Kind:        models.TaskKindFlexible,
+			Kind:        constants.TaskKindFlexible,
 			DurationMin: 120,
 			Active:      true,
 			Priority:    1, // Highest
-			Recurrence:  models.Recurrence{Type: models.RecurrenceDaily},
+			Recurrence:  models.Recurrence{Type: constants.RecurrenceDaily},
 		},
 		{
 			ID:          "prio-2-late",
 			Name:        "Medium Priority Late",
-			Kind:        models.TaskKindFlexible,
+			Kind:        constants.TaskKindFlexible,
 			DurationMin: 120,
 			Active:      true,
 			Priority:    2,
 			LastDone:    "2025-12-01", // Very late
-			Recurrence:  models.Recurrence{Type: models.RecurrenceNDays, IntervalDays: 1},
+			Recurrence:  models.Recurrence{Type: constants.RecurrenceNDays, IntervalDays: 1},
 		},
 		{
 			ID:          "prio-2-recent",
 			Name:        "Medium Priority Recent",
-			Kind:        models.TaskKindFlexible,
+			Kind:        constants.TaskKindFlexible,
 			DurationMin: 120,
 			Active:      true,
 			Priority:    2,
 			LastDone:    "2025-12-30", // Recently done
-			Recurrence:  models.Recurrence{Type: models.RecurrenceNDays, IntervalDays: 1},
+			Recurrence:  models.Recurrence{Type: constants.RecurrenceNDays, IntervalDays: 1},
 		},
 	}
 
@@ -307,27 +308,27 @@ func TestGeneratePlan_MixedScheduling(t *testing.T) {
 		{
 			ID:         "fixed-lunch",
 			Name:       "Lunch",
-			Kind:       models.TaskKindAppointment,
+			Kind:       constants.TaskKindAppointment,
 			FixedStart: "12:00",
 			FixedEnd:   "13:00",
 			Active:     true,
-			Recurrence: models.Recurrence{Type: models.RecurrenceDaily},
+			Recurrence: models.Recurrence{Type: constants.RecurrenceDaily},
 		},
 		{
 			ID:          "flex-morning",
 			Name:        "Morning Work",
-			Kind:        models.TaskKindFlexible,
+			Kind:        constants.TaskKindFlexible,
 			DurationMin: 120, // 2 hours
 			Active:      true,
-			Recurrence:  models.Recurrence{Type: models.RecurrenceDaily},
+			Recurrence:  models.Recurrence{Type: constants.RecurrenceDaily},
 		},
 		{
 			ID:          "flex-afternoon",
 			Name:        "Afternoon Work",
-			Kind:        models.TaskKindFlexible,
+			Kind:        constants.TaskKindFlexible,
 			DurationMin: 120, // 2 hours
 			Active:      true,
-			Recurrence:  models.Recurrence{Type: models.RecurrenceDaily},
+			Recurrence:  models.Recurrence{Type: constants.RecurrenceDaily},
 		},
 	}
 
@@ -373,18 +374,18 @@ func TestGeneratePlan_EdgeCases(t *testing.T) {
 		{
 			ID:          "zero-duration",
 			Name:        "Zero Duration",
-			Kind:        models.TaskKindFlexible,
+			Kind:        constants.TaskKindFlexible,
 			DurationMin: 0,
 			Active:      true,
-			Recurrence:  models.Recurrence{Type: models.RecurrenceDaily},
+			Recurrence:  models.Recurrence{Type: constants.RecurrenceDaily},
 		},
 		{
 			ID:          "too-long",
 			Name:        "Too Long",
-			Kind:        models.TaskKindFlexible,
+			Kind:        constants.TaskKindFlexible,
 			DurationMin: 600, // 10 hours
 			Active:      true,
-			Recurrence:  models.Recurrence{Type: models.RecurrenceDaily},
+			Recurrence:  models.Recurrence{Type: constants.RecurrenceDaily},
 		},
 	}
 

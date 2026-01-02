@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
-	"github.com/julianstephens/daylit/daylit-cli/internal/models"
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/utils"
 )
 
@@ -52,13 +52,13 @@ func (c *TaskEditCmd) Run(ctx *cli.Context) error {
 	if c.Recurrence != nil {
 		switch *c.Recurrence {
 		case "daily":
-			task.Recurrence.Type = models.RecurrenceDaily
+			task.Recurrence.Type = constants.RecurrenceDaily
 		case "weekly":
-			task.Recurrence.Type = models.RecurrenceWeekly
+			task.Recurrence.Type = constants.RecurrenceWeekly
 		case "n_days":
-			task.Recurrence.Type = models.RecurrenceNDays
+			task.Recurrence.Type = constants.RecurrenceNDays
 		case "ad_hoc":
-			task.Recurrence.Type = models.RecurrenceAdHoc
+			task.Recurrence.Type = constants.RecurrenceAdHoc
 		default:
 			return fmt.Errorf("invalid recurrence type: %s", *c.Recurrence)
 		}
@@ -107,9 +107,9 @@ func (c *TaskEditCmd) Run(ctx *cli.Context) error {
 
 	// Update kind based on fixed times
 	if task.FixedStart != "" && task.FixedEnd != "" {
-		task.Kind = models.TaskKindAppointment
+		task.Kind = constants.TaskKindAppointment
 	} else {
-		task.Kind = models.TaskKindFlexible
+		task.Kind = constants.TaskKindFlexible
 	}
 
 	if err := task.Validate(); err != nil {

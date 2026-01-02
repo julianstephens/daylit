@@ -9,6 +9,8 @@ import (
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/backup"
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
+	"github.com/julianstephens/daylit/daylit-cli/internal/logger"
 )
 
 type BackupCreateCmd struct{}
@@ -40,7 +42,7 @@ func (c *BackupListCmd) Run(ctx *cli.Context) error {
 		return nil
 	}
 
-	fmt.Printf("Available backups (%d total, keeping most recent %d):\n\n", len(backups), backup.MaxBackups)
+	fmt.Printf("Available backups (%d total, keeping most recent %d):\n\n", len(backups), constants.MaxBackups)
 	for _, b := range backups {
 		sizeKB := float64(b.Size) / 1024.0
 		timestamp := b.Timestamp.Format("2006-01-02 15:04:05")
@@ -110,7 +112,7 @@ func (c *BackupRestoreCmd) Run(ctx *cli.Context) error {
 
 	// Close the current store connection before restoring
 	if err := ctx.Store.Close(); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to close database connection: %v\n", err)
+		logger.Warn("Failed to close database connection", "error", err)
 	}
 
 	// Perform restore

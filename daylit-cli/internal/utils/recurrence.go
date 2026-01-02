@@ -13,9 +13,9 @@ import (
 // scheduling to ensure consistency.
 func ShouldScheduleTask(task models.Task, date time.Time) bool {
 	switch task.Recurrence.Type {
-	case models.RecurrenceDaily:
+	case constants.RecurrenceDaily:
 		return true
-	case models.RecurrenceWeekly:
+	case constants.RecurrenceWeekly:
 		if len(task.Recurrence.WeekdayMask) == 0 {
 			return false
 		}
@@ -25,7 +25,7 @@ func ShouldScheduleTask(task models.Task, date time.Time) bool {
 			}
 		}
 		return false
-	case models.RecurrenceNDays:
+	case constants.RecurrenceNDays:
 		if task.LastDone == "" {
 			return true
 		}
@@ -36,7 +36,7 @@ func ShouldScheduleTask(task models.Task, date time.Time) bool {
 		// Use date-based arithmetic to avoid DST issues with explicit rounding
 		daysSince := int(math.Round(date.Sub(lastDone).Hours() / 24))
 		return daysSince >= task.Recurrence.IntervalDays
-	case models.RecurrenceAdHoc:
+	case constants.RecurrenceAdHoc:
 		return false // Ad-hoc tasks are not automatically scheduled
 	default:
 		return false

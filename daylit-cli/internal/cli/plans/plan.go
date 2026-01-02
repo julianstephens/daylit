@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
-	"github.com/julianstephens/daylit/daylit-cli/internal/models"
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/validation"
 )
 
@@ -134,7 +134,7 @@ func (c *PlanCmd) Run(ctx *cli.Context) error {
 	if strings.ToLower(response) == "y" || strings.ToLower(response) == "yes" {
 		// Update all slots to accepted and set accepted_at timestamp
 		for i := range plan.Slots {
-			plan.Slots[i].Status = models.SlotStatusAccepted
+			plan.Slots[i].Status = constants.SlotStatusAccepted
 		}
 		now := time.Now().UTC().Format(time.RFC3339)
 		plan.AcceptedAt = &now

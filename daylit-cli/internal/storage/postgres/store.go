@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"io/fs"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
 	pq "github.com/lib/pq"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
+	"github.com/julianstephens/daylit/daylit-cli/internal/logger"
 	"github.com/julianstephens/daylit/daylit-cli/internal/migration"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
 	"github.com/julianstephens/daylit/daylit-cli/migrations"
@@ -41,7 +41,7 @@ func (s *Store) ensureSearchPath() {
 	if strings.HasPrefix(s.connStr, "postgres://") || strings.HasPrefix(s.connStr, "postgresql://") {
 		u, err := url.Parse(s.connStr)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "warning: failed to parse Postgres connection string %q: %v\n", s.connStr, err)
+			logger.Warn("Failed to parse Postgres connection string", "connStr", s.connStr, "error", err)
 			return
 		}
 		q := u.Query()
