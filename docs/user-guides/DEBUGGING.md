@@ -39,6 +39,23 @@ The `daylit debug` command provides specific tools for inspecting the internal s
     ```bash
     daylit debug dump-task task_123abc
     ```
+-   **`daylit debug dump-habit <id>`**: Dumps the raw JSON structure of a specific habit.
+    ```bash
+    daylit debug dump-habit habit_456def
+    ```
+-   **`daylit debug dump-ot [date]`**: Dumps the raw JSON structure of an OT entry for a specific day.
+    ```bash
+    daylit debug dump-ot today
+    daylit debug dump-ot 2024-01-01
+    ```
+-   **`daylit debug dump-alert <id>`**: Dumps the raw JSON structure of a specific alert.
+    ```bash
+    daylit debug dump-alert alert_789ghi
+    ```
+-   **`daylit debug dump-settings`**: Dumps the raw JSON structure of application settings.
+    ```bash
+    daylit debug dump-settings
+    ```
 
 *Note: The `daylit debug` command automatically enables debug logging.*
 
@@ -55,7 +72,13 @@ Logs are stored in the `logs` subdirectory of your Daylit configuration folder:
 
 ### Log Rotation
 
-To prevent log files from consuming too much disk space, Daylit automatically rotates logs. Old logs are compressed or deleted as new ones are created.
+To prevent log files from consuming too much disk space, Daylit automatically rotates logs using the following policy:
+- Maximum log file size: 10 MB
+- Maximum backup files kept: 3
+- Maximum age of backup files: 28 days
+- Old backups are automatically compressed
+
+This ensures that logs are preserved for troubleshooting while preventing unbounded disk usage.
 
 ## Reporting Issues
 
