@@ -47,14 +47,14 @@ func (s *Store) ensureSearchPath() {
 		q := u.Query()
 		// Only set search_path if it's not already present
 		if q.Get("search_path") == "" {
-			q.Set("search_path", constants.SchemaName)
+			q.Set("search_path", constants.AppName)
 			u.RawQuery = q.Encode()
 			s.connStr = u.String()
 		}
 	} else {
 		// Assume DSN format - only append if search_path is not already present
 		if !hasSearchPathParam(s.connStr) {
-			s.connStr = strings.TrimSpace(s.connStr) + " search_path=" + constants.SchemaName
+			s.connStr = strings.TrimSpace(s.connStr) + " search_path=" + constants.AppName
 		}
 	}
 }
@@ -159,7 +159,7 @@ func (s *Store) Init() error {
 	db.SetConnMaxLifetime(5 * time.Minute)
 
 	// Create schema if it doesn't exist (before assigning to s.db to maintain consistency)
-	if _, err := db.Exec("CREATE SCHEMA IF NOT EXISTS " + constants.SchemaName); err != nil {
+	if _, err := db.Exec("CREATE SCHEMA IF NOT EXISTS " + constants.AppName); err != nil {
 		db.Close()
 		return fmt.Errorf("failed to create schema: %w", err)
 	}

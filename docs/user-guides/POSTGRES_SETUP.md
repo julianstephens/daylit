@@ -100,11 +100,53 @@ postgresql://username@hostname:port/database?options
 
 ### Secure Credential Management
 
-daylit supports three secure methods for providing database credentials:
+daylit supports four secure methods for providing database credentials:
 
-#### 1. Environment Variable (Recommended for Automation)
+#### 1. OS Keyring (Recommended for Desktop Use)
+
+Store your connection string securely in your operating system's native credential manager:
+
+- **macOS**: Keychain
+- **Windows**: Credential Manager
+- **Linux**: Secret Service (GNOME Keyring, KWallet, etc.)
+
+**Setup:**
+```bash
+# Store connection string in OS keyring (password can be embedded here as it's stored securely)
+daylit keyring set "postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"
+
+# Verify it's stored
+daylit keyring status
+
+# Now use daylit without any config flag - it will automatically use the keyring
+daylit init
+daylit task list
+```
+
+**Management commands:**
+```bash
+# Check keyring status
+daylit keyring status
+
+# Retrieve stored connection string (password will be masked)
+daylit keyring get
+
+# Delete stored credentials
+daylit keyring delete
+```
+
+**Benefits:**
+- Credentials are encrypted by the OS
+- Works seamlessly with system security policies
+- No need to specify --config flag
+
+> **Security note:** Avoid passing real passwords directly on the `daylit` command line (for example, in a `daylit keyring set "postgres://..."` command). Command-line arguments can be captured in shell history and process inspection tools on multi-user systems. Prefer methods that prompt for secrets or paste them only when needed.
+
+#### 2. Environment Variable (Recommended for Automation)
 
 Set the connection string with credentials in the `DAYLIT_CONFIG` environment variable:
+
+> **Security note:** Environment variables and the commands used to set them can expose credentials (for example, via shell history, debug output, or process inspection by privileged users). Use this approach only on trusted machines, and avoid reusing these credentials elsewhere.
 
 **Bash/Zsh:**
 ```bash
@@ -122,7 +164,7 @@ $env:DAYLIT_CONFIG="postgres://daylit_user:password@localhost:5432/daylit?sslmod
 [System.Environment]::SetEnvironmentVariable('DAYLIT_CONFIG', 'postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable', 'User')
 ```
 
-#### 2. .pgpass File (Recommended for Interactive Use)
+#### 3. .pgpass File (Recommended for Interactive Use)
 
 PostgreSQL's standard password file provides secure, automatic credential management.
 
@@ -144,13 +186,27 @@ daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" i
 
 > **Note:** The application automatically appends `search_path=daylit` to the connection string to ensure all tables are created within the `daylit` schema for isolation.
 
-### Future Features
+### Credential Lookup Priority
 
-#### OS Keyring Integration (Planned)
+When no `--config` flag is provided, daylit looks for credentials in this order:
 
-Support for OS keyring storage is planned for a future release. Use `.pgpass` or environment variables in the meantime.
+1. `DAYLIT_CONFIG` environment variable
+2. OS keyring (if credentials are stored)
+3. Default SQLite database at `~/.config/daylit/daylit.db`
+
+When `--config` is provided explicitly, it takes precedence over all other sources.
 
 ### Examples
+
+**Local database with OS keyring:**
+```bash
+# Store credentials in keyring
+daylit keyring set "postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"
+
+# Use without config flag
+daylit init
+daylit task list
+```
 
 **Local database with .pgpass:**
 ```bash
@@ -164,16 +220,17 @@ export DAYLIT_CONFIG="postgres://daylit_user:secure_password@db.example.com:5432
 daylit task list
 ```
 
-**WSL2 accessing Windows PostgreSQL with .pgpass:**
+**WSL2 accessing Windows PostgreSQL with OS keyring:**
 ```bash
 # Find your Windows host IP from WSL2
 ip route | grep default | awk '{print $3}'
 # Usually something like 172.x.x.x
 
-# Add to ~/.pgpass:
-# 172.20.240.1:5432:daylit:daylit_user:your_password
+# Store in keyring
+daylit keyring set "postgres://daylit_user:password@172.20.240.1:5432/daylit?sslmode=disable"
 
-daylit --config "postgres://daylit_user@172.20.240.1:5432/daylit?sslmode=disable" plan
+# Use without config flag
+daylit plan
 ```
 
 ## Usage
@@ -191,7 +248,24 @@ daylit --config "postgres://user:password@host:5432/daylit" init
 
 Use the secure methods described below instead.
 
-### Secure Method 1: .pgpass File (Recommended for Interactive Use)
+### OS Keyring (Recommended for Desktop Use)
+
+Store your connection string in the OS keyring for maximum security and convenience:
+
+**Setup:**
+```bash
+# Store credentials in OS keyring
+daylit keyring set "postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"
+
+# Use without --config flag - credentials are retrieved automatically
+daylit init
+daylit task list
+
+# Optional: Check status
+daylit keyring status
+```
+
+### .pgpass File (Recommended for Interactive Use)
 
 Create a `.pgpass` file with your credentials and use a connection string without password:
 
@@ -206,7 +280,7 @@ daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" i
 daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" task list
 ```
 
-### Secure Method 2: Environment Variable (Recommended for Automation)
+### Environment Variable (Recommended for Automation)
 
 Set the connection credentials in the `DAYLIT_CONFIG` environment variable:
 
@@ -230,7 +304,7 @@ $env:DAYLIT_CONFIG="postgres://daylit_user:password@localhost:5432/daylit?sslmod
 [System.Environment]::SetEnvironmentVariable('DAYLIT_CONFIG', 'postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable', 'User')
 ```
 
-### Secure Method 3: PGPASSWORD Environment Variable
+### PGPASSWORD Environment Variable
 
 Alternatively, you can use the standard PostgreSQL environment variable `PGPASSWORD` to supply the password separately from the connection string:
 
@@ -246,7 +320,7 @@ $env:PGPASSWORD="your_password"
 daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" init
 ```
 
-### Secure Method 4: Shell Alias with .pgpass
+### Shell Alias with .pgpass
 
 Create an alias for convenience (requires .pgpass setup):
 
@@ -264,7 +338,16 @@ daylit plan
 
 Before first use, initialize the database. Make sure you're using a secure credential method:
 
-**With .pgpass file (recommended):**
+**With OS keyring (recommended):**
+```bash
+# Store credentials first
+daylit keyring set "postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"
+
+# Initialize without --config flag
+daylit init
+```
+
+**With .pgpass file:**
 ```bash
 # Ensure ~/.pgpass contains your credentials
 daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" init
@@ -276,7 +359,7 @@ export DAYLIT_CONFIG="postgres://daylit_user:password@localhost:5432/daylit?sslm
 daylit init
 ```
 
-This usage is allowed because `DAYLIT_CONFIG` is read from the environment and is **not** exposed via process listings (for example, `ps` output), unlike `--config` command-line arguments. However, embedding passwords in environment variables can still be risky if they end up in shell history, crash dumps, logs, or other debug tooling. Prefer the `.pgpass` file or the `PGPASSWORD` environment variable for credentials whenever possible, and only use an embedded password in `DAYLIT_CONFIG` in controlled environments (for example, systemd unit files or a secrets-managed runtime configuration).
+This usage is allowed because `DAYLIT_CONFIG` is read from the environment and is **not** exposed via process listings (for example, `ps` output), unlike `--config` command-line arguments. However, embedding passwords in environment variables can still be risky if they end up in shell history, crash dumps, logs, or other debug tooling. Prefer the OS keyring, `.pgpass` file, or the `PGPASSWORD` environment variable for credentials whenever possible, and only use an embedded password in `DAYLIT_CONFIG` in controlled environments (for example, systemd unit files or a secrets-managed runtime configuration).
 
 This will:
 1. Connect to the PostgreSQL database
@@ -284,7 +367,7 @@ This will:
 3. Run all necessary migrations to create tables
 4. Initialize default settings
 
-**Note:** The restriction on embedding passwords applies specifically to the `--config` command-line flag because command-line arguments are visible in process listings. The connection string you provide via `--config` should **not** contain a password. Credentials should currently be provided through `.pgpass`, the `PGPASSWORD` environment variable, or (if necessary) a carefully managed `DAYLIT_CONFIG` environment variable.
+**Note:** The restriction on embedding passwords applies specifically to the `--config` command-line flag because command-line arguments are visible in process listings. The connection string you provide via `--config` should **not** contain a password. Credentials should be provided through the OS keyring, `.pgpass`, the `PGPASSWORD` environment variable, or (if necessary) a carefully managed `DAYLIT_CONFIG` environment variable.
 
 ## Security Considerations
 
@@ -303,14 +386,16 @@ daylit --config "host=localhost password=secret dbname=daylit" init
 
 **What IS allowed:**
 
-1. **Use environment variables:**
+1. **Use OS keyring (RECOMMENDED):**
    ```bash
-   export PGPASSWORD="your_password"
-   # Connection string used by libpq will read from environment
-   daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" init
+   # Store credentials securely in OS keyring
+   daylit keyring set "postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"
+   
+   # Use without --config flag
+   daylit init
    ```
 
-2. **Use a `.pgpass` file (RECOMMENDED):**
+2. **Use a `.pgpass` file:**
    Create `~/.pgpass` with permissions `0600`:
    ```
    localhost:5432:daylit:daylit_user:your_password
@@ -320,7 +405,14 @@ daylit --config "host=localhost password=secret dbname=daylit" init
    daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" init
    ```
 
-3. **Use PostgreSQL service file:**
+3. **Use environment variables:**
+   ```bash
+   export PGPASSWORD="your_password"
+   # Connection string used by libpq will read from environment
+   daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" init
+   ```
+
+4. **Use PostgreSQL service file:**
    Create `~/.pg_service.conf`:
    ```ini
    [daylit]
@@ -344,9 +436,10 @@ Embedding passwords in command-line arguments is insecure because:
 - **Scripts**: Encourages committing credentials to version control
 
 The secure methods above avoid these issues by:
-- Storing credentials in files with restricted permissions
-- Using PostgreSQL's built-in credential mechanisms
-- Keeping credentials out of command-line arguments
+- **OS Keyring**: Encrypts credentials using native OS security (best option for desktop use)
+- **Files with restricted permissions**: `.pgpass` files with 0600 permissions
+- **PostgreSQL's built-in mechanisms**: Service files and environment variables
+- **Keeping credentials out of command-line arguments**: Prevents exposure in process lists
 
 ### SSL/TLS
 
@@ -427,6 +520,33 @@ If migrations fail:
    SELECT * FROM schema_version;
    ```
 
+### OS Keyring Not Available
+
+```
+Error: keyring unavailable
+```
+
+**Common Causes and Solutions:**
+
+- **Linux**: Install a keyring service:
+  - GNOME: `gnome-keyring` is usually pre-installed
+  - KDE: `kwallet` is usually pre-installed
+  - Headless/Server: OS keyring is not supported in headless environments. Use `.pgpass` or environment variables instead.
+
+- **macOS**: Keychain is built-in and should always work. If you see errors, check System Preferences > Security & Privacy.
+
+- **Windows**: Credential Manager is built-in. Ensure you're not running as a service account without credential access.
+
+- **WSL2/Docker/Containers**: OS keyring may not be accessible. Use `.pgpass` or environment variables as alternatives.
+
+**Alternative approaches:**
+```bash
+# Instead of keyring, use .pgpass
+echo "localhost:5432:daylit:daylit_user:your_password" > ~/.pgpass
+chmod 0600 ~/.pgpass
+daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" init
+```
+
 ## Performance Tips
 
 1. **Connection Pooling**: The application manages connections efficiently, but for high-concurrency scenarios, consider using pgBouncer.
@@ -448,7 +568,11 @@ To migrate existing SQLite data to PostgreSQL:
 2. Run the `init` command with the `--source` flag pointing to your existing SQLite database:
 
 ```bash
-# Using .pgpass for credentials (recommended)
+# Using OS keyring for credentials (recommended)
+daylit keyring set "postgres://daylit_user:password@localhost:5432/daylit?sslmode=disable"
+daylit init --source ~/.config/daylit/daylit.db
+
+# Or using .pgpass for credentials
 daylit --config "postgres://daylit_user@localhost:5432/daylit?sslmode=disable" init --source ~/.config/daylit/daylit.db
 ```
 
