@@ -23,6 +23,8 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage/postgres"
 )
 
+const defaultConfigPath = "~/.config/daylit/daylit.db"
+
 type CLI struct {
 	Version kong.VersionFlag
 	Config  string `help:"Config file path or PostgreSQL connection string. For PostgreSQL, credentials must NOT be embedded in the connection string. Use environment variables or a .pgpass file instead." type:"string" default:"~/.config/daylit/daylit.db" env:"DAYLIT_CONFIG"`
@@ -83,7 +85,7 @@ func (c *CLI) AfterApply(ctx *kong.Context) error {
 
 	// If config is still the default SQLite path and no DAYLIT_CONFIG env var is set,
 	// try to retrieve from keyring
-	if configToUse == "~/.config/daylit/daylit.db" && os.Getenv("DAYLIT_CONFIG") == "" {
+	if configToUse == defaultConfigPath && os.Getenv("DAYLIT_CONFIG") == "" {
 		keyringConnStr, err := keyring.GetConnectionString()
 		if err == nil {
 			// Successfully retrieved from keyring

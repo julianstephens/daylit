@@ -39,6 +39,11 @@ func TestKeyringSetCmd(t *testing.T) {
 			wantError: true,
 		},
 		{
+			name:      "malformed postgres URL",
+			connStr:   "postgres://",
+			wantError: true,
+		},
+		{
 			name:      "postgres URL with password (warning but succeeds)",
 			connStr:   "postgres://user:password@localhost:5432/daylit",
 			wantError: false,
