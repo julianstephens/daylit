@@ -154,6 +154,7 @@ func TestKeyringDeleteCmd(t *testing.T) {
 
 func TestKeyringStatusCmd(t *testing.T) {
 	gokeyring.MockInit()
+	defer func() { _ = keyring.DeleteConnectionString() }()
 
 	cmd := &KeyringStatusCmd{}
 	ctx := &cli.Context{}
