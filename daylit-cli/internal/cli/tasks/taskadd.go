@@ -52,7 +52,7 @@ func (c *TaskAddCmd) Validate() error {
 	// Validate monthly_date recurrence
 	if c.Recurrence == "monthly_date" {
 		if c.MonthDay < 1 || c.MonthDay > 31 {
-			return fmt.Errorf("month_day must be between 1 and 31 for monthly_date recurrence")
+			return fmt.Errorf("--month-day must be between 1 and 31 for monthly_date recurrence")
 		}
 		// Note: We allow day 31 even though some months don't have it.
 		// The scheduler will skip those months.
@@ -61,20 +61,20 @@ func (c *TaskAddCmd) Validate() error {
 	// Validate monthly_day recurrence
 	if c.Recurrence == "monthly_day" {
 		if c.WeekOccurrence < -1 || c.WeekOccurrence == 0 || c.WeekOccurrence > 5 {
-			return fmt.Errorf("week_occurrence must be -1 (last) or 1-5 for monthly_day recurrence")
+			return fmt.Errorf("--week-occurrence must be -1 (last) or 1-5 for monthly_day recurrence")
 		}
 		if c.DayOfWeekInMonth == "" {
-			return fmt.Errorf("day_of_week_in_month must be specified for monthly_day recurrence")
+			return fmt.Errorf("--day-of-week-in-month must be specified for monthly_day recurrence")
 		}
 	}
 
 	// Validate yearly recurrence
 	if c.Recurrence == "yearly" {
 		if c.Month < 1 || c.Month > 12 {
-			return fmt.Errorf("month must be between 1 and 12 for yearly recurrence")
+			return fmt.Errorf("--month must be between 1 and 12 for yearly recurrence")
 		}
 		if c.MonthDay < 1 || c.MonthDay > 31 {
-			return fmt.Errorf("month_day must be between 1 and 31 for yearly recurrence")
+			return fmt.Errorf("--month-day must be between 1 and 31 for yearly recurrence")
 		}
 		// Note: We allow potentially invalid dates like Feb 31.
 		// The scheduler will skip years where this date doesn't exist.

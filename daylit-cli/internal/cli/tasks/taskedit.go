@@ -93,21 +93,21 @@ func (c *TaskEditCmd) Run(ctx *cli.Context) error {
 
 	if c.MonthDay != nil {
 		if *c.MonthDay < 1 || *c.MonthDay > 31 {
-			return fmt.Errorf("month_day must be between 1 and 31")
+			return fmt.Errorf("--month-day must be between 1 and 31")
 		}
 		task.Recurrence.MonthDay = *c.MonthDay
 	}
 
 	if c.Month != nil {
 		if *c.Month < 1 || *c.Month > 12 {
-			return fmt.Errorf("month must be between 1 and 12")
+			return fmt.Errorf("--month must be between 1 and 12")
 		}
 		task.Recurrence.Month = *c.Month
 	}
 
 	if c.WeekOccurrence != nil {
 		if *c.WeekOccurrence < -1 || *c.WeekOccurrence == 0 || *c.WeekOccurrence > 5 {
-			return fmt.Errorf("week_occurrence must be -1 (last) or 1-5")
+			return fmt.Errorf("--week-occurrence must be -1 (last) or 1-5")
 		}
 		task.Recurrence.WeekOccurrence = *c.WeekOccurrence
 	}
@@ -115,7 +115,7 @@ func (c *TaskEditCmd) Run(ctx *cli.Context) error {
 	if c.DayOfWeekInMonth != nil {
 		wd, err := cli.ParseWeekday(*c.DayOfWeekInMonth)
 		if err != nil {
-			return fmt.Errorf("invalid day_of_week_in_month: %w", err)
+			return fmt.Errorf("invalid --day-of-week-in-month: %w", err)
 		}
 		task.Recurrence.DayOfWeekInMonth = wd
 	}

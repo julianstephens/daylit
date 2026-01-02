@@ -318,3 +318,150 @@ func TestShouldScheduleTask_BackwardCompatibility(t *testing.T) {
 		t.Error("Ad-hoc task should never be automatically scheduled")
 	}
 }
+
+func TestShouldScheduleTask_MonthlyDate_Day31EdgeCases(t *testing.T) {
+	task := models.Task{
+		ID:   "monthly-31",
+		Name: "Monthly Task on 31st",
+		Recurrence: models.Recurrence{
+			Type:     constants.RecurrenceMonthlyDate,
+			MonthDay: 31,
+		},
+	}
+
+	// Test on January 31st - should be scheduled (31 days)
+	jan31, _ := time.Parse(constants.DateFormat, "2026-01-31")
+	if !ShouldScheduleTask(task, jan31) {
+		t.Error("Expected task to be scheduled on January 31st")
+	}
+
+	// Test on February 28th - should NOT be scheduled (no Feb 31)
+	feb28, _ := time.Parse(constants.DateFormat, "2026-02-28")
+	if ShouldScheduleTask(task, feb28) {
+		t.Error("Expected task not to be scheduled on February 28th (no Feb 31)")
+	}
+
+	// Test on March 31st - should be scheduled (31 days)
+	mar31, _ := time.Parse(constants.DateFormat, "2026-03-31")
+	if !ShouldScheduleTask(task, mar31) {
+		t.Error("Expected task to be scheduled on March 31st")
+	}
+
+	// Test on April 30th - should NOT be scheduled (only 30 days in April)
+	apr30, _ := time.Parse(constants.DateFormat, "2026-04-30")
+	if ShouldScheduleTask(task, apr30) {
+		t.Error("Expected task not to be scheduled on April 30th (no Apr 31)")
+	}
+
+	// Test on May 31st - should be scheduled (31 days)
+	may31, _ := time.Parse(constants.DateFormat, "2026-05-31")
+	if !ShouldScheduleTask(task, may31) {
+		t.Error("Expected task to be scheduled on May 31st")
+	}
+}
+
+func TestShouldScheduleTask_MonthlyDay_Sunday(t *testing.T) {
+	task := models.Task{
+		ID:   "first-sunday",
+		Name: "First Sunday of Month",
+		Recurrence: models.Recurrence{
+			Type:             constants.RecurrenceMonthlyDay,
+			WeekOccurrence:   1,
+			DayOfWeekInMonth: time.Sunday, // Sunday = 0
+		},
+	}
+
+	// January 2026: Sunday the 4th is the first Sunday
+	firstSundayJan, _ := time.Parse(constants.DateFormat, "2026-01-04")
+	if !ShouldScheduleTask(task, firstSundayJan) {
+		t.Error("Expected task to be scheduled on first Sunday of January (4th)")
+	}
+
+	// Sunday the 11th is the second Sunday
+	secondSunday, _ := time.Parse(constants.DateFormat, "2026-01-11")
+	if ShouldScheduleTask(task, secondSunday) {
+		t.Error("Expected task not to be scheduled on second Sunday")
+	}
+
+	// Test last Sunday
+	taskLastSunday := models.Task{
+		ID:   "last-sunday",
+		Name: "Last Sunday of Month",
+		Recurrence: models.Recurrence{
+			Type:             constants.RecurrenceMonthlyDay,
+			WeekOccurrence:   -1,
+			DayOfWeekInMonth: time.Sunday,
+		},
+	}
+
+	// January 2026: Sunday the 25th is the last Sunday
+	lastSundayJan, _ := time.Parse(constants.DateFormat, "2026-01-25")
+	if !ShouldScheduleTask(taskLastSunday, lastSundayJan) {
+		t.Error("Expected task to be scheduled on last Sunday of January (25th)")
+	}
+
+	// Sunday the 18th is NOT the last Sunday
+	notLastSunday, _ := time.Parse(constants.DateFormat, "2026-01-18")
+	if ShouldScheduleTask(taskLastSunday, notLastSunday) {
+		t.Error("Expected task not to be scheduled on non-last Sunday")
+	}
+}
+
+func TestShouldScheduleTask_MonthlyDay_FifthOccurrence(t *testing.T) {
+	task := models.Task{
+		ID:   "fifth-friday",
+		Name: "Fifth Friday of Month",
+		Recurrence: models.Recurrence{
+			Type:             constants.RecurrenceMonthlyDay,
+			WeekOccurrence:   5,
+			DayOfWeekInMonth: time.Friday,
+		},
+	}
+
+	// January 2026: Friday the 30th is the 5th Friday
+	fifthFriday, _ := time.Parse(constants.DateFormat, "2026-01-30")
+	if !ShouldScheduleTask(task, fifthFriday) {
+		t.Error("Expected task to be scheduled on 5th Friday of January (30th)")
+	}
+
+	// Fourth Friday should not match
+	fourthFriday, _ := time.Parse(constants.DateFormat, "2026-01-23")
+	if ShouldScheduleTask(task, fourthFriday) {
+		t.Error("Expected task not to be scheduled on 4th Friday")
+	}
+
+	// February 2026 has no 5th Friday (only 4 Fridays)
+	// Friday the 27th is the 4th Friday
+	feb27, _ := time.Parse(constants.DateFormat, "2026-02-27")
+	if ShouldScheduleTask(task, feb27) {
+		t.Error("Expected task not to be scheduled on 4th Friday of February (no 5th Friday)")
+	}
+}
+
+func TestIsNthWeekdayOfMonth_EdgeCases(t *testing.T) {
+	// Test 5th occurrence exists
+	// January 2026: 5th Friday is the 30th
+	fifthFriday, _ := time.Parse(constants.DateFormat, "2026-01-30")
+	if !isNthWeekdayOfMonth(fifthFriday, time.Friday, 5) {
+		t.Error("Expected Jan 30 to be the 5th Friday")
+	}
+
+	// Test month without 5th occurrence
+	// February 2026: 4th Friday is the 27th, no 5th Friday
+	fourthFridayFeb, _ := time.Parse(constants.DateFormat, "2026-02-27")
+	if isNthWeekdayOfMonth(fourthFridayFeb, time.Friday, 5) {
+		t.Error("Expected Feb 27 not to be the 5th Friday (only 4 Fridays in Feb 2026)")
+	}
+
+	// Test Sunday (0) as first occurrence
+	firstSunday, _ := time.Parse(constants.DateFormat, "2026-01-04")
+	if !isNthWeekdayOfMonth(firstSunday, time.Sunday, 1) {
+		t.Error("Expected Jan 4 to be the first Sunday")
+	}
+
+	// Test Sunday (0) as last occurrence
+	lastSunday, _ := time.Parse(constants.DateFormat, "2026-01-25")
+	if !isNthWeekdayOfMonth(lastSunday, time.Sunday, -1) {
+		t.Error("Expected Jan 25 to be the last Sunday")
+	}
+}
