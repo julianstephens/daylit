@@ -100,6 +100,7 @@ func (m *Model) updateViewportContent() {
 		fmt.Sprintf("%s %s", labelStyle.Render("Day Start:"), valueStyle.Render(m.settings.DayStart)),
 		fmt.Sprintf("%s %s", labelStyle.Render("Day End:"), valueStyle.Render(m.settings.DayEnd)),
 		fmt.Sprintf("%s %s", labelStyle.Render("Default Block (min):"), valueStyle.Render(fmt.Sprintf("%d", m.settings.DefaultBlockMin))),
+		fmt.Sprintf("%s %s", labelStyle.Render("Timezone:"), valueStyle.Render(m.settings.Timezone)),
 	)
 	sections = append(sections, sectionStyle.Render(generalTitle+"\n"+generalContent))
 

@@ -40,6 +40,7 @@ type SettingsFormModel struct {
 	DayStart             string
 	DayEnd               string
 	DefaultBlockMin      string
+	Timezone             string
 	PromptOnEmpty        bool
 	StrictMode           bool
 	DefaultLogDays       string

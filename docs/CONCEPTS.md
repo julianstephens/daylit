@@ -104,3 +104,42 @@ daylit restore plan <date>
 
 ### Technical Details
 Soft delete is implemented via `deleted_at` timestamp columns on tasks, plans, and slots tables.
+## Timezone Handling
+
+Daylit supports timezone-aware scheduling and time tracking to ensure consistent behavior when traveling or working across different timezones.
+
+### Configuration
+
+Users can configure their timezone preference through:
+- The TUI Settings tab (press 'e' to edit, navigate to the Timezone field)
+- The CLI: `daylit settings --timezone="America/New_York"`
+
+The timezone can be set to:
+- `Local` (default): Uses the system's local timezone
+- Any valid IANA timezone name (e.g., `America/New_York`, `Europe/London`, `Asia/Tokyo`, `UTC`)
+
+### How It Works
+
+The timezone configuration provides infrastructure for future timezone-aware operations:
+
+1. **Time Storage**: Times are stored as strings (`HH:MM` for time-of-day, `YYYY-MM-DD` for dates) which are timezone-independent
+2. **Timestamps**: Full timestamps (like `created_at`, `last_sent`) are stored in RFC3339 format which includes timezone information
+3. **Current Behavior**: The application currently uses the system's local timezone for all date/time operations via `time.Now()`
+4. **Future Integration**: Utility functions have been created (`GetTodayInTimezone`, `ParseDateInLocation`, etc.) to enable timezone-aware scheduling in future updates
+
+### Planned Use Cases
+
+Once fully integrated, the timezone setting will enable:
+
+- **Traveling**: Update your timezone setting to match your current location for accurate date determination
+- **Remote Work**: Set your timezone to match your team's timezone for consistent scheduling
+- **Consistency**: Explicitly set your timezone to ensure consistent behavior regardless of system timezone changes
+
+### Current Status
+
+The timezone setting is **stored and configurable** but not yet integrated into the application logic. The infrastructure is in place with utility functions ready for integration:
+- `GetTodayInTimezone(timezone)` - determines "today" in the configured timezone
+- `NowInTimezone(timezone)` - gets current time in the configured timezone
+- `ParseDateInLocation()`, `CombineDateAndTime()` - timezone-aware parsing functions
+
+Future updates will integrate these functions throughout the codebase to replace direct `time.Now()` calls.
