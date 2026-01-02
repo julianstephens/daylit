@@ -1,0 +1,216 @@
+package models
+
+import (
+	"testing"
+	"time"
+)
+
+func TestAlert_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		alert   Alert
+		wantErr bool
+	}{
+		{
+			name: "valid daily alert",
+			alert: Alert{
+				ID:      "test-id",
+				Message: "Test alert",
+				Time:    "10:00",
+				Recurrence: Recurrence{
+					Type: RecurrenceDaily,
+				},
+				Active:    true,
+				CreatedAt: time.Now(),
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid one-time alert",
+			alert: Alert{
+				ID:        "test-id",
+				Message:   "Test alert",
+				Time:      "14:30",
+				Date:      "2026-01-15",
+				Active:    true,
+				CreatedAt: time.Now(),
+			},
+			wantErr: false,
+		},
+		{
+			name: "empty message",
+			alert: Alert{
+				ID:      "test-id",
+				Message: "",
+				Time:    "10:00",
+				Active:  true,
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty time",
+			alert: Alert{
+				ID:      "test-id",
+				Message: "Test",
+				Time:    "",
+				Active:  true,
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid time format",
+			alert: Alert{
+				ID:      "test-id",
+				Message: "Test",
+				Time:    "25:00",
+				Active:  true,
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid date format",
+			alert: Alert{
+				ID:      "test-id",
+				Message: "Test",
+				Time:    "10:00",
+				Date:    "2026/01/15",
+				Active:  true,
+			},
+			wantErr: true,
+		},
+		{
+			name: "weekly without weekdays",
+			alert: Alert{
+				ID:      "test-id",
+				Message: "Test",
+				Time:    "10:00",
+				Recurrence: Recurrence{
+					Type:        RecurrenceWeekly,
+					WeekdayMask: []time.Weekday{},
+				},
+				Active: true,
+			},
+			wantErr: true,
+		},
+		{
+			name: "n_days with invalid interval",
+			alert: Alert{
+				ID:      "test-id",
+				Message: "Test",
+				Time:    "10:00",
+				Recurrence: Recurrence{
+					Type:         RecurrenceNDays,
+					IntervalDays: 0,
+				},
+				Active: true,
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.alert.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Alert.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestAlert_IsOneTime(t *testing.T) {
+	tests := []struct {
+		name  string
+		alert Alert
+		want  bool
+	}{
+		{
+			name: "one-time with date",
+			alert: Alert{
+				Date: "2026-01-15",
+			},
+			want: true,
+		},
+		{
+			name: "recurring without date",
+			alert: Alert{
+				Date: "",
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.alert.IsOneTime(); got != tt.want {
+				t.Errorf("Alert.IsOneTime() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAlert_IsDueToday(t *testing.T) {
+	tests := []struct {
+		name  string
+		alert Alert
+		today time.Time
+		want  bool
+	}{
+		{
+			name: "daily alert is always due",
+			alert: Alert{
+				Recurrence: Recurrence{
+					Type: RecurrenceDaily,
+				},
+			},
+			today: time.Now(),
+			want:  true,
+		},
+		{
+			name: "weekly alert on matching weekday",
+			alert: Alert{
+				Recurrence: Recurrence{
+					Type:        RecurrenceWeekly,
+					WeekdayMask: []time.Weekday{time.Monday, time.Wednesday, time.Friday},
+				},
+			},
+			today: time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC), // Monday
+			want:  true,
+		},
+		{
+			name: "weekly alert on non-matching weekday",
+			alert: Alert{
+				Recurrence: Recurrence{
+					Type:        RecurrenceWeekly,
+					WeekdayMask: []time.Weekday{time.Monday, time.Wednesday, time.Friday},
+				},
+			},
+			today: time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC), // Tuesday
+			want:  false,
+		},
+		{
+			name: "one-time alert on matching date",
+			alert: Alert{
+				Date: "2026-01-15",
+			},
+			today: time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
+			want:  true,
+		},
+		{
+			name: "one-time alert on non-matching date",
+			alert: Alert{
+				Date: "2026-01-15",
+			},
+			today: time.Date(2026, 1, 16, 0, 0, 0, 0, time.UTC),
+			want:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.alert.IsDueToday(tt.today); got != tt.want {
+				t.Errorf("Alert.IsDueToday() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
