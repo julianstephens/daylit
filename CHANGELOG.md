@@ -1,3 +1,12 @@
+## v0.5.0
+
+- Adds automatic feedback adjustment
+- Adds One Thing (OT) integration to TUI
+- Adds OS Keyring support for database credentials
+- Adds arbitrary scheduled notifications
+- Restricts conflict detection visibility to active plan scope
+- Refactors storage layer and cleans up TUI
+
 ## v0.4.0
 
 - Adds PostgreSQL storage backend for shared access

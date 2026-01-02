@@ -161,7 +161,7 @@ func main() {
 			Compact:             true,
 			NoExpandSubcommands: true,
 		}),
-		kong.Vars{"version": "v0.4.0"},
+		kong.Vars{"version": "v0.5.0"},
 	)
 
 	appCtx := &cli.Context{
