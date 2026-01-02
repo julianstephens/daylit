@@ -3,6 +3,8 @@ package models
 import (
 	"testing"
 	"time"
+
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 )
 
 func TestAlert_Validate(t *testing.T) {
@@ -18,7 +20,7 @@ func TestAlert_Validate(t *testing.T) {
 				Message: "Test alert",
 				Time:    "10:00",
 				Recurrence: Recurrence{
-					Type: RecurrenceDaily,
+					Type: constants.RecurrenceDaily,
 				},
 				Active:    true,
 				CreatedAt: time.Now(),
@@ -85,7 +87,7 @@ func TestAlert_Validate(t *testing.T) {
 				Message: "Test",
 				Time:    "10:00",
 				Recurrence: Recurrence{
-					Type:        RecurrenceWeekly,
+					Type:        constants.RecurrenceWeekly,
 					WeekdayMask: []time.Weekday{},
 				},
 				Active: true,
@@ -99,7 +101,7 @@ func TestAlert_Validate(t *testing.T) {
 				Message: "Test",
 				Time:    "10:00",
 				Recurrence: Recurrence{
-					Type:         RecurrenceNDays,
+					Type:         constants.RecurrenceNDays,
 					IntervalDays: 0,
 				},
 				Active: true,
@@ -160,7 +162,7 @@ func TestAlert_IsDueToday(t *testing.T) {
 			name: "daily alert is always due",
 			alert: Alert{
 				Recurrence: Recurrence{
-					Type: RecurrenceDaily,
+					Type: constants.RecurrenceDaily,
 				},
 			},
 			today: time.Now(),
@@ -170,7 +172,7 @@ func TestAlert_IsDueToday(t *testing.T) {
 			name: "weekly alert on matching weekday",
 			alert: Alert{
 				Recurrence: Recurrence{
-					Type:        RecurrenceWeekly,
+					Type:        constants.RecurrenceWeekly,
 					WeekdayMask: []time.Weekday{time.Monday, time.Wednesday, time.Friday},
 				},
 			},
@@ -181,7 +183,7 @@ func TestAlert_IsDueToday(t *testing.T) {
 			name: "weekly alert on non-matching weekday",
 			alert: Alert{
 				Recurrence: Recurrence{
-					Type:        RecurrenceWeekly,
+					Type:        constants.RecurrenceWeekly,
 					WeekdayMask: []time.Weekday{time.Monday, time.Wednesday, time.Friday},
 				},
 			},
@@ -208,7 +210,7 @@ func TestAlert_IsDueToday(t *testing.T) {
 			name: "n_days alert on first occurrence",
 			alert: Alert{
 				Recurrence: Recurrence{
-					Type:         RecurrenceNDays,
+					Type:         constants.RecurrenceNDays,
 					IntervalDays: 3,
 				},
 				CreatedAt: time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC),
@@ -220,7 +222,7 @@ func TestAlert_IsDueToday(t *testing.T) {
 			name: "n_days alert on exact interval boundary",
 			alert: Alert{
 				Recurrence: Recurrence{
-					Type:         RecurrenceNDays,
+					Type:         constants.RecurrenceNDays,
 					IntervalDays: 3,
 				},
 				CreatedAt: time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC),
@@ -232,7 +234,7 @@ func TestAlert_IsDueToday(t *testing.T) {
 			name: "n_days alert not on interval boundary",
 			alert: Alert{
 				Recurrence: Recurrence{
-					Type:         RecurrenceNDays,
+					Type:         constants.RecurrenceNDays,
 					IntervalDays: 3,
 				},
 				CreatedAt: time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC),
@@ -244,7 +246,7 @@ func TestAlert_IsDueToday(t *testing.T) {
 			name: "n_days alert with LastSent as base",
 			alert: Alert{
 				Recurrence: Recurrence{
-					Type:         RecurrenceNDays,
+					Type:         constants.RecurrenceNDays,
 					IntervalDays: 3,
 				},
 				CreatedAt: time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC),
@@ -257,7 +259,7 @@ func TestAlert_IsDueToday(t *testing.T) {
 			name: "n_days alert with invalid interval",
 			alert: Alert{
 				Recurrence: Recurrence{
-					Type:         RecurrenceNDays,
+					Type:         constants.RecurrenceNDays,
 					IntervalDays: 0,
 				},
 				CreatedAt: time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC),

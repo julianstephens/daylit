@@ -97,7 +97,7 @@ func (c *FeedbackCmd) Run(ctx *cli.Context) error {
 			task.LastDone = dateStr
 		case constants.FeedbackUnnecessary:
 			// Increase interval or reduce priority
-			if task.Recurrence.Type == models.RecurrenceNDays {
+			if task.Recurrence.Type == constants.RecurrenceNDays {
 				task.Recurrence.IntervalDays++
 			}
 		}

@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 )
 
@@ -14,24 +15,24 @@ func TestValidateTasks_RespectsWeekdays(t *testing.T) {
 		{
 			ID:         "task-mon",
 			Name:       "Monday Task",
-			Kind:       models.TaskKindAppointment,
+			Kind:       constants.TaskKindAppointment,
 			FixedStart: "09:00",
 			FixedEnd:   "10:00",
 			Active:     true,
 			Recurrence: models.Recurrence{
-				Type:        models.RecurrenceWeekly,
+				Type:        constants.RecurrenceWeekly,
 				WeekdayMask: []time.Weekday{time.Monday},
 			},
 		},
 		{
 			ID:         "task-tue",
 			Name:       "Tuesday Task",
-			Kind:       models.TaskKindAppointment,
+			Kind:       constants.TaskKindAppointment,
 			FixedStart: "09:00",
 			FixedEnd:   "10:00",
 			Active:     true,
 			Recurrence: models.Recurrence{
-				Type:        models.RecurrenceWeekly,
+				Type:        constants.RecurrenceWeekly,
 				WeekdayMask: []time.Weekday{time.Tuesday},
 			},
 		},
@@ -51,24 +52,24 @@ func TestValidateTasks_DetectsOverlappingWeekdays(t *testing.T) {
 		{
 			ID:         "task-mon-wed",
 			Name:       "MW Task",
-			Kind:       models.TaskKindAppointment,
+			Kind:       constants.TaskKindAppointment,
 			FixedStart: "09:00",
 			FixedEnd:   "10:00",
 			Active:     true,
 			Recurrence: models.Recurrence{
-				Type:        models.RecurrenceWeekly,
+				Type:        constants.RecurrenceWeekly,
 				WeekdayMask: []time.Weekday{time.Monday, time.Wednesday},
 			},
 		},
 		{
 			ID:         "task-wed-fri",
 			Name:       "WF Task",
-			Kind:       models.TaskKindAppointment,
+			Kind:       constants.TaskKindAppointment,
 			FixedStart: "09:30", // Overlaps with 09:00-10:00
 			FixedEnd:   "10:30",
 			Active:     true,
 			Recurrence: models.Recurrence{
-				Type:        models.RecurrenceWeekly,
+				Type:        constants.RecurrenceWeekly,
 				WeekdayMask: []time.Weekday{time.Wednesday, time.Friday},
 			},
 		},

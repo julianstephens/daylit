@@ -37,10 +37,10 @@ func TestTaskSoftDelete(t *testing.T) {
 	task := models.Task{
 		ID:          "task-1",
 		Name:        "Test Task",
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 30,
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Priority: 1,
 		Active:   true,
@@ -91,10 +91,10 @@ func TestTaskRestore(t *testing.T) {
 	task := models.Task{
 		ID:          "task-2",
 		Name:        "Test Task 2",
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 45,
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Priority: 2,
 		Active:   true,
@@ -141,10 +141,10 @@ func TestPlanSoftDelete(t *testing.T) {
 	task := models.Task{
 		ID:          "task-3",
 		Name:        "Test Task 3",
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 30,
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Priority: 1,
 		Active:   true,
@@ -200,10 +200,10 @@ func TestPlanRestore(t *testing.T) {
 	task := models.Task{
 		ID:          "task-4",
 		Name:        "Test Task 4",
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 30,
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Priority: 1,
 		Active:   true,
@@ -266,10 +266,10 @@ func TestCannotAddSlotsToDeletedPlan(t *testing.T) {
 	task := models.Task{
 		ID:          "task-5",
 		Name:        "Test Task 5",
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 30,
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Priority: 1,
 		Active:   true,
@@ -325,10 +325,10 @@ func TestDeletedTasksExcludedFromScheduler(t *testing.T) {
 	task1 := models.Task{
 		ID:          "task-6",
 		Name:        "Active Task",
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 30,
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Priority: 1,
 		Active:   true,
@@ -336,10 +336,10 @@ func TestDeletedTasksExcludedFromScheduler(t *testing.T) {
 	task2 := models.Task{
 		ID:          "task-7",
 		Name:        "To Be Deleted Task",
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 30,
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Priority: 2,
 		Active:   true,
@@ -387,18 +387,18 @@ func TestSoftDeletePreservesData(t *testing.T) {
 	task := models.Task{
 		ID:            "task-8",
 		Name:          "Full Task",
-		Kind:          models.TaskKindAppointment,
+		Kind:          constants.TaskKindAppointment,
 		DurationMin:   60,
 		EarliestStart: "09:00",
 		LatestEnd:     "17:00",
 		FixedStart:    "10:00",
 		FixedEnd:      "11:00",
 		Recurrence: models.Recurrence{
-			Type:        models.RecurrenceWeekly,
+			Type:        constants.RecurrenceWeekly,
 			WeekdayMask: []time.Weekday{time.Monday, time.Wednesday, time.Friday},
 		},
 		Priority:             3,
-		EnergyBand:           models.EnergyHigh,
+		EnergyBand:           constants.EnergyHigh,
 		Active:               true,
 		LastDone:             "2024-01-10",
 		SuccessStreak:        5,
@@ -452,10 +452,10 @@ func TestDeleteAlreadyDeletedTask(t *testing.T) {
 	task := models.Task{
 		ID:          "task-double-delete",
 		Name:        "Double Delete Task",
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 30,
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Priority: 1,
 		Active:   true,
@@ -485,10 +485,10 @@ func TestRestoreNonDeletedTask(t *testing.T) {
 	task := models.Task{
 		ID:          "task-restore-active",
 		Name:        "Restore Active Task",
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 30,
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Priority: 1,
 		Active:   true,
@@ -513,10 +513,10 @@ func TestDeleteAlreadyDeletedPlan(t *testing.T) {
 	task := models.Task{
 		ID:          "task-plan-double-delete",
 		Name:        "Plan Double Delete Task",
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 30,
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Priority: 1,
 		Active:   true,
@@ -562,10 +562,10 @@ func TestRestoreNonDeletedPlan(t *testing.T) {
 	task := models.Task{
 		ID:          "task-restore-active-plan",
 		Name:        "Restore Active Plan Task",
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 30,
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Priority: 1,
 		Active:   true,
@@ -606,10 +606,10 @@ func TestRestorePlanTimestampMatching(t *testing.T) {
 	task := models.Task{
 		ID:          "task-timestamp-match",
 		Name:        "Timestamp Match Task",
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 30,
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Priority: 1,
 		Active:   true,

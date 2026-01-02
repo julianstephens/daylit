@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/scheduler"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
@@ -55,10 +56,10 @@ func TestDebugDumpTaskCmd_Success(t *testing.T) {
 	task := models.Task{
 		ID:          "test-task-id",
 		Name:        "Test Task",
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 30,
 		Recurrence: models.Recurrence{
-			Type:         models.RecurrenceDaily,
+			Type:         constants.RecurrenceDaily,
 			IntervalDays: 1,
 		},
 		Priority:             3,
@@ -229,10 +230,10 @@ func TestDebugDumpTaskCmd_JSONOutput(t *testing.T) {
 	task := models.Task{
 		ID:          "json-test-id",
 		Name:        "JSON Test",
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 45,
 		Recurrence: models.Recurrence{
-			Type:         models.RecurrenceWeekly,
+			Type:         constants.RecurrenceWeekly,
 			IntervalDays: 7,
 		},
 		Priority:             2,
@@ -466,7 +467,7 @@ func TestDebugDumpAlertCmd_Success(t *testing.T) {
 		Message: "Test Alert",
 		Time:    "10:00",
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Active: true,
 	}
@@ -512,7 +513,7 @@ func TestDebugDumpAlertCmd_JSONOutput(t *testing.T) {
 		Message: "JSON Alert",
 		Time:    "12:00",
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Active: true,
 	}

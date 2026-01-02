@@ -42,13 +42,13 @@ func newEditForm(fm *TaskFormModel) *huh.Form {
 					}
 					return nil
 				}),
-			huh.NewSelect[models.RecurrenceType]().
+			huh.NewSelect[constants.RecurrenceType]().
 				Title("Recurrence").
 				Options(
-					huh.NewOption("Ad-hoc", models.RecurrenceAdHoc),
-					huh.NewOption("Daily", models.RecurrenceDaily),
-					huh.NewOption("Weekly", models.RecurrenceWeekly),
-					huh.NewOption("Every N Days", models.RecurrenceNDays),
+					huh.NewOption("Ad-hoc", constants.RecurrenceAdHoc),
+					huh.NewOption("Daily", constants.RecurrenceDaily),
+					huh.NewOption("Weekly", constants.RecurrenceWeekly),
+					huh.NewOption("Every N Days", constants.RecurrenceNDays),
 				).
 				Value(&fm.Recurrence),
 			huh.NewInput().
@@ -140,16 +140,16 @@ func newAlertForm(fm *AlertFormModel) *huh.Form {
 					}
 					return nil
 				}),
-			huh.NewSelect[models.RecurrenceType]().
+			huh.NewSelect[constants.RecurrenceType]().
 				Title("Recurrence").
 				Description("Only for recurring alerts (no date)").
 				Options(
-					huh.NewOption("Daily", models.RecurrenceDaily),
-					huh.NewOption("Weekly", models.RecurrenceWeekly),
-					huh.NewOption("Every N Days", models.RecurrenceNDays),
+					huh.NewOption("Daily", constants.RecurrenceDaily),
+					huh.NewOption("Weekly", constants.RecurrenceWeekly),
+					huh.NewOption("Every N Days", constants.RecurrenceNDays),
 				).
 				Value(&fm.Recurrence).
-				Validate(func(r models.RecurrenceType) error {
+				Validate(func(r constants.RecurrenceType) error {
 					// When Date is empty (recurring alert), a recurrence type must be selected
 					if strings.TrimSpace(fm.Date) == "" && r == "" {
 						return fmt.Errorf("recurrence is required when date is empty")
@@ -442,7 +442,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 
 				// Parse weekdays for weekly recurrence
-				if m.alertForm.Recurrence == models.RecurrenceWeekly && m.alertForm.Weekdays != "" {
+				if m.alertForm.Recurrence == constants.RecurrenceWeekly && m.alertForm.Weekdays != "" {
 					weekdays, err := cli.ParseWeekdays(m.alertForm.Weekdays)
 					if err != nil {
 						// Invalid weekdays; keep user in the form to correct the value
@@ -683,7 +683,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 							task.DurationMin = constants.MinTaskDurationMin
 						}
 					case constants.FeedbackUnnecessary:
-						if task.Recurrence.Type == models.RecurrenceNDays {
+						if task.Recurrence.Type == constants.RecurrenceNDays {
 							task.Recurrence.IntervalDays++
 						}
 					}
@@ -886,10 +886,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		task := models.Task{
 			ID:          uuid.New().String(),
 			Name:        "New Task",
-			Kind:        models.TaskKindFlexible,
+			Kind:        constants.TaskKindFlexible,
 			DurationMin: 30,
 			Recurrence: models.Recurrence{
-				Type: models.RecurrenceAdHoc,
+				Type: constants.RecurrenceAdHoc,
 			},
 			Priority: 3,
 			Active:   true,
@@ -987,7 +987,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Message:    "",
 			Time:       "",
 			Date:       "",
-			Recurrence: models.RecurrenceDaily,
+			Recurrence: constants.RecurrenceDaily,
 			Interval:   "1",
 			Weekdays:   "",
 		}

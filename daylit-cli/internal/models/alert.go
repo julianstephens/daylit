@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 )
 
 type Alert struct {
@@ -40,10 +42,10 @@ func (a *Alert) Validate() error {
 
 	// If not a one-time alert, validate recurrence
 	if a.Date == "" {
-		if a.Recurrence.Type == RecurrenceWeekly && len(a.Recurrence.WeekdayMask) == 0 {
+		if a.Recurrence.Type == constants.RecurrenceWeekly && len(a.Recurrence.WeekdayMask) == 0 {
 			return fmt.Errorf("weekdays must be specified for weekly recurrence")
 		}
-		if a.Recurrence.Type == RecurrenceNDays && a.Recurrence.IntervalDays < 1 {
+		if a.Recurrence.Type == constants.RecurrenceNDays && a.Recurrence.IntervalDays < 1 {
 			return fmt.Errorf("interval must be at least 1 for n_days recurrence")
 		}
 	}
@@ -66,9 +68,9 @@ func (a *Alert) IsDueToday(today time.Time) bool {
 
 	// Recurring alerts: check recurrence pattern
 	switch a.Recurrence.Type {
-	case RecurrenceDaily:
+	case constants.RecurrenceDaily:
 		return true
-	case RecurrenceWeekly:
+	case constants.RecurrenceWeekly:
 		todayWeekday := today.Weekday()
 		for _, wd := range a.Recurrence.WeekdayMask {
 			if wd == todayWeekday {
@@ -76,7 +78,7 @@ func (a *Alert) IsDueToday(today time.Time) bool {
 			}
 		}
 		return false
-	case RecurrenceNDays:
+	case constants.RecurrenceNDays:
 		// For n_days recurrence, an alert is due when today falls on an IntervalDays boundary
 		// relative to the base date (LastSent if available, otherwise CreatedAt).
 		interval := a.Recurrence.IntervalDays
@@ -104,7 +106,7 @@ func (a *Alert) IsDueToday(today time.Time) bool {
 
 		// Fire on exact interval boundaries (0, interval, 2*interval, etc.)
 		return daysSince%interval == 0
-	case RecurrenceAdHoc:
+	case constants.RecurrenceAdHoc:
 		// Ad-hoc alerts don't recur
 		return false
 	default:
@@ -119,15 +121,15 @@ func (a *Alert) FormatRecurrence() string {
 	}
 
 	switch a.Recurrence.Type {
-	case RecurrenceDaily:
+	case constants.RecurrenceDaily:
 		return "Daily"
-	case RecurrenceWeekly:
+	case constants.RecurrenceWeekly:
 		days := make([]string, len(a.Recurrence.WeekdayMask))
 		for i, wd := range a.Recurrence.WeekdayMask {
 			days[i] = wd.String()[:3]
 		}
 		return fmt.Sprintf("Weekly: %s", strings.Join(days, ", "))
-	case RecurrenceNDays:
+	case constants.RecurrenceNDays:
 		if a.Recurrence.IntervalDays == 1 {
 			return "Daily"
 		}

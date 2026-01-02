@@ -46,10 +46,10 @@ func TestNotifyCmd_Idempotency(t *testing.T) {
 	task := models.Task{
 		ID:          "task-notify-1",
 		Name:        "Test Task",
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 30,
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Priority: 1,
 		Active:   true,
@@ -166,10 +166,10 @@ func TestNotifyCmd_GracePeriod(t *testing.T) {
 	task := models.Task{
 		ID:          "task-grace-1",
 		Name:        "Test Grace Period",
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 30,
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Priority: 1,
 		Active:   true,
@@ -288,10 +288,10 @@ func TestNotifyCmd_NoNotificationBeforeTime(t *testing.T) {
 	task := models.Task{
 		ID:          "task-future-1",
 		Name:        "Future Task",
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 30,
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Priority: 1,
 		Active:   true,
@@ -368,10 +368,10 @@ func TestNotifyCmd_DisabledNotifications(t *testing.T) {
 	task := models.Task{
 		ID:          "task-disabled-1",
 		Name:        "Test Task",
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 30,
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Priority: 1,
 		Active:   true,
@@ -436,10 +436,10 @@ func TestUpdateSlotNotificationTimestamp(t *testing.T) {
 	task := models.Task{
 		ID:          "task-timestamp-1",
 		Name:        "Test Task",
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 30,
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Priority: 1,
 		Active:   true,
@@ -566,10 +566,10 @@ func TestNotifyCmd_BothStartAndEndNotifications(t *testing.T) {
 	task := models.Task{
 		ID:          "task-both-1",
 		Name:        "Test Both Notifications",
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 30,
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Priority: 1,
 		Active:   true,
@@ -653,10 +653,10 @@ func TestNotifyCmd_OnlyAcceptedOrDoneSlots(t *testing.T) {
 	task1 := models.Task{
 		ID:          "task-status-1",
 		Name:        "Accepted Task",
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 30,
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Priority: 1,
 		Active:   true,
@@ -664,10 +664,10 @@ func TestNotifyCmd_OnlyAcceptedOrDoneSlots(t *testing.T) {
 	task2 := models.Task{
 		ID:          "task-status-2",
 		Name:        "Planned Task",
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 30,
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Priority: 1,
 		Active:   true,
@@ -758,7 +758,7 @@ func TestNotifyCmd_Alerts_GracePeriod(t *testing.T) {
 		Message: "Test alert",
 		Time:    "10:00",
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Active:    true,
 		CreatedAt: time.Now(),
@@ -787,7 +787,7 @@ func TestNotifyCmd_Alerts_GracePeriod(t *testing.T) {
 		Message: "Test alert 2",
 		Time:    "10:00",
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Active:    true,
 		CreatedAt: time.Now(),
@@ -822,7 +822,7 @@ func TestNotifyCmd_Alerts_DuplicatePrevention(t *testing.T) {
 		Message: "Duplicate test",
 		Time:    "10:00",
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Active:    true,
 		CreatedAt: time.Now(),
@@ -919,7 +919,7 @@ func TestNotifyCmd_Alerts_WeeklyRecurrence(t *testing.T) {
 		Message: "Weekly alert",
 		Time:    "10:00",
 		Recurrence: models.Recurrence{
-			Type:        models.RecurrenceWeekly,
+			Type:        constants.RecurrenceWeekly,
 			WeekdayMask: []time.Weekday{time.Monday, time.Friday},
 		},
 		Active:    true,
@@ -976,7 +976,7 @@ func TestNotifyCmd_Alerts_NDaysRecurrence(t *testing.T) {
 		Message: "Every 3 days",
 		Time:    "10:00",
 		Recurrence: models.Recurrence{
-			Type:         models.RecurrenceNDays,
+			Type:         constants.RecurrenceNDays,
 			IntervalDays: 3,
 		},
 		Active:    true,
@@ -1038,7 +1038,7 @@ func TestNotifyCmd_Alerts_InactiveSkipped(t *testing.T) {
 		Message: "Inactive alert",
 		Time:    "10:00",
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Active:    false,
 		CreatedAt: time.Now(),

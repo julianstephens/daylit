@@ -7,53 +7,29 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 )
 
-type TaskKind string
-
-const (
-	TaskKindAppointment TaskKind = constants.TaskKindAppointment
-	TaskKindFlexible    TaskKind = constants.TaskKindFlexible
-)
-
-type RecurrenceType string
-
-const (
-	RecurrenceDaily  RecurrenceType = constants.RecurrenceDaily
-	RecurrenceWeekly RecurrenceType = constants.RecurrenceWeekly
-	RecurrenceNDays  RecurrenceType = constants.RecurrenceNDays
-	RecurrenceAdHoc  RecurrenceType = constants.RecurrenceAdHoc
-)
-
-type EnergyBand string
-
-const (
-	EnergyLow    EnergyBand = constants.EnergyLow
-	EnergyMedium EnergyBand = constants.EnergyMedium
-	EnergyHigh   EnergyBand = constants.EnergyHigh
-)
-
 type Recurrence struct {
-	Type         RecurrenceType `json:"type"`
-	IntervalDays int            `json:"interval_days,omitempty"`
-	WeekdayMask  []time.Weekday `json:"weekday_mask,omitempty"`
+	Type         constants.RecurrenceType `json:"type"`
+	IntervalDays int                      `json:"interval_days,omitempty"`
+	WeekdayMask  []time.Weekday           `json:"weekday_mask,omitempty"`
 }
 
 type Task struct {
-	ID                   string     `json:"id"`
-	Name                 string     `json:"name"`
-	Kind                 TaskKind   `json:"kind"`
-	DurationMin          int        `json:"duration_min"`
-	EarliestStart        string     `json:"earliest_start,omitempty"` // HH:MM format
-	LatestEnd            string     `json:"latest_end,omitempty"`     // HH:MM format
-	FixedStart           string     `json:"fixed_start,omitempty"`    // HH:MM format
-	FixedEnd             string     `json:"fixed_end,omitempty"`      // HH:MM format
-	Recurrence           Recurrence `json:"recurrence"`
-	Priority             int        `json:"priority"`
-	EnergyBand           EnergyBand `json:"energy_band,omitempty"`
-	Active               bool       `json:"active"`
-	LastDone             string     `json:"last_done,omitempty"` // YYYY-MM-DD format
-	SuccessStreak        int        `json:"success_streak"`
-	AvgActualDurationMin float64    `json:"avg_actual_duration_min"`
-	DeletedAt            *string    `json:"deleted_at,omitempty"` // RFC3339 timestamp
+	ID                   string               `json:"id"`
+	Name                 string               `json:"name"`
+	Kind                 constants.TaskKind   `json:"kind"`
+	DurationMin          int                  `json:"duration_min"`
+	EarliestStart        string               `json:"earliest_start,omitempty"` // HH:MM format
+	LatestEnd            string               `json:"latest_end,omitempty"`     // HH:MM format
+	FixedStart           string               `json:"fixed_start,omitempty"`    // HH:MM format
+	FixedEnd             string               `json:"fixed_end,omitempty"`      // HH:MM format
+	Recurrence           Recurrence           `json:"recurrence"`
+	Priority             int                  `json:"priority"`
+	EnergyBand           constants.EnergyBand `json:"energy_band,omitempty"`
+	Active               bool                 `json:"active"`
+	LastDone             string               `json:"last_done,omitempty"` // YYYY-MM-DD format
+	SuccessStreak        int                  `json:"success_streak"`
+	AvgActualDurationMin float64              `json:"avg_actual_duration_min"`
+	DeletedAt            *string              `json:"deleted_at,omitempty"` // RFC3339 timestamp
 }
 
 func (t *Task) Validate() error {

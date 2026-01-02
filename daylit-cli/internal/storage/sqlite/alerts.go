@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 )
 
@@ -72,7 +73,7 @@ func (s *Store) GetAlert(id string) (models.Alert, error) {
 		return models.Alert{}, fmt.Errorf("failed to get alert: %w", err)
 	}
 
-	alert.Recurrence.Type = models.RecurrenceType(recurrenceType)
+	alert.Recurrence.Type = constants.RecurrenceType(recurrenceType)
 
 	if err := json.Unmarshal([]byte(weekdaysJSON), &alert.Recurrence.WeekdayMask); err != nil {
 		return models.Alert{}, fmt.Errorf("failed to unmarshal weekdays: %w", err)
@@ -125,7 +126,7 @@ func (s *Store) GetAllAlerts() ([]models.Alert, error) {
 			return nil, fmt.Errorf("failed to scan alert: %w", err)
 		}
 
-		alert.Recurrence.Type = models.RecurrenceType(recurrenceType)
+		alert.Recurrence.Type = constants.RecurrenceType(recurrenceType)
 
 		if err := json.Unmarshal([]byte(weekdaysJSON), &alert.Recurrence.WeekdayMask); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal weekdays: %w", err)

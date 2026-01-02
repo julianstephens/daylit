@@ -9,7 +9,6 @@ import (
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
-	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/optimizer"
 )
 
@@ -216,7 +215,7 @@ func applyOptimization(ctx *cli.Context, opt optimizer.Optimization) error {
 		if suggestedMap, ok := opt.SuggestedValue.(map[string]interface{}); ok {
 			// Check if this is a recurrence type change (e.g., daily to n_days)
 			if recurrence, ok := suggestedMap["recurrence"].(string); ok && recurrence == "n_days" {
-				task.Recurrence.Type = models.RecurrenceNDays
+				task.Recurrence.Type = constants.RecurrenceNDays
 				if intervalDays, ok := suggestedMap["interval_days"].(int); ok {
 					task.Recurrence.IntervalDays = intervalDays
 				} else {

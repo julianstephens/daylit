@@ -4,7 +4,9 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/utils"
 )
@@ -94,22 +96,22 @@ func (c *TaskAddCmd) Validate() error {
 
 func (c *TaskAddCmd) Run(ctx *cli.Context) error {
 	// Determine task kind
-	taskKind := models.TaskKindFlexible
+	taskKind := constants.TaskKindFlexible
 	if c.FixedStart != "" && c.FixedEnd != "" {
-		taskKind = models.TaskKindAppointment
+		taskKind = constants.TaskKindAppointment
 	}
 
 	// Parse recurrence
-	var recType models.RecurrenceType
+	var recType constants.RecurrenceType
 	switch c.Recurrence {
 	case "daily":
-		recType = models.RecurrenceDaily
+		recType = constants.RecurrenceDaily
 	case "weekly":
-		recType = models.RecurrenceWeekly
+		recType = constants.RecurrenceWeekly
 	case "n_days":
-		recType = models.RecurrenceNDays
+		recType = constants.RecurrenceNDays
 	case "ad_hoc":
-		recType = models.RecurrenceAdHoc
+		recType = constants.RecurrenceAdHoc
 	default:
 		return fmt.Errorf("invalid recurrence type: %s", c.Recurrence)
 	}
@@ -120,7 +122,7 @@ func (c *TaskAddCmd) Run(ctx *cli.Context) error {
 	}
 
 	// Parse weekdays for weekly recurrence
-	if recType == models.RecurrenceWeekly && c.Weekdays != "" {
+	if recType == constants.RecurrenceWeekly && c.Weekdays != "" {
 		wds, err := cli.ParseWeekdays(c.Weekdays)
 		if err != nil {
 			return err

@@ -91,7 +91,8 @@ func (c *CLI) AfterApply(ctx *kong.Context) error {
 
 	// Initialize logger
 	// For debug command, always enable debug logging
-	isDebugCmd := strings.HasPrefix(ctx.Command(), "debug ")
+	cmdPath := ctx.Command()
+	isDebugCmd := cmdPath == "debug" || strings.HasPrefix(cmdPath, "debug ")
 	debugEnabled := c.DebugMode || isDebugCmd
 
 	if err := logger.Init(logger.Config{
@@ -102,8 +103,7 @@ func (c *CLI) AfterApply(ctx *kong.Context) error {
 	}
 
 	// Skip keyring lookup for keyring management commands
-	cmdPath := ctx.Command()
-	if strings.HasPrefix(cmdPath, "keyring") {
+	if cmdPath == "keyring" || strings.HasPrefix(cmdPath, "keyring ") {
 		return nil
 	}
 
@@ -182,14 +182,14 @@ func (c *CLI) AfterApply(ctx *kong.Context) error {
 func main() {
 	kongCLI := CLI{}
 	ctx := kong.Parse(&kongCLI,
-		kong.Name("daylit"),
+		kong.Name(constants.AppName),
 		kong.Description("Daily structure scheduler / time-blocking companion"),
 		kong.UsageOnError(),
 		kong.ConfigureHelp(kong.HelpOptions{
 			Compact:             true,
 			NoExpandSubcommands: true,
 		}),
-		kong.Vars{"version": "v0.5.0"},
+		kong.Vars{"version": constants.Version},
 	)
 
 	appCtx := &cli.Context{

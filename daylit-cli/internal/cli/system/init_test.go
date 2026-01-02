@@ -37,13 +37,13 @@ func createTestTask(id, name string) models.Task {
 	return models.Task{
 		ID:          id,
 		Name:        name,
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 60,
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceAdHoc,
+			Type: constants.RecurrenceAdHoc,
 		},
 		Priority:   1,
-		EnergyBand: models.EnergyMedium,
+		EnergyBand: constants.EnergyMedium,
 		Active:     true,
 	}
 }

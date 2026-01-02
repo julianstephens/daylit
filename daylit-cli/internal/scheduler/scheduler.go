@@ -54,7 +54,7 @@ func (s *Scheduler) GeneratePlan(date string, tasks []models.Task, dayStart, day
 
 	for _, task := range activeTasks {
 		switch task.Kind {
-		case models.TaskKindAppointment:
+		case constants.TaskKindAppointment:
 			// Appointments must have both fixed start and end times
 			if task.FixedStart != "" && task.FixedEnd != "" {
 				if shouldScheduleTask(task, planDate) {
@@ -69,7 +69,7 @@ func (s *Scheduler) GeneratePlan(date string, tasks []models.Task, dayStart, day
 				// Treat incomplete appointments as flexible tasks
 				flexibleTasks = append(flexibleTasks, task)
 			}
-		case models.TaskKindFlexible:
+		case constants.TaskKindFlexible:
 			flexibleTasks = append(flexibleTasks, task)
 		}
 	}

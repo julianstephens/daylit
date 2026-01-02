@@ -169,7 +169,7 @@ func TestApplyOptimization_ReduceFrequency(t *testing.T) {
 				Priority:    3,
 				Active:      true,
 				Recurrence: models.Recurrence{
-					Type:         models.RecurrenceNDays,
+					Type:         constants.RecurrenceNDays,
 					IntervalDays: 1,
 				},
 			},

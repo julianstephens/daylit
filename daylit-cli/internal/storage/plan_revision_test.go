@@ -17,10 +17,10 @@ func TestPlanAcceptCreatesRevision1(t *testing.T) {
 	task := models.Task{
 		ID:          "task-rev-1",
 		Name:        "Test Task",
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 30,
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Priority: 1,
 		Active:   true,
@@ -73,10 +73,10 @@ func TestRegenerateAcceptedPlanCreatesRevision2(t *testing.T) {
 	task := models.Task{
 		ID:          "task-rev-2",
 		Name:        "Test Task",
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 30,
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Priority: 1,
 		Active:   true,
@@ -166,10 +166,10 @@ func TestRegenerateUnacceptedPlanOverwrites(t *testing.T) {
 	task := models.Task{
 		ID:          "task-rev-3",
 		Name:        "Test Task",
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 30,
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Priority: 1,
 		Active:   true,
@@ -240,10 +240,10 @@ func TestGetLatestPlanRevision(t *testing.T) {
 	task := models.Task{
 		ID:          "task-rev-4",
 		Name:        "Test Task",
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 30,
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Priority: 1,
 		Active:   true,
@@ -293,10 +293,10 @@ func TestFeedbackAttachesToLatestRevision(t *testing.T) {
 	task := models.Task{
 		ID:          "task-rev-5",
 		Name:        "Test Task",
-		Kind:        models.TaskKindFlexible,
+		Kind:        constants.TaskKindFlexible,
 		DurationMin: 30,
 		Recurrence: models.Recurrence{
-			Type: models.RecurrenceDaily,
+			Type: constants.RecurrenceDaily,
 		},
 		Priority: 1,
 		Active:   true,

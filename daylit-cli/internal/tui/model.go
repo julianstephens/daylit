@@ -26,7 +26,7 @@ import (
 type TaskFormModel struct {
 	Name       string
 	Duration   string
-	Recurrence models.RecurrenceType
+	Recurrence constants.RecurrenceType
 	Interval   string
 	Priority   string
 	Active     bool
@@ -59,7 +59,7 @@ type AlertFormModel struct {
 	Message    string
 	Time       string
 	Date       string
-	Recurrence models.RecurrenceType
+	Recurrence constants.RecurrenceType
 	Interval   string
 	Weekdays   string
 }

@@ -8,10 +8,20 @@ type ConflictType string
 // SessionState represents the current state of the TUI application
 type SessionState int
 
+// TaskKind represents the kind of task
+type TaskKind string
+
+// RecurrenceType represents the type of recurrence for tasks or alerts
+type RecurrenceType string
+
+// EnergyBand represents the energy band of a task
+type EnergyBand string
+
 const (
 	AppName            = "daylit"
 	DefaultKeyringUser = "database-connection"
 	DefaultConfigPath  = "~/.config/daylit/daylit.db"
+	Version            = "v0.5.0"
 
 	// DateFormat is the standard date format used throughout the application (YYYY-MM-DD)
 	DateFormat = "2006-01-02"
@@ -36,19 +46,19 @@ const (
 	SlotStatusSkipped  = "skipped"
 
 	// Task Kind constants
-	TaskKindAppointment = "appointment"
-	TaskKindFlexible    = "flexible"
+	TaskKindAppointment TaskKind = "appointment"
+	TaskKindFlexible    TaskKind = "flexible"
 
 	// Recurrence Type constants
-	RecurrenceDaily  = "daily"
-	RecurrenceWeekly = "weekly"
-	RecurrenceNDays  = "n_days"
-	RecurrenceAdHoc  = "ad_hoc"
+	RecurrenceDaily  RecurrenceType = "daily"
+	RecurrenceWeekly RecurrenceType = "weekly"
+	RecurrenceNDays  RecurrenceType = "n_days"
+	RecurrenceAdHoc  RecurrenceType = "ad_hoc"
 
 	// Energy Band constants
-	EnergyLow    = "low"
-	EnergyMedium = "medium"
-	EnergyHigh   = "high"
+	EnergyLow    EnergyBand = "low"
+	EnergyMedium EnergyBand = "medium"
+	EnergyHigh   EnergyBand = "high"
 
 	// Notification constants
 	NotifierLockfileName   = "daylit-tray.lock"

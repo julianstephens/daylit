@@ -176,7 +176,7 @@ func TestAnalyzeTask_MostlyUnnecessary(t *testing.T) {
 		DurationMin: 60,
 		Active:      true,
 		Recurrence: models.Recurrence{
-			Type:         models.RecurrenceNDays,
+			Type:         constants.RecurrenceNDays,
 			IntervalDays: 1,
 		},
 	}
