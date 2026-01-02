@@ -183,7 +183,7 @@ func (c *TaskAddCmd) Run(ctx *cli.Context) error {
 		rec.WeekOccurrence = c.WeekOccurrence
 		wd, err := cli.ParseWeekday(c.DayOfWeekInMonth)
 		if err != nil {
-			return fmt.Errorf("invalid day_of_week_in_month: %w", err)
+			return fmt.Errorf("invalid --day-of-week-in-month: %w", err)
 		}
 		rec.DayOfWeekInMonth = wd
 	}
