@@ -20,10 +20,11 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/tui/components/ot"
 	"github.com/julianstephens/daylit/daylit-cli/internal/tui/components/settings"
 	"github.com/julianstephens/daylit/daylit-cli/internal/tui/components/tasklist"
+	"github.com/julianstephens/daylit/daylit-cli/internal/tui/state"
 	"github.com/julianstephens/daylit/daylit-cli/internal/utils"
 )
 
-func newEditForm(fm *TaskFormModel) *huh.Form {
+func newEditForm(fm *state.TaskFormModel) *huh.Form {
 	return huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
@@ -88,7 +89,7 @@ func newEditForm(fm *TaskFormModel) *huh.Form {
 	).WithTheme(huh.ThemeDracula())
 }
 
-func newHabitForm(fm *HabitFormModel) *huh.Form {
+func newHabitForm(fm *state.HabitFormModel) *huh.Form {
 	return huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
@@ -104,7 +105,7 @@ func newHabitForm(fm *HabitFormModel) *huh.Form {
 	).WithTheme(huh.ThemeDracula())
 }
 
-func newAlertForm(fm *AlertFormModel) *huh.Form {
+func newAlertForm(fm *state.AlertFormModel) *huh.Form {
 	return huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
@@ -181,7 +182,7 @@ func newAlertForm(fm *AlertFormModel) *huh.Form {
 	).WithTheme(huh.ThemeDracula())
 }
 
-func newSettingsForm(fm *SettingsFormModel) *huh.Form {
+func newSettingsForm(fm *state.SettingsFormModel) *huh.Form {
 	return huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
@@ -280,7 +281,7 @@ func newSettingsForm(fm *SettingsFormModel) *huh.Form {
 	).WithTheme(huh.ThemeDracula())
 }
 
-func newOTForm(fm *OTFormModel) *huh.Form {
+func newOTForm(fm *state.OTFormModel) *huh.Form {
 	return huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
@@ -315,215 +316,215 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	// Handle Editing State
-	if m.state == constants.StateEditing {
+	if m.State == constants.StateEditing {
 		if msg, ok := msg.(tea.KeyMsg); ok && msg.Type == tea.KeyEsc {
-			m.state = constants.StateTasks
+			m.State = constants.StateTasks
 			return m, nil
 		}
 
-		form, cmd := m.form.Update(msg)
+		form, cmd := m.Form.Update(msg)
 		if f, ok := form.(*huh.Form); ok {
-			m.form = f
+			m.Form = f
 		}
 		cmds = append(cmds, cmd)
 
-		switch m.form.State {
+		switch m.Form.State {
 		case huh.StateCompleted:
 			// Apply changes
-			m.editingTask.Name = m.taskForm.Name
-			dur, err := strconv.Atoi(m.taskForm.Duration)
+			m.EditingTask.Name = m.TaskForm.Name
+			dur, err := strconv.Atoi(m.TaskForm.Duration)
 			if err == nil {
-				m.editingTask.DurationMin = dur
+				m.EditingTask.DurationMin = dur
 			}
-			m.editingTask.Recurrence.Type = m.taskForm.Recurrence
-			intervalStr := strings.TrimSpace(m.taskForm.Interval)
+			m.EditingTask.Recurrence.Type = m.TaskForm.Recurrence
+			intervalStr := strings.TrimSpace(m.TaskForm.Interval)
 			interval, err := strconv.Atoi(intervalStr)
 			if err == nil {
-				m.editingTask.Recurrence.IntervalDays = interval
+				m.EditingTask.Recurrence.IntervalDays = interval
 			}
-			prio, err := strconv.Atoi(m.taskForm.Priority)
+			prio, err := strconv.Atoi(m.TaskForm.Priority)
 			if err == nil {
-				m.editingTask.Priority = prio
+				m.EditingTask.Priority = prio
 			}
-			m.editingTask.Active = m.taskForm.Active
+			m.EditingTask.Active = m.TaskForm.Active
 
 			// Check if task exists to decide Add vs Update
-			_, err = m.store.GetTask(m.editingTask.ID)
+			_, err = m.Store.GetTask(m.EditingTask.ID)
 			var saveErr error
 			if err != nil {
 				// Task doesn't exist, add it
-				saveErr = m.store.AddTask(*m.editingTask)
+				saveErr = m.Store.AddTask(*m.EditingTask)
 			} else {
 				// Task exists, update it
-				saveErr = m.store.UpdateTask(*m.editingTask)
+				saveErr = m.Store.UpdateTask(*m.EditingTask)
 			}
 
 			// Only update task list if save was successful
 			if saveErr == nil {
-				tasks, err := m.store.GetAllTasksIncludingDeleted()
+				tasks, err := m.Store.GetAllTasksIncludingDeleted()
 				if err == nil {
-					m.taskList.SetTasks(tasks)
+					m.TaskList.SetTasks(tasks)
 				}
 				m.updateValidationStatus()
 			}
-			m.state = constants.StateTasks
+			m.State = constants.StateTasks
 		case huh.StateAborted:
-			m.state = constants.StateTasks
+			m.State = constants.StateTasks
 		}
 		return m, tea.Batch(cmds...)
 	}
 
 	// Handle Add Habit State
-	if m.state == constants.StateAddHabit {
+	if m.State == constants.StateAddHabit {
 		if msg, ok := msg.(tea.KeyMsg); ok && msg.Type == tea.KeyEsc {
-			m.state = constants.StateHabits
+			m.State = constants.StateHabits
 			return m, nil
 		}
 
-		form, cmd := m.form.Update(msg)
+		form, cmd := m.Form.Update(msg)
 		if f, ok := form.(*huh.Form); ok {
-			m.form = f
+			m.Form = f
 		}
 		cmds = append(cmds, cmd)
 
-		switch m.form.State {
+		switch m.Form.State {
 		case huh.StateCompleted:
 			// Create new habit
 			habit := models.Habit{
 				ID:        uuid.New().String(),
-				Name:      m.habitForm.Name,
+				Name:      m.HabitForm.Name,
 				CreatedAt: time.Now(),
 			}
-			if err := m.store.AddHabit(habit); err == nil {
+			if err := m.Store.AddHabit(habit); err == nil {
 				// Refresh habits list only if add succeeded
 				today := time.Now().Format(constants.DateFormat)
-				habitsList, _ := m.store.GetAllHabits(false, true)
-				habitEntries, _ := m.store.GetHabitEntriesForDay(today)
-				m.habitsModel.SetHabits(habitsList, habitEntries)
-				m.state = constants.StateHabits
+				habitsList, _ := m.Store.GetAllHabits(false, true)
+				habitEntries, _ := m.Store.GetHabitEntriesForDay(today)
+				m.HabitsModel.SetHabits(habitsList, habitEntries)
+				m.State = constants.StateHabits
 			} else {
 				// Stay in form state on error to allow retry
 				// The form will display, user can cancel with ESC or retry
-				m.form.State = huh.StateNormal
+				m.Form.State = huh.StateNormal
 			}
 		case huh.StateAborted:
-			m.state = constants.StateHabits
+			m.State = constants.StateHabits
 		}
 		return m, tea.Batch(cmds...)
 	}
 
 	// Handle Add Alert State
-	if m.state == constants.StateAddAlert {
+	if m.State == constants.StateAddAlert {
 		if msg, ok := msg.(tea.KeyMsg); ok && msg.Type == tea.KeyEsc {
-			m.state = constants.StateAlerts
+			m.State = constants.StateAlerts
 			return m, nil
 		}
 
-		form, cmd := m.form.Update(msg)
+		form, cmd := m.Form.Update(msg)
 		if f, ok := form.(*huh.Form); ok {
-			m.form = f
+			m.Form = f
 		}
 		cmds = append(cmds, cmd)
 
-		switch m.form.State {
+		switch m.Form.State {
 		case huh.StateCompleted:
 			// Validate and create new alert
 			alert := models.Alert{
 				ID:        uuid.New().String(),
-				Message:   m.alertForm.Message,
-				Time:      m.alertForm.Time,
-				Date:      m.alertForm.Date,
+				Message:   m.AlertForm.Message,
+				Time:      m.AlertForm.Time,
+				Date:      m.AlertForm.Date,
 				Active:    true,
 				CreatedAt: time.Now(),
 			}
 
 			// Set recurrence if not one-time
 			if alert.Date == "" {
-				alert.Recurrence.Type = m.alertForm.Recurrence
-				if m.alertForm.Interval != "" {
-					interval, err := strconv.Atoi(m.alertForm.Interval)
+				alert.Recurrence.Type = m.AlertForm.Recurrence
+				if m.AlertForm.Interval != "" {
+					interval, err := strconv.Atoi(m.AlertForm.Interval)
 					if err != nil || interval < 1 {
 						// Invalid interval; keep user in the form to correct the value
-						m.formError = "Invalid interval: must be a positive number"
-						m.form.State = huh.StateNormal
+						m.FormError = "Invalid interval: must be a positive number"
+						m.Form.State = huh.StateNormal
 						return m, tea.Batch(cmds...)
 					}
 					alert.Recurrence.IntervalDays = interval
 				}
 
 				// Parse weekdays for weekly recurrence
-				if m.alertForm.Recurrence == constants.RecurrenceWeekly && m.alertForm.Weekdays != "" {
-					weekdays, err := cli.ParseWeekdays(m.alertForm.Weekdays)
+				if m.AlertForm.Recurrence == constants.RecurrenceWeekly && m.AlertForm.Weekdays != "" {
+					weekdays, err := cli.ParseWeekdays(m.AlertForm.Weekdays)
 					if err != nil {
 						// Invalid weekdays; keep user in the form to correct the value
-						m.formError = fmt.Sprintf("Invalid weekdays: %v", err)
-						m.form.State = huh.StateNormal
+						m.FormError = fmt.Sprintf("Invalid weekdays: %v", err)
+						m.Form.State = huh.StateNormal
 						return m, tea.Batch(cmds...)
 					}
 					alert.Recurrence.WeekdayMask = weekdays
 				}
 			}
 
-			if err := m.store.AddAlert(alert); err == nil {
+			if err := m.Store.AddAlert(alert); err == nil {
 				// Refresh alerts list only if add succeeded
-				alertsList, _ := m.store.GetAllAlerts()
-				m.alertsModel.SetAlerts(alertsList)
-				m.formError = "" // Clear any previous errors
-				m.state = constants.StateAlerts
+				alertsList, _ := m.Store.GetAllAlerts()
+				m.AlertsModel.SetAlerts(alertsList)
+				m.FormError = "" // Clear any previous errors
+				m.State = constants.StateAlerts
 			} else {
 				// Store error and stay in form state to allow retry
-				m.formError = fmt.Sprintf("Failed to add alert: %v", err)
-				m.form.State = huh.StateNormal
+				m.FormError = fmt.Sprintf("Failed to add alert: %v", err)
+				m.Form.State = huh.StateNormal
 			}
 		case huh.StateAborted:
-			m.state = constants.StateAlerts
+			m.State = constants.StateAlerts
 		}
 		return m, tea.Batch(cmds...)
 	}
 
 	// Handle Edit OT State
-	if m.state == constants.StateEditOT {
+	if m.State == constants.StateEditOT {
 		if msg, ok := msg.(tea.KeyMsg); ok && msg.Type == tea.KeyEsc {
-			m.formError = "" // Clear error on cancel
-			m.state = constants.StateOT
+			m.FormError = "" // Clear error on cancel
+			m.State = constants.StateOT
 			return m, nil
 		}
 
-		form, cmd := m.form.Update(msg)
+		form, cmd := m.Form.Update(msg)
 		if f, ok := form.(*huh.Form); ok {
-			m.form = f
+			m.Form = f
 		}
 		cmds = append(cmds, cmd)
 
-		switch m.form.State {
+		switch m.Form.State {
 		case huh.StateCompleted:
 			// Save or update OT entry
 			today := time.Now().Format(constants.DateFormat)
 
 			// Trim whitespace from title and note
-			title := strings.TrimSpace(m.otForm.Title)
-			note := strings.TrimSpace(m.otForm.Note)
+			title := strings.TrimSpace(m.OTForm.Title)
+			note := strings.TrimSpace(m.OTForm.Note)
 
 			// Check if entry exists for today
-			existingEntry, err := m.store.GetOTEntry(today)
+			existingEntry, err := m.Store.GetOTEntry(today)
 			if err == nil {
 				// Update existing entry
 				existingEntry.Title = title
 				existingEntry.Note = note
 				existingEntry.UpdatedAt = time.Now()
-				if err := m.store.UpdateOTEntry(existingEntry); err != nil {
+				if err := m.Store.UpdateOTEntry(existingEntry); err != nil {
 					// Store error and stay in form state to allow retry
-					m.formError = fmt.Sprintf("Failed to update OT: %v", err)
-					m.form.State = huh.StateNormal
+					m.FormError = fmt.Sprintf("Failed to update OT: %v", err)
+					m.Form.State = huh.StateNormal
 					return m, tea.Batch(cmds...)
 				}
 				// Reload entry from storage to get a fresh copy
-				updatedEntry, err := m.store.GetOTEntry(today)
+				updatedEntry, err := m.Store.GetOTEntry(today)
 				if err != nil {
 					// Fallback to using the data we just saved if reload fails
-					m.otModel.SetEntry(&existingEntry)
+					m.OTModel.SetEntry(&existingEntry)
 				} else {
-					m.otModel.SetEntry(&updatedEntry)
+					m.OTModel.SetEntry(&updatedEntry)
 				}
 			} else {
 				// Create new entry
@@ -535,115 +536,115 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					CreatedAt: time.Now(),
 					UpdatedAt: time.Now(),
 				}
-				if err := m.store.AddOTEntry(newEntry); err != nil {
+				if err := m.Store.AddOTEntry(newEntry); err != nil {
 					// Store error and stay in form state to allow retry
-					m.formError = fmt.Sprintf("Failed to create OT: %v", err)
-					m.form.State = huh.StateNormal
+					m.FormError = fmt.Sprintf("Failed to create OT: %v", err)
+					m.Form.State = huh.StateNormal
 					return m, tea.Batch(cmds...)
 				}
 				// Reload entry from storage to get a fresh copy
-				savedEntry, err := m.store.GetOTEntry(today)
+				savedEntry, err := m.Store.GetOTEntry(today)
 				if err != nil {
 					// Fallback to using the data we just created if reload fails
-					m.otModel.SetEntry(&newEntry)
+					m.OTModel.SetEntry(&newEntry)
 				} else {
-					m.otModel.SetEntry(&savedEntry)
+					m.OTModel.SetEntry(&savedEntry)
 				}
 			}
-			m.formError = "" // Clear any previous errors
-			m.state = constants.StateOT
+			m.FormError = "" // Clear any previous errors
+			m.State = constants.StateOT
 		case huh.StateAborted:
-			m.formError = "" // Clear error on abort
-			m.state = constants.StateOT
+			m.FormError = "" // Clear error on abort
+			m.State = constants.StateOT
 		}
 		return m, tea.Batch(cmds...)
 	}
 
 	// Handle Edit Settings State
-	if m.state == constants.StateEditSettings {
+	if m.State == constants.StateEditSettings {
 		if msg, ok := msg.(tea.KeyMsg); ok && msg.Type == tea.KeyEsc {
-			m.state = constants.StateSettings
+			m.State = constants.StateSettings
 			return m, nil
 		}
 
-		form, cmd := m.form.Update(msg)
+		form, cmd := m.Form.Update(msg)
 		if f, ok := form.(*huh.Form); ok {
-			m.form = f
+			m.Form = f
 		}
 		cmds = append(cmds, cmd)
 
-		switch m.form.State {
+		switch m.Form.State {
 		case huh.StateCompleted:
 			// Apply settings changes
-			settings, _ := m.store.GetSettings()
-			settings.DayStart = m.settingsForm.DayStart
-			settings.DayEnd = m.settingsForm.DayEnd
+			settings, _ := m.Store.GetSettings()
+			settings.DayStart = m.SettingsForm.DayStart
+			settings.DayEnd = m.SettingsForm.DayEnd
 
 			// Parse and validate DefaultBlockMin
-			blockMin, err := strconv.Atoi(m.settingsForm.DefaultBlockMin)
+			blockMin, err := strconv.Atoi(m.SettingsForm.DefaultBlockMin)
 			if err != nil {
 				// Stay in form state on conversion error
-				m.form.State = huh.StateNormal
+				m.Form.State = huh.StateNormal
 				return m, tea.Batch(cmds...)
 			}
 			settings.DefaultBlockMin = blockMin
 
 			// Timezone setting
-			settings.Timezone = m.settingsForm.Timezone
+			settings.Timezone = m.SettingsForm.Timezone
 
 			// Notification settings
-			settings.NotificationsEnabled = m.settingsForm.NotificationsEnabled
-			settings.NotifyBlockStart = m.settingsForm.NotifyBlockStart
-			settings.NotifyBlockEnd = m.settingsForm.NotifyBlockEnd
+			settings.NotificationsEnabled = m.SettingsForm.NotificationsEnabled
+			settings.NotifyBlockStart = m.SettingsForm.NotifyBlockStart
+			settings.NotifyBlockEnd = m.SettingsForm.NotifyBlockEnd
 
-			startOffset, err := strconv.Atoi(m.settingsForm.BlockStartOffsetMin)
+			startOffset, err := strconv.Atoi(m.SettingsForm.BlockStartOffsetMin)
 			if err == nil {
 				settings.BlockStartOffsetMin = startOffset
 			}
 
-			endOffset, err := strconv.Atoi(m.settingsForm.BlockEndOffsetMin)
+			endOffset, err := strconv.Atoi(m.SettingsForm.BlockEndOffsetMin)
 			if err == nil {
 				settings.BlockEndOffsetMin = endOffset
 			}
 
 			// Apply OT settings changes
-			otSettings, _ := m.store.GetOTSettings()
-			otSettings.PromptOnEmpty = m.settingsForm.PromptOnEmpty
-			otSettings.StrictMode = m.settingsForm.StrictMode
+			otSettings, _ := m.Store.GetOTSettings()
+			otSettings.PromptOnEmpty = m.SettingsForm.PromptOnEmpty
+			otSettings.StrictMode = m.SettingsForm.StrictMode
 
 			// Parse and validate DefaultLogDays
-			logDays, err := strconv.Atoi(m.settingsForm.DefaultLogDays)
+			logDays, err := strconv.Atoi(m.SettingsForm.DefaultLogDays)
 			if err != nil {
 				// Stay in form state on conversion error
-				m.form.State = huh.StateNormal
+				m.Form.State = huh.StateNormal
 				return m, tea.Batch(cmds...)
 			}
 			otSettings.DefaultLogDays = logDays
 
 			// Save settings and check for errors
-			if err := m.store.SaveSettings(settings); err != nil {
+			if err := m.Store.SaveSettings(settings); err != nil {
 				// Stay in form state on save error
-				m.form.State = huh.StateNormal
+				m.Form.State = huh.StateNormal
 				return m, tea.Batch(cmds...)
 			}
 
-			if err := m.store.SaveOTSettings(otSettings); err != nil {
+			if err := m.Store.SaveOTSettings(otSettings); err != nil {
 				// Stay in form state on save error
-				m.form.State = huh.StateNormal
+				m.Form.State = huh.StateNormal
 				return m, tea.Batch(cmds...)
 			}
 
 			// Refresh settings view only after successful save
-			m.settingsModel.SetSettings(settings, otSettings)
-			m.state = constants.StateSettings
+			m.SettingsModel.SetSettings(settings, otSettings)
+			m.State = constants.StateSettings
 		case huh.StateAborted:
-			m.state = constants.StateSettings
+			m.State = constants.StateSettings
 		}
 		return m, tea.Batch(cmds...)
 	}
 
 	// Handle Feedback State
-	if m.state == constants.StateFeedback {
+	if m.State == constants.StateFeedback {
 		if msg, ok := msg.(tea.KeyMsg); ok {
 			var rating models.FeedbackRating
 			switch msg.String() {
@@ -654,7 +655,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "3":
 				rating = constants.FeedbackUnnecessary
 			case "q", "esc":
-				m.state = m.previousState
+				m.State = m.PreviousState
 				return m, nil
 			default:
 				return m, nil
@@ -662,23 +663,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			// Apply feedback
 			today := time.Now().Format(constants.DateFormat)
-			plan, err := m.store.GetPlan(today)
-			if err == nil && m.feedbackSlotID >= 0 && m.feedbackSlotID < len(plan.Slots) {
-				slot := &plan.Slots[m.feedbackSlotID]
+			plan, err := m.Store.GetPlan(today)
+			if err == nil && m.FeedbackSlotID >= 0 && m.FeedbackSlotID < len(plan.Slots) {
+				slot := &plan.Slots[m.FeedbackSlotID]
 				slot.Feedback = &models.Feedback{
 					Rating: rating,
 				}
 				slot.Status = constants.SlotStatusDone
 
 				// Save plan first to ensure feedback is persisted
-				if err := m.store.SavePlan(plan); err != nil {
+				if err := m.Store.SavePlan(plan); err != nil {
 					// On error, revert to previous state
-					m.state = m.previousState
+					m.State = m.PreviousState
 					return m, nil
 				}
 
 				// Update task stats only after plan is saved
-				task, err := m.store.GetTask(slot.TaskID)
+				task, err := m.Store.GetTask(slot.TaskID)
 				if err == nil {
 					switch rating {
 					case constants.FeedbackOnTrack:
@@ -703,116 +704,116 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					task.LastDone = today
 					task.SuccessStreak++
 					// Ignore task update errors to avoid inconsistency if it fails after plan save
-					m.store.UpdateTask(task)
+					m.Store.UpdateTask(task)
 				}
 
 				// Refresh views
-				tasks, err := m.store.GetAllTasks()
+				tasks, err := m.Store.GetAllTasks()
 				if err != nil {
 					// On error, revert to previous state
-					m.state = m.previousState
+					m.State = m.PreviousState
 					return m, nil
 				}
-				tasksIncludingDeleted, _ := m.store.GetAllTasksIncludingDeleted()
-				m.planModel.SetPlan(plan, tasks)
-				m.nowModel.SetPlan(plan, tasks)
-				m.taskList.SetTasks(tasksIncludingDeleted)
+				tasksIncludingDeleted, _ := m.Store.GetAllTasksIncludingDeleted()
+				m.PlanModel.SetPlan(plan, tasks)
+				m.NowModel.SetPlan(plan, tasks)
+				m.TaskList.SetTasks(tasksIncludingDeleted)
 				m.updateValidationStatus()
 			}
 
-			m.state = m.previousState
+			m.State = m.PreviousState
 			return m, nil
 		}
 		return m, nil
 	}
 
 	// Handle Confirm Delete State
-	if m.state == constants.StateConfirmDelete {
+	if m.State == constants.StateConfirmDelete {
 		if msg, ok := msg.(tea.KeyMsg); ok {
 			switch msg.String() {
 			case "y", "Y":
-				if err := m.store.DeleteTask(m.taskToDeleteID); err != nil {
+				if err := m.Store.DeleteTask(m.TaskToDeleteID); err != nil {
 					// On error, silently return to tasks view
-					m.state = constants.StateTasks
-					m.taskToDeleteID = ""
+					m.State = constants.StateTasks
+					m.TaskToDeleteID = ""
 					return m, nil
 				}
 				// Deletion succeeded - always refresh and clear state
-				tasks, err := m.store.GetAllTasksIncludingDeleted()
+				tasks, err := m.Store.GetAllTasksIncludingDeleted()
 				if err == nil {
-					m.taskList.SetTasks(tasks)
+					m.TaskList.SetTasks(tasks)
 				}
 				m.updateValidationStatus()
-				m.state = constants.StateTasks
-				m.taskToDeleteID = ""
+				m.State = constants.StateTasks
+				m.TaskToDeleteID = ""
 			case "n", "N", "esc", "q":
-				m.state = constants.StateTasks
-				m.taskToDeleteID = ""
+				m.State = constants.StateTasks
+				m.TaskToDeleteID = ""
 			}
 		}
 		return m, nil
 	}
 
 	// Handle Confirm Restore State
-	if m.state == constants.StateConfirmRestore {
+	if m.State == constants.StateConfirmRestore {
 		if msg, ok := msg.(tea.KeyMsg); ok {
 			switch msg.String() {
 			case "y", "Y":
-				if m.taskToRestoreID != "" {
-					if err := m.store.RestoreTask(m.taskToRestoreID); err != nil {
+				if m.TaskToRestoreID != "" {
+					if err := m.Store.RestoreTask(m.TaskToRestoreID); err != nil {
 						// On error, silently return to tasks view
-						m.state = constants.StateTasks
-						m.taskToRestoreID = ""
+						m.State = constants.StateTasks
+						m.TaskToRestoreID = ""
 						return m, nil
 					}
 					// Restore succeeded - refresh and clear state
-					tasks, err := m.store.GetAllTasksIncludingDeleted()
+					tasks, err := m.Store.GetAllTasksIncludingDeleted()
 					if err == nil {
-						m.taskList.SetTasks(tasks)
+						m.TaskList.SetTasks(tasks)
 					}
 					m.updateValidationStatus()
-					m.state = constants.StateTasks
-					m.taskToRestoreID = ""
-				} else if m.planToRestoreDate != "" {
-					if err := m.store.RestorePlan(m.planToRestoreDate); err != nil {
+					m.State = constants.StateTasks
+					m.TaskToRestoreID = ""
+				} else if m.PlanToRestoreDate != "" {
+					if err := m.Store.RestorePlan(m.PlanToRestoreDate); err != nil {
 						// On error, silently return to plan view
-						m.state = constants.StatePlan
-						m.planToRestoreDate = ""
+						m.State = constants.StatePlan
+						m.PlanToRestoreDate = ""
 						return m, nil
 					}
 					// Restore succeeded - refresh plan
 					today := time.Now().Format(constants.DateFormat)
-					plan, err := m.store.GetPlan(today)
-					tasks, _ := m.store.GetAllTasksIncludingDeleted()
+					plan, err := m.Store.GetPlan(today)
+					tasks, _ := m.Store.GetAllTasksIncludingDeleted()
 					if err == nil {
-						m.planModel.SetPlan(plan, tasks)
-						m.nowModel.SetPlan(plan, tasks)
+						m.PlanModel.SetPlan(plan, tasks)
+						m.NowModel.SetPlan(plan, tasks)
 					}
 					m.updateValidationStatus()
-					m.state = constants.StatePlan
-					m.planToRestoreDate = ""
+					m.State = constants.StatePlan
+					m.PlanToRestoreDate = ""
 				}
 			case "n", "N", "esc", "q":
-				if m.planToRestoreDate != "" {
-					m.state = constants.StatePlan
+				if m.PlanToRestoreDate != "" {
+					m.State = constants.StatePlan
 				} else {
-					m.state = constants.StateTasks
+					m.State = constants.StateTasks
 				}
-				m.taskToRestoreID = ""
-				m.planToRestoreDate = ""
+				m.TaskToRestoreID = ""
+				m.PlanToRestoreDate = ""
 			}
 		}
 		return m, nil
 	}
 
 	// Handle Confirm Overwrite State
-	if m.state == constants.StateConfirmOverwrite {
+	if m.State == constants.StateConfirmOverwrite {
 		if msg, ok := msg.(tea.KeyMsg); ok {
 			switch msg.String() {
 			case "y", "Y":
 				// Generate new plan (creates new revision)
-				if m.planToOverwriteDate != "" {
-					settings, _ := m.store.GetSettings()
+				if m.PlanToOverwriteDate != "" {
+					settings, _ := m.Store.GetSettings()
 					dayStart := settings.DayStart
 					if dayStart == "" {
 						dayStart = "08:00"
@@ -822,47 +823,47 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						dayEnd = "18:00"
 					}
 
-					tasks, _ := m.store.GetAllTasks()
-					plan, err := m.scheduler.GeneratePlan(m.planToOverwriteDate, tasks, dayStart, dayEnd)
+					tasks, _ := m.Store.GetAllTasks()
+					plan, err := m.Scheduler.GeneratePlan(m.PlanToOverwriteDate, tasks, dayStart, dayEnd)
 					if err == nil {
-						m.store.SavePlan(plan)
-						allTasks, _ := m.store.GetAllTasksIncludingDeleted()
-						m.planModel.SetPlan(plan, allTasks)
-						m.nowModel.SetPlan(plan, allTasks)
-						m.taskList.SetTasks(allTasks)
+						m.Store.SavePlan(plan)
+						allTasks, _ := m.Store.GetAllTasksIncludingDeleted()
+						m.PlanModel.SetPlan(plan, allTasks)
+						m.NowModel.SetPlan(plan, allTasks)
+						m.TaskList.SetTasks(allTasks)
 						m.updateValidationStatus()
 					}
 				}
-				m.state = constants.StatePlan
-				m.planToOverwriteDate = ""
+				m.State = constants.StatePlan
+				m.PlanToOverwriteDate = ""
 			case "n", "N", "esc", "q":
-				m.state = constants.StatePlan
-				m.planToOverwriteDate = ""
+				m.State = constants.StatePlan
+				m.PlanToOverwriteDate = ""
 			}
 		}
 		return m, nil
 	}
 
 	// Handle Confirm Archive State
-	if m.state == constants.StateConfirmArchive {
+	if m.State == constants.StateConfirmArchive {
 		if msg, ok := msg.(tea.KeyMsg); ok {
 			switch msg.String() {
 			case "y", "Y":
-				if err := m.store.ArchiveHabit(m.habitToArchiveID); err != nil {
-					m.state = constants.StateHabits
-					m.habitToArchiveID = ""
+				if err := m.Store.ArchiveHabit(m.HabitToArchiveID); err != nil {
+					m.State = constants.StateHabits
+					m.HabitToArchiveID = ""
 					return m, nil
 				}
 				// Refresh habits list
 				today := time.Now().Format(constants.DateFormat)
-				habitsList, _ := m.store.GetAllHabits(false, true)
-				habitEntries, _ := m.store.GetHabitEntriesForDay(today)
-				m.habitsModel.SetHabits(habitsList, habitEntries)
-				m.state = constants.StateHabits
-				m.habitToArchiveID = ""
+				habitsList, _ := m.Store.GetAllHabits(false, true)
+				habitEntries, _ := m.Store.GetHabitEntriesForDay(today)
+				m.HabitsModel.SetHabits(habitsList, habitEntries)
+				m.State = constants.StateHabits
+				m.HabitToArchiveID = ""
 			case "n", "N", "esc", "q":
-				m.state = constants.StateHabits
-				m.habitToArchiveID = ""
+				m.State = constants.StateHabits
+				m.HabitToArchiveID = ""
 			}
 		}
 		return m, nil
@@ -870,29 +871,29 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-		m.help.Width = msg.Width
+		m.Width = msg.Width
+		m.Height = msg.Height
+		m.Help.Width = msg.Width
 		// Adjust height for tabs and help
 		listHeight := msg.Height - 4 // Approximate height for tabs + help
 
 		h, v := docStyle.GetFrameSize()
-		m.taskList.SetSize(msg.Width-h, listHeight-v)
-		m.planModel.SetSize(msg.Width-h, listHeight-v)
-		m.nowModel.SetSize(msg.Width, listHeight)
-		m.habitsModel.SetSize(msg.Width-h, listHeight-v)
-		m.otModel.SetSize(msg.Width-h, listHeight-v)
-		m.alertsModel.SetSize(msg.Width-h, listHeight-v)
-		m.settingsModel.SetSize(msg.Width-h, listHeight-v)
+		m.TaskList.SetSize(msg.Width-h, listHeight-v)
+		m.PlanModel.SetSize(msg.Width-h, listHeight-v)
+		m.NowModel.SetSize(msg.Width, listHeight)
+		m.HabitsModel.SetSize(msg.Width-h, listHeight-v)
+		m.OTModel.SetSize(msg.Width-h, listHeight-v)
+		m.AlertsModel.SetSize(msg.Width-h, listHeight-v)
+		m.SettingsModel.SetSize(msg.Width-h, listHeight-v)
 
 	case tasklist.DeleteTaskMsg:
-		m.taskToDeleteID = msg.ID
-		m.state = constants.StateConfirmDelete
+		m.TaskToDeleteID = msg.ID
+		m.State = constants.StateConfirmDelete
 		return m, nil
 
 	case tasklist.RestoreTaskMsg:
-		m.taskToRestoreID = msg.ID
-		m.state = constants.StateConfirmRestore
+		m.TaskToRestoreID = msg.ID
+		m.State = constants.StateConfirmRestore
 		return m, nil
 
 	case tasklist.AddTaskMsg:
@@ -907,8 +908,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Priority: 3,
 			Active:   true,
 		}
-		m.editingTask = &task
-		m.taskForm = &TaskFormModel{
+		m.EditingTask = &task
+		m.TaskForm = &state.TaskFormModel{
 			Name:       task.Name,
 			Duration:   strconv.Itoa(task.DurationMin),
 			Recurrence: task.Recurrence.Type,
@@ -916,13 +917,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Priority:   strconv.Itoa(task.Priority),
 			Active:     task.Active,
 		}
-		m.form = newEditForm(m.taskForm)
-		m.state = constants.StateEditing
-		return m, m.form.Init()
+		m.Form = newEditForm(m.TaskForm)
+		m.State = constants.StateEditing
+		return m, m.Form.Init()
 
 	case tasklist.EditTaskMsg:
-		m.editingTask = &msg.Task
-		m.taskForm = &TaskFormModel{
+		m.EditingTask = &msg.Task
+		m.TaskForm = &state.TaskFormModel{
 			Name:       msg.Task.Name,
 			Duration:   strconv.Itoa(msg.Task.DurationMin),
 			Recurrence: msg.Task.Recurrence.Type,
@@ -930,18 +931,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Priority:   strconv.Itoa(msg.Task.Priority),
 			Active:     msg.Task.Active,
 		}
-		m.form = newEditForm(m.taskForm)
-		m.state = constants.StateEditing
-		return m, m.form.Init()
+		m.Form = newEditForm(m.TaskForm)
+		m.State = constants.StateEditing
+		return m, m.Form.Init()
 
 	// Handle habit messages
 	case habits.AddHabitMsg:
-		m.habitForm = &HabitFormModel{
+		m.HabitForm = &state.HabitFormModel{
 			Name: "",
 		}
-		m.form = newHabitForm(m.habitForm)
-		m.state = constants.StateAddHabit
-		return m, m.form.Init()
+		m.Form = newHabitForm(m.HabitForm)
+		m.State = constants.StateAddHabit
+		return m, m.Form.Init()
 
 	case habits.MarkHabitMsg:
 		today := time.Now().Format(constants.DateFormat)
@@ -952,51 +953,51 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		}
-		if err := m.store.AddHabitEntry(entry); err == nil {
-			habitsList, _ := m.store.GetAllHabits(false, true)
-			habitEntries, _ := m.store.GetHabitEntriesForDay(today)
-			m.habitsModel.SetHabits(habitsList, habitEntries)
+		if err := m.Store.AddHabitEntry(entry); err == nil {
+			habitsList, _ := m.Store.GetAllHabits(false, true)
+			habitEntries, _ := m.Store.GetHabitEntriesForDay(today)
+			m.HabitsModel.SetHabits(habitsList, habitEntries)
 		}
 		return m, nil
 
 	case habits.UnmarkHabitMsg:
 		today := time.Now().Format(constants.DateFormat)
-		entry, err := m.store.GetHabitEntry(msg.ID, today)
+		entry, err := m.Store.GetHabitEntry(msg.ID, today)
 		if err == nil {
-			if err := m.store.DeleteHabitEntry(entry.ID); err == nil {
-				habitsList, _ := m.store.GetAllHabits(false, true)
-				habitEntries, _ := m.store.GetHabitEntriesForDay(today)
-				m.habitsModel.SetHabits(habitsList, habitEntries)
+			if err := m.Store.DeleteHabitEntry(entry.ID); err == nil {
+				habitsList, _ := m.Store.GetAllHabits(false, true)
+				habitEntries, _ := m.Store.GetHabitEntriesForDay(today)
+				m.HabitsModel.SetHabits(habitsList, habitEntries)
 			}
 		}
 		return m, nil
 
 	case habits.ArchiveHabitMsg:
-		m.habitToArchiveID = msg.ID
-		m.state = constants.StateConfirmArchive
+		m.HabitToArchiveID = msg.ID
+		m.State = constants.StateConfirmArchive
 		return m, nil
 
 	case habits.DeleteHabitMsg:
-		if err := m.store.DeleteHabit(msg.ID); err == nil {
+		if err := m.Store.DeleteHabit(msg.ID); err == nil {
 			today := time.Now().Format(constants.DateFormat)
-			habitsList, _ := m.store.GetAllHabits(false, true)
-			habitEntries, _ := m.store.GetHabitEntriesForDay(today)
-			m.habitsModel.SetHabits(habitsList, habitEntries)
+			habitsList, _ := m.Store.GetAllHabits(false, true)
+			habitEntries, _ := m.Store.GetHabitEntriesForDay(today)
+			m.HabitsModel.SetHabits(habitsList, habitEntries)
 		}
 		return m, nil
 
 	case habits.RestoreHabitMsg:
-		if err := m.store.RestoreHabit(msg.ID); err == nil {
+		if err := m.Store.RestoreHabit(msg.ID); err == nil {
 			today := time.Now().Format(constants.DateFormat)
-			habitsList, _ := m.store.GetAllHabits(false, true)
-			habitEntries, _ := m.store.GetHabitEntriesForDay(today)
-			m.habitsModel.SetHabits(habitsList, habitEntries)
+			habitsList, _ := m.Store.GetAllHabits(false, true)
+			habitEntries, _ := m.Store.GetHabitEntriesForDay(today)
+			m.HabitsModel.SetHabits(habitsList, habitEntries)
 		}
 		return m, nil
 
 	// Handle alert messages
 	case alerts.AddAlertMsg:
-		m.alertForm = &AlertFormModel{
+		m.AlertForm = &state.AlertFormModel{
 			Message:    "",
 			Time:       "",
 			Date:       "",
@@ -1004,22 +1005,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Interval:   "1",
 			Weekdays:   "",
 		}
-		m.form = newAlertForm(m.alertForm)
-		m.state = constants.StateAddAlert
-		return m, m.form.Init()
+		m.Form = newAlertForm(m.AlertForm)
+		m.State = constants.StateAddAlert
+		return m, m.Form.Init()
 
 	case alerts.DeleteAlertMsg:
-		if err := m.store.DeleteAlert(msg.ID); err == nil {
-			alertsList, _ := m.store.GetAllAlerts()
-			m.alertsModel.SetAlerts(alertsList)
+		if err := m.Store.DeleteAlert(msg.ID); err == nil {
+			alertsList, _ := m.Store.GetAllAlerts()
+			m.AlertsModel.SetAlerts(alertsList)
 		}
 		return m, nil
 
 	// Handle settings messages
 	case settings.EditSettingsMsg:
-		currentSettings, _ := m.store.GetSettings()
-		currentOTSettings, _ := m.store.GetOTSettings()
-		m.settingsForm = &SettingsFormModel{
+		currentSettings, _ := m.Store.GetSettings()
+		currentOTSettings, _ := m.Store.GetOTSettings()
+		m.SettingsForm = &state.SettingsFormModel{
 			DayStart:             currentSettings.DayStart,
 			DayEnd:               currentSettings.DayEnd,
 			DefaultBlockMin:      strconv.Itoa(currentSettings.DefaultBlockMin),
@@ -1033,14 +1034,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			BlockStartOffsetMin:  strconv.Itoa(currentSettings.BlockStartOffsetMin),
 			BlockEndOffsetMin:    strconv.Itoa(currentSettings.BlockEndOffsetMin),
 		}
-		m.form = newSettingsForm(m.settingsForm)
-		m.state = constants.StateEditSettings
-		return m, m.form.Init()
+		m.Form = newSettingsForm(m.SettingsForm)
+		m.State = constants.StateEditSettings
+		return m, m.Form.Init()
 
 	// Handle OT messages
 	case ot.EditOTMsg:
 		today := time.Now().Format(constants.DateFormat)
-		existingEntry, err := m.store.GetOTEntry(today)
+		existingEntry, err := m.Store.GetOTEntry(today)
 
 		// Handle database errors differently from "not found"
 		if err != nil {
@@ -1050,41 +1051,41 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				existingEntry = models.OTEntry{}
 			} else {
 				// Actual database error - show error to user
-				m.formError = fmt.Sprintf("Error loading OT: %v", err)
+				m.FormError = fmt.Sprintf("Error loading OT: %v", err)
 				// Still allow editing with empty form
 				existingEntry = models.OTEntry{}
 			}
 		} else {
 			// Clear any previous form errors only if no error occurred
-			m.formError = ""
+			m.FormError = ""
 		}
 
-		m.otForm = &OTFormModel{
+		m.OTForm = &state.OTFormModel{
 			Title: existingEntry.Title,
 			Note:  existingEntry.Note,
 		}
-		m.form = newOTForm(m.otForm)
-		m.state = constants.StateEditOT
-		return m, m.form.Init()
+		m.Form = newOTForm(m.OTForm)
+		m.State = constants.StateEditOT
+		return m, m.Form.Init()
 
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, m.keys.Quit):
-			m.quitting = true
+		case key.Matches(msg, m.Keys.Quit):
+			m.Quitting = true
 			return m, tea.Quit
-		case key.Matches(msg, m.keys.Tab, m.keys.Right):
-			m.state = (m.state + 1) % constants.NumMainTabs
+		case key.Matches(msg, m.Keys.Tab, m.Keys.Right):
+			m.State = (m.State + 1) % constants.NumMainTabs
 			return m, nil
-		case key.Matches(msg, m.keys.ShiftTab, m.keys.Left):
-			m.state = (m.state - 1 + constants.NumMainTabs) % constants.NumMainTabs
+		case key.Matches(msg, m.Keys.ShiftTab, m.Keys.Left):
+			m.State = (m.State - 1 + constants.NumMainTabs) % constants.NumMainTabs
 			return m, nil
-		case key.Matches(msg, m.keys.Help):
-			m.help.ShowAll = !m.help.ShowAll
+		case key.Matches(msg, m.Keys.Help):
+			m.Help.ShowAll = !m.Help.ShowAll
 			return m, nil
-		case key.Matches(msg, m.keys.Feedback):
+		case key.Matches(msg, m.Keys.Feedback):
 			// Find slot for feedback
 			today := time.Now().Format(constants.DateFormat)
-			plan, err := m.store.GetPlan(today)
+			plan, err := m.Store.GetPlan(today)
 			if err == nil {
 				now := time.Now()
 				currentMinutes := now.Hour()*60 + now.Minute()
@@ -1103,9 +1104,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 
 				if targetSlotIdx != -1 {
-					m.previousState = m.state
-					m.state = constants.StateFeedback
-					m.feedbackSlotID = targetSlotIdx
+					m.PreviousState = m.State
+					m.State = constants.StateFeedback
+					m.FeedbackSlotID = targetSlotIdx
 					return m, nil
 				}
 			}
@@ -1114,28 +1115,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Always update nowModel for time ticks
 	var cmd tea.Cmd
-	m.nowModel, cmd = m.nowModel.Update(msg)
+	m.NowModel, cmd = m.NowModel.Update(msg)
 	cmds = append(cmds, cmd)
 
-	switch m.state {
+	switch m.State {
 	case constants.StateTasks:
-		m.taskList, cmd = m.taskList.Update(msg)
+		m.TaskList, cmd = m.TaskList.Update(msg)
 		cmds = append(cmds, cmd)
 	case constants.StatePlan:
-		if msg, ok := msg.(tea.KeyMsg); ok && key.Matches(msg, m.keys.Generate) {
+		if msg, ok := msg.(tea.KeyMsg); ok && key.Matches(msg, m.Keys.Generate) {
 			// Generate plan
 			today := time.Now().Format(constants.DateFormat)
 
 			// Check if plan already exists
-			_, err := m.store.GetPlan(today)
+			_, err := m.Store.GetPlan(today)
 			if err == nil {
 				// Plan exists, ask for confirmation
-				m.planToOverwriteDate = today
-				m.state = constants.StateConfirmOverwrite
+				m.PlanToOverwriteDate = today
+				m.State = constants.StateConfirmOverwrite
 				return m, nil
 			}
 
-			settings, _ := m.store.GetSettings()
+			settings, _ := m.Store.GetSettings()
 
 			// Default settings if not set
 			dayStart := settings.DayStart
@@ -1147,28 +1148,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				dayEnd = "18:00"
 			}
 
-			tasks, _ := m.store.GetAllTasks()
-			plan, err := m.scheduler.GeneratePlan(today, tasks, dayStart, dayEnd)
+			tasks, _ := m.Store.GetAllTasks()
+			plan, err := m.Scheduler.GeneratePlan(today, tasks, dayStart, dayEnd)
 			if err == nil {
-				m.store.SavePlan(plan)
-				m.planModel.SetPlan(plan, tasks)
-				m.nowModel.SetPlan(plan, tasks)
+				m.Store.SavePlan(plan)
+				m.PlanModel.SetPlan(plan, tasks)
+				m.NowModel.SetPlan(plan, tasks)
 				m.updateValidationStatus()
 			}
 		}
-		m.planModel, cmd = m.planModel.Update(msg)
+		m.PlanModel, cmd = m.PlanModel.Update(msg)
 		cmds = append(cmds, cmd)
 	case constants.StateHabits:
-		m.habitsModel, cmd = m.habitsModel.Update(msg)
+		m.HabitsModel, cmd = m.HabitsModel.Update(msg)
 		cmds = append(cmds, cmd)
 	case constants.StateOT:
-		m.otModel, cmd = m.otModel.Update(msg)
+		m.OTModel, cmd = m.OTModel.Update(msg)
 		cmds = append(cmds, cmd)
 	case constants.StateAlerts:
-		m.alertsModel, cmd = m.alertsModel.Update(msg)
+		m.AlertsModel, cmd = m.AlertsModel.Update(msg)
 		cmds = append(cmds, cmd)
 	case constants.StateSettings:
-		m.settingsModel, cmd = m.settingsModel.Update(msg)
+		m.SettingsModel, cmd = m.SettingsModel.Update(msg)
 		cmds = append(cmds, cmd)
 	case constants.StateNow:
 		// nowModel is already updated above, but if we add specific keys for Now view, handle them here
