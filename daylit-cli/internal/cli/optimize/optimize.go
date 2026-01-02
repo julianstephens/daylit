@@ -242,6 +242,11 @@ func applyOptimization(ctx *cli.Context, opt optimizer.Optimization) error {
 		return nil
 	}
 
+	// Validate the task before updating
+	if err := task.Validate(); err != nil {
+		return fmt.Errorf("task validation failed: %w", err)
+	}
+
 	// Update the task
 	if err := ctx.Store.UpdateTask(task); err != nil {
 		return fmt.Errorf("failed to update task: %w", err)

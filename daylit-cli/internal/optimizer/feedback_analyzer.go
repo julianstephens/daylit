@@ -62,7 +62,6 @@ func (fa *FeedbackAnalyzer) AnalyzeTask(task models.Task, feedbackLimit int) ([]
 	// Count feedback types
 	tooMuchCount := 0
 	unnecessaryCount := 0
-	onTrackCount := 0
 
 	for _, entry := range feedbackHistory {
 		switch entry.Rating {
@@ -70,8 +69,6 @@ func (fa *FeedbackAnalyzer) AnalyzeTask(task models.Task, feedbackLimit int) ([]
 			tooMuchCount++
 		case models.FeedbackUnnecessary:
 			unnecessaryCount++
-		case models.FeedbackOnTrack:
-			onTrackCount++
 		}
 	}
 

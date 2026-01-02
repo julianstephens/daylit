@@ -119,6 +119,7 @@ func TestApplyOptimization_ReduceDuration(t *testing.T) {
 				ID:          "task-1",
 				Name:        "Test Task",
 				DurationMin: 60,
+				Priority:    3,
 				Active:      true,
 			},
 		},
@@ -159,6 +160,7 @@ func TestApplyOptimization_ReduceFrequency(t *testing.T) {
 				ID:          "task-1",
 				Name:        "Test Task",
 				DurationMin: 30,
+				Priority:    3,
 				Active:      true,
 				Recurrence: models.Recurrence{
 					Type:         models.RecurrenceNDays,
@@ -203,6 +205,7 @@ func TestApplyOptimization_InvalidTypeAssertion(t *testing.T) {
 				ID:          "task-1",
 				Name:        "Test Task",
 				DurationMin: 60,
+				Priority:    3,
 				Active:      true,
 			},
 		},

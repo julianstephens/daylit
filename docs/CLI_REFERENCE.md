@@ -258,7 +258,6 @@ daylit optimize [flags]
 
 **Flags:**
 
-- `--dry-run`: Show optimization suggestions without applying them (report mode, default behavior)
 - `--interactive`: Interactively review and apply optimizations one by one
 - `--auto-apply`: Automatically apply all optimizations without confirmation
 - `--feedback-limit INT`: Number of recent feedback entries to analyze per task (default: 10)
@@ -291,7 +290,6 @@ The optimizer analyzes feedback patterns:
 ```bash
 # Review optimization suggestions (dry-run mode)
 daylit optimize
-daylit optimize --dry-run
 
 # Review and selectively apply optimizations
 daylit optimize --interactive
