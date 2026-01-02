@@ -386,6 +386,10 @@ func (s *Store) GetTaskFeedbackHistory(taskID string, limit int) ([]models.TaskF
 		if err == nil {
 			endMin, err := utils.ParseTimeToMinutes(entry.ActualEnd)
 			if err == nil {
+				// Handle slots that span midnight by treating the end time as the next day.
+				if endMin < startMin {
+					endMin += 24 * 60
+				}
 				entry.ActualDuration = endMin - startMin
 			}
 		}
