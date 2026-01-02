@@ -36,11 +36,8 @@ const (
 	BackupFileSuffix = ".db"
 
 	// Notify constants
-	NotifyMaxRetries       = 3
-	NotifyRetryDelay       = 100 * time.Millisecond
-	NotifierLockfileName   = "daylit-tray.lock"
-	NotificationDurationMs = 5000
-	TrayAppIdentifier      = "com.daylit.daylit-tray"
+	NotifyMaxRetries = 3
+	NotifyRetryDelay = 100 * time.Millisecond
 
 	// Slot Status constants
 	SlotStatusPlanned  = "planned"
@@ -66,6 +63,11 @@ const (
 	EnergyLow    EnergyBand = "low"
 	EnergyMedium EnergyBand = "medium"
 	EnergyHigh   EnergyBand = "high"
+
+	// Notification constants
+	NotifierLockfileName   = "daylit-tray.lock"
+	NotificationDurationMs = 5000
+	TrayAppIdentifier      = "com.daylit.daylit-tray"
 
 	// NumMainTabs is the number of main navigation tabs in the TUI
 	NumMainTabs = 7 // Now, Plan, Tasks, Habits, OT, Alerts, Settings

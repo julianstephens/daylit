@@ -43,11 +43,30 @@ func HandleConfirmRestoreState(m *state.Model, msg tea.Msg) tea.Cmd {
 					m.UpdateValidationStatus()
 				}
 				m.TaskToRestoreID = ""
+				m.State = constants.StateTasks
+			} else if m.PlanToRestoreDate != "" {
+				if err := m.Store.RestorePlan(m.PlanToRestoreDate); err == nil {
+					// Restore succeeded - refresh plan
+					today := time.Now().Format(constants.DateFormat)
+					plan, err := m.Store.GetPlan(today)
+					tasks, _ := m.Store.GetAllTasksIncludingDeleted()
+					if err == nil {
+						m.PlanModel.SetPlan(plan, tasks)
+						m.NowModel.SetPlan(plan, tasks)
+					}
+					m.UpdateValidationStatus()
+				}
+				m.PlanToRestoreDate = ""
+				m.State = constants.StatePlan
 			}
-			m.State = constants.StateTasks
 		case "n", "N", "esc":
-			m.TaskToRestoreID = ""
-			m.State = constants.StateTasks
+			if m.PlanToRestoreDate != "" {
+				m.PlanToRestoreDate = ""
+				m.State = constants.StatePlan
+			} else {
+				m.TaskToRestoreID = ""
+				m.State = constants.StateTasks
+			}
 		}
 	}
 	return nil
