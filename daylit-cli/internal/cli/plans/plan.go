@@ -88,7 +88,8 @@ func (c *PlanCmd) Run(ctx *cli.Context) error {
 
 	// Validate both tasks and the generated plan
 	validator := validation.New()
-	taskValidationResult := validator.ValidateTasks(tasks)
+	// Use scoped validation - only validate tasks that would be scheduled on this plan date
+	taskValidationResult := validator.ValidateTasksForDate(tasks, &planDate)
 	planValidationResult := validator.ValidatePlan(plan, tasks, settings.DayStart, settings.DayEnd)
 
 	// Combine validation results
