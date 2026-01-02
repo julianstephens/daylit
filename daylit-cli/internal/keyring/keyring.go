@@ -4,14 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/zalando/go-keyring"
-)
-
-const (
-	// ServiceName is the identifier for daylit in the OS keyring
-	ServiceName = "daylit"
-	// DefaultUser is the default user/account name for keyring entries
-	DefaultUser = "database-connection"
 )
 
 var (
@@ -24,7 +18,7 @@ var (
 // GetConnectionString retrieves the database connection string from the OS keyring.
 // Returns ErrNotFound if no credentials are stored.
 func GetConnectionString() (string, error) {
-	connStr, err := keyring.Get(ServiceName, DefaultUser)
+	connStr, err := keyring.Get(constants.AppName, constants.DefaultKeyringUser)
 	if err != nil {
 		if err == keyring.ErrNotFound {
 			return "", ErrNotFound
@@ -40,7 +34,7 @@ func SetConnectionString(connStr string) error {
 	if connStr == "" {
 		return errors.New("connection string cannot be empty")
 	}
-	err := keyring.Set(ServiceName, DefaultUser, connStr)
+	err := keyring.Set(constants.AppName, constants.DefaultKeyringUser, connStr)
 	if err != nil {
 		return fmt.Errorf("failed to store credentials in keyring: %w", err)
 	}
@@ -49,7 +43,7 @@ func SetConnectionString(connStr string) error {
 
 // DeleteConnectionString removes the database connection string from the OS keyring.
 func DeleteConnectionString() error {
-	err := keyring.Delete(ServiceName, DefaultUser)
+	err := keyring.Delete(constants.AppName, constants.DefaultKeyringUser)
 	if err != nil {
 		if err == keyring.ErrNotFound {
 			return ErrNotFound
@@ -64,7 +58,7 @@ func DeleteConnectionString() error {
 func IsAvailable() bool {
 	// Try to perform a read operation to test availability
 	// We don't care about the result, just whether the operation succeeds or fails
-	_, err := keyring.Get(ServiceName, "test-availability")
+	_, err := keyring.Get(constants.AppName, "test-availability")
 	// If the error is ErrNotFound, the keyring is available but empty
 	// Any other error likely indicates the keyring is not available
 	return err == nil || err == keyring.ErrNotFound
