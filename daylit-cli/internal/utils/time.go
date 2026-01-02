@@ -5,7 +5,23 @@ import (
 	"time"
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
+	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 )
+
+// GetTodayInTimezone returns today's date string (YYYY-MM-DD) in the specified timezone.
+// This ensures that "today" is determined by the user's configured timezone, not the system timezone.
+func GetTodayInTimezone(timezone string) (string, error) {
+	now, err := NowInTimezone(timezone)
+	if err != nil {
+		return "", err
+	}
+	return now.Format(constants.DateFormat), nil
+}
+
+// GetTodayFromSettings returns today's date string (YYYY-MM-DD) using the timezone from settings.
+func GetTodayFromSettings(settings models.Settings) (string, error) {
+	return GetTodayInTimezone(settings.Timezone)
+}
 
 // LoadLocation loads a timezone location from an IANA timezone name.
 // If the timezone is "Local" or empty, it returns the system's local timezone.

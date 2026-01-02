@@ -222,6 +222,20 @@ func newSettingsForm(fm *SettingsFormModel) *huh.Form {
 					}
 					return nil
 				}),
+			huh.NewInput().
+				Title("Timezone (IANA name or 'Local')").
+				Description("Examples: Local, UTC, America/New_York, Europe/London, Asia/Tokyo").
+				Value(&fm.Timezone).
+				Validate(func(s string) error {
+					if s == "" || s == "Local" {
+						return nil
+					}
+					_, err := time.LoadLocation(s)
+					if err != nil {
+						return fmt.Errorf("invalid timezone name")
+					}
+					return nil
+				}),
 			huh.NewConfirm().
 				Title("Prompt On Empty").
 				Value(&fm.PromptOnEmpty),
@@ -577,6 +591,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Batch(cmds...)
 			}
 			settings.DefaultBlockMin = blockMin
+
+			// Timezone setting
+			settings.Timezone = m.settingsForm.Timezone
 
 			// Notification settings
 			settings.NotificationsEnabled = m.settingsForm.NotificationsEnabled
@@ -1010,6 +1027,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			DayStart:             currentSettings.DayStart,
 			DayEnd:               currentSettings.DayEnd,
 			DefaultBlockMin:      strconv.Itoa(currentSettings.DefaultBlockMin),
+			Timezone:             currentSettings.Timezone,
 			PromptOnEmpty:        currentOTSettings.PromptOnEmpty,
 			StrictMode:           currentOTSettings.StrictMode,
 			DefaultLogDays:       strconv.Itoa(currentOTSettings.DefaultLogDays),

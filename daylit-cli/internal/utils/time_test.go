@@ -3,7 +3,110 @@ package utils
 import (
 	"testing"
 	"time"
+
+	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
+	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 )
+
+func TestGetTodayInTimezone(t *testing.T) {
+	tests := []struct {
+		name     string
+		timezone string
+		wantErr  bool
+	}{
+		{
+			name:     "Local timezone",
+			timezone: "Local",
+			wantErr:  false,
+		},
+		{
+			name:     "UTC timezone",
+			timezone: "UTC",
+			wantErr:  false,
+		},
+		{
+			name:     "America/New_York timezone",
+			timezone: "America/New_York",
+			wantErr:  false,
+		},
+		{
+			name:     "invalid timezone",
+			timezone: "Invalid/Timezone",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			today, err := GetTodayInTimezone(tt.timezone)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetTodayInTimezone() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr {
+				// Verify the format is YYYY-MM-DD
+				_, err := time.Parse(constants.DateFormat, today)
+				if err != nil {
+					t.Errorf("GetTodayInTimezone() returned invalid date format: %v", today)
+				}
+			}
+		})
+	}
+}
+
+func TestGetTodayFromSettings(t *testing.T) {
+	tests := []struct {
+		name     string
+		settings models.Settings
+		wantErr  bool
+	}{
+		{
+			name: "Local timezone in settings",
+			settings: models.Settings{
+				Timezone: "Local",
+			},
+			wantErr: false,
+		},
+		{
+			name: "UTC timezone in settings",
+			settings: models.Settings{
+				Timezone: "UTC",
+			},
+			wantErr: false,
+		},
+		{
+			name: "empty timezone in settings defaults to Local",
+			settings: models.Settings{
+				Timezone: "",
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid timezone in settings",
+			settings: models.Settings{
+				Timezone: "Invalid/Timezone",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			today, err := GetTodayFromSettings(tt.settings)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetTodayFromSettings() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr {
+				// Verify the format is YYYY-MM-DD
+				_, err := time.Parse(constants.DateFormat, today)
+				if err != nil {
+					t.Errorf("GetTodayFromSettings() returned invalid date format: %v", today)
+				}
+			}
+		})
+	}
+}
 
 func TestLoadLocation(t *testing.T) {
 	tests := []struct {
