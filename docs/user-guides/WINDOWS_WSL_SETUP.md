@@ -46,10 +46,14 @@ We recommend using a hosted database (like Supabase, Neon, or AWS RDS) for the b
 2.  Create the database and user as described in the [PostgreSQL Setup Guide](POSTGRES_SETUP.md).
 3.  **Important**: You must configure PostgreSQL to listen on all interfaces and allow connections from WSL.
     -   Edit `postgresql.conf`: Set `listen_addresses = '*'`.
-    -   Edit `pg_hba.conf`: Add a line to allow the WSL subnet (often `172.x.x.x` or `192.168.x.x`).
+    -   Edit `pg_hba.conf`: Add a line to allow **only** the WSL subnet (often `172.x.x.x` or `192.168.x.x`). For example:
         ```
-        host    all             all             0.0.0.0/0            scram-sha-256
+        # Replace 172.22.0.0/16 with your actual WSL subnet
+        host    all             all             172.22.0.0/16        scram-sha-256
         ```
+        You can find your WSL IP/subnet with `ip addr` inside WSL or via `ipconfig` on Windows and then adjust the CIDR accordingly.
+
+        **Security warning:** Do **not** use `0.0.0.0/0` in `pg_hba.conf` for production or internet-accessible PostgreSQL instances, as it allows connections from any IPv4 address.
     -   Restart the PostgreSQL service.
 
 ## Step 2: Configure Windows (Tray App)
