@@ -17,6 +17,7 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli/system"
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli/tasks"
 	_ "github.com/julianstephens/daylit/daylit-cli/internal/constants"
+	"github.com/julianstephens/daylit/daylit-cli/internal/keyring"
 	"github.com/julianstephens/daylit/daylit-cli/internal/scheduler"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage/postgres"
@@ -54,8 +55,14 @@ type CLI struct {
 		Task tasks.TaskRestoreCmd `cmd:"" help:"Restore a deleted task."`
 		Plan plans.PlanRestoreCmd `cmd:"" help:"Restore a deleted plan."`
 	} `cmd:"" help:"Restore deleted items."`
-	Habit    habits.HabitCmd      `cmd:"" help:"Manage habits and habit tracking."`
-	OT       ot.OTCmd             `cmd:"" help:"Manage Once-Today (OT) intentions."`
+	Habit   habits.HabitCmd      `cmd:"" help:"Manage habits and habit tracking."`
+	OT      ot.OTCmd             `cmd:"" help:"Manage Once-Today (OT) intentions."`
+	Keyring struct {
+		Set    system.KeyringSetCmd    `cmd:"" help:"Store database connection string in OS keyring."`
+		Get    system.KeyringGetCmd    `cmd:"" help:"Retrieve database connection string from OS keyring."`
+		Delete system.KeyringDeleteCmd `cmd:"" help:"Remove database connection string from OS keyring."`
+		Status system.KeyringStatusCmd `cmd:"" help:"Check OS keyring availability and status."`
+	} `cmd:"" help:"Manage database credentials in OS keyring."`
 	Settings settings.SettingsCmd `cmd:"" help:"Manage application settings."`
 	Notify   system.NotifyCmd     `cmd:"" hidden:"" help:"Send a notification (used internally)."`
 
@@ -63,45 +70,70 @@ type CLI struct {
 }
 
 func (c *CLI) AfterApply(ctx *kong.Context) error {
+	// Skip keyring lookup for keyring management commands
+	cmdPath := ctx.Command()
+	if strings.HasPrefix(cmdPath, "keyring") {
+		return nil
+	}
+
 	// Initialize storage based on config format
 	var store storage.Provider
 
+	configToUse := c.Config
+
+	// If config is still the default SQLite path and no DAYLIT_CONFIG env var is set,
+	// try to retrieve from keyring
+	if configToUse == "~/.config/daylit/daylit.db" && os.Getenv("DAYLIT_CONFIG") == "" {
+		keyringConnStr, err := keyring.GetConnectionString()
+		if err == nil {
+			// Successfully retrieved from keyring
+			configToUse = keyringConnStr
+		} else if !errors.Is(err, keyring.ErrNotFound) {
+			// Keyring error (not just "not found")
+			fmt.Fprintf(os.Stderr, "⚠️  Warning: Failed to access OS keyring: %v\n", err)
+			fmt.Fprintf(os.Stderr, "   Falling back to default SQLite configuration.\n")
+		}
+		// If ErrNotFound, silently fall back to SQLite
+	}
+
 	// Check for Postgres URL or DSN format
-	isPostgres := strings.HasPrefix(c.Config, "postgres://") ||
-		strings.HasPrefix(c.Config, "postgresql://") ||
+	isPostgres := strings.HasPrefix(configToUse, "postgres://") ||
+		strings.HasPrefix(configToUse, "postgresql://") ||
 		// Simple DSN heuristic: contains space and common keys
-		(strings.Contains(c.Config, " ") &&
-			(strings.Contains(c.Config, "host=") ||
-				strings.Contains(c.Config, "dbname=") ||
-				strings.Contains(c.Config, "user=") ||
-				strings.Contains(c.Config, "sslmode=")))
+		(strings.Contains(configToUse, " ") &&
+			(strings.Contains(configToUse, "host=") ||
+				strings.Contains(configToUse, "dbname=") ||
+				strings.Contains(configToUse, "user=") ||
+				strings.Contains(configToUse, "sslmode=")))
 
 	if isPostgres {
 		// PostgreSQL connection string detected - validate for embedded credentials
 		// We only enforce this check if the config was NOT sourced from the environment
-		// (e.g. came from command line flags, which are visible in the process list).
+		// or keyring (e.g. came from command line flags, which are visible in the process list).
 		envConfig := os.Getenv("DAYLIT_CONFIG")
-		configFromEnv := envConfig != "" && envConfig == c.Config
+		configFromEnv := envConfig != "" && envConfig == configToUse
+		configFromKeyring := configToUse != c.Config
 
-		_, err := postgres.ValidateConnString(c.Config)
+		_, err := postgres.ValidateConnString(configToUse)
 		hasPasswordError := err != nil && errors.Is(err, postgres.ErrEmbeddedCredentials)
 
-		if !configFromEnv && hasPasswordError {
+		if !configFromEnv && !configFromKeyring && hasPasswordError {
 			fmt.Fprintf(os.Stderr, "❌ Error: PostgreSQL connection strings with embedded credentials are NOT allowed via command line flags.\n")
 			fmt.Fprintf(os.Stderr, "       Use one of these secure alternatives:\n")
 			fmt.Fprintf(os.Stderr, "       1. Environment:   export DAYLIT_CONFIG=\"postgresql://user:your_password@host:5432/daylit\"\n")
 			fmt.Fprintf(os.Stderr, "       2. .pgpass file:  Create ~/.pgpass with credentials\n")
+			fmt.Fprintf(os.Stderr, "       3. OS keyring:    daylit keyring set \"postgresql://user:your_password@host:5432/daylit\"\n")
 			fmt.Fprintf(os.Stderr, "\n       For more information, see docs/user-guides/POSTGRES_SETUP.md\n")
 			os.Exit(1)
 		} else if configFromEnv && hasPasswordError {
 			// Warn user about embedded credentials in environment variable
 			fmt.Fprintf(os.Stderr, "⚠️  Warning: Using embedded credentials in DAYLIT_CONFIG environment variable.\n")
-			fmt.Fprintf(os.Stderr, "            Consider using a .pgpass file for better security.\n")
+			fmt.Fprintf(os.Stderr, "            Consider using a .pgpass file or OS keyring for better security.\n")
 		}
-		store = postgres.New(c.Config)
+		store = postgres.New(configToUse)
 	} else {
 		// Default to SQLite
-		store = storage.NewSQLiteStore(c.Config)
+		store = storage.NewSQLiteStore(configToUse)
 	}
 
 	c.store = store
