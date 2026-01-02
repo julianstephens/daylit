@@ -249,7 +249,8 @@ func (s *Store) UpdateTask(task models.Task) error {
 	if task.Recurrence.MonthDay != 0 {
 		recMonthDay = sql.NullInt64{Int64: int64(task.Recurrence.MonthDay), Valid: true}
 	}
-	if task.Recurrence.WeekOccurrence != 0 {
+	if task.Recurrence.WeekOccurrence != 0 || task.Recurrence.Type == constants.RecurrenceMonthlyDay {
+		// For monthly_day, -1 is a valid value (last occurrence), so we need to check the type
 		recWeekOccurrence = sql.NullInt64{Int64: int64(task.Recurrence.WeekOccurrence), Valid: true}
 	}
 	if task.Recurrence.Month != 0 {

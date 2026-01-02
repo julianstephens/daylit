@@ -54,6 +54,8 @@ func (c *TaskAddCmd) Validate() error {
 		if c.MonthDay < 1 || c.MonthDay > 31 {
 			return fmt.Errorf("month_day must be between 1 and 31 for monthly_date recurrence")
 		}
+		// Note: We allow day 31 even though some months don't have it.
+		// The scheduler will skip those months.
 	}
 
 	// Validate monthly_day recurrence
@@ -74,6 +76,8 @@ func (c *TaskAddCmd) Validate() error {
 		if c.MonthDay < 1 || c.MonthDay > 31 {
 			return fmt.Errorf("month_day must be between 1 and 31 for yearly recurrence")
 		}
+		// Note: We allow potentially invalid dates like Feb 31.
+		// The scheduler will skip years where this date doesn't exist.
 	}
 
 	// Validate time formats

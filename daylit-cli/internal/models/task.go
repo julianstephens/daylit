@@ -58,6 +58,8 @@ func (t *Task) Validate() error {
 		if t.Recurrence.MonthDay < 1 || t.Recurrence.MonthDay > 31 {
 			return fmt.Errorf("month day must be between 1 and 31 for monthly_date recurrence")
 		}
+		// Note: We allow day 31 even though some months don't have 31 days.
+		// The scheduler will skip those months (e.g., Feb 31 won't schedule in February).
 	}
 	if t.Recurrence.Type == constants.RecurrenceMonthlyDay {
 		if t.Recurrence.WeekOccurrence < -1 || t.Recurrence.WeekOccurrence == 0 || t.Recurrence.WeekOccurrence > 5 {
@@ -71,6 +73,8 @@ func (t *Task) Validate() error {
 		if t.Recurrence.MonthDay < 1 || t.Recurrence.MonthDay > 31 {
 			return fmt.Errorf("month day must be between 1 and 31 for yearly recurrence")
 		}
+		// Note: We allow potentially invalid dates like Feb 31.
+		// The scheduler will skip years where this date doesn't exist.
 	}
 
 	return nil

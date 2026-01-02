@@ -38,6 +38,11 @@ func ShouldScheduleTask(task models.Task, date time.Time) bool {
 		return daysSince >= task.Recurrence.IntervalDays
 	case constants.RecurrenceMonthlyDate:
 		// Schedule on the specified day of each month
+		// If the day doesn't exist in the current month (e.g., Feb 31), skip it
+		if date.Day() != task.Recurrence.MonthDay {
+			return false
+		}
+		// Double-check the month day hasn't wrapped (e.g., setting day 31 in February)
 		return date.Day() == task.Recurrence.MonthDay
 	case constants.RecurrenceMonthlyDay:
 		// Schedule on a specific weekday occurrence in the month
@@ -45,7 +50,11 @@ func ShouldScheduleTask(task models.Task, date time.Time) bool {
 		return isNthWeekdayOfMonth(date, task.Recurrence.DayOfWeekInMonth, task.Recurrence.WeekOccurrence)
 	case constants.RecurrenceYearly:
 		// Schedule on a specific date each year
-		return date.Month() == time.Month(task.Recurrence.Month) && date.Day() == task.Recurrence.MonthDay
+		// If the date doesn't exist (e.g., Feb 29 in non-leap years), skip it
+		if date.Month() != time.Month(task.Recurrence.Month) {
+			return false
+		}
+		return date.Day() == task.Recurrence.MonthDay
 	case constants.RecurrenceWeekdays:
 		// Schedule every weekday (Monday through Friday)
 		wd := date.Weekday()
@@ -74,6 +83,12 @@ func isNthWeekdayOfMonth(date time.Time, weekday time.Weekday, occurrence int) b
 	// Count which occurrence this is
 	day := date.Day()
 	occurrenceNum := (day-1)/7 + 1
+
+	// Validate that the occurrence number is reasonable for this month
+	// A month can have at most 5 occurrences of any weekday
+	if occurrence < 1 || occurrence > 5 {
+		return false
+	}
 
 	return occurrenceNum == occurrence
 }
