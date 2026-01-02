@@ -120,20 +120,26 @@ The timezone can be set to:
 
 ### How It Works
 
-1. **Date Determination**: When determining "today's date", daylit uses the configured timezone rather than just the system timezone
-2. **Time Storage**: Times are stored as strings (`HH:MM` for time-of-day, `YYYY-MM-DD` for dates) which are timezone-independent
-3. **Timestamps**: Full timestamps (like `created_at`, `last_sent`) are stored in RFC3339 format which includes timezone information
-4. **Scheduling**: When scheduling tasks and alerts, time windows are interpreted in the configured timezone
+The timezone configuration provides infrastructure for future timezone-aware operations:
 
-### Use Cases
+1. **Time Storage**: Times are stored as strings (`HH:MM` for time-of-day, `YYYY-MM-DD` for dates) which are timezone-independent
+2. **Timestamps**: Full timestamps (like `created_at`, `last_sent`) are stored in RFC3339 format which includes timezone information
+3. **Current Behavior**: The application currently uses the system's local timezone for all date/time operations via `time.Now()`
+4. **Future Integration**: Utility functions have been created (`GetTodayInTimezone`, `ParseDateInLocation`, etc.) to enable timezone-aware scheduling in future updates
 
-- **Traveling**: If you travel from New York to London, you can update your timezone setting to `Europe/London` and daylit will correctly determine today's date and schedule times according to London time
-- **Remote Work**: If you work with a team in a different timezone, you can set your timezone to match theirs for consistent scheduling
-- **Consistency**: By explicitly setting your timezone, you ensure daylit behaves consistently even if your system timezone changes
+### Planned Use Cases
 
-### Important Notes
+Once fully integrated, the timezone setting will enable:
 
-- Changing the timezone setting affects how "today" is determined going forward
-- Existing timestamps are preserved and will be interpreted in the context of the new timezone
-- The timezone setting does not retroactively change historical data - it only affects current and future date/time interpretations
-- When using `Local`, daylit will automatically adapt to system timezone changes (useful for travelers who adjust their system clock)
+- **Traveling**: Update your timezone setting to match your current location for accurate date determination
+- **Remote Work**: Set your timezone to match your team's timezone for consistent scheduling
+- **Consistency**: Explicitly set your timezone to ensure consistent behavior regardless of system timezone changes
+
+### Current Status
+
+The timezone setting is **stored and configurable** but not yet integrated into the application logic. The infrastructure is in place with utility functions ready for integration:
+- `GetTodayInTimezone(timezone)` - determines "today" in the configured timezone
+- `NowInTimezone(timezone)` - gets current time in the configured timezone
+- `ParseDateInLocation()`, `CombineDateAndTime()` - timezone-aware parsing functions
+
+Future updates will integrate these functions throughout the codebase to replace direct `time.Now()` calls.

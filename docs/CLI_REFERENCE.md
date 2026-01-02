@@ -1246,8 +1246,9 @@ The timezone setting controls how daylit interprets dates and times. This is par
 - IANA timezone names: `America/New_York`, `Europe/London`, `Asia/Tokyo`, `UTC`, etc.
 
 **Important notes:**
-- Changing the timezone affects how "today" is determined and when notifications are triggered
-- Existing timestamps and schedules are preserved and interpreted in the new timezone
+- This setting is stored for future use in timezone-aware scheduling and notifications
+- Currently, the application uses your system's local timezone for date/time operations
+- Future updates will integrate this setting to affect how "today" is determined and when notifications are triggered
 - Use the full IANA timezone name (e.g., `America/New_York` not `EST`)
 
 **Example:**

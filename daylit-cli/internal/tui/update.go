@@ -227,11 +227,7 @@ func newSettingsForm(fm *SettingsFormModel) *huh.Form {
 				Description("Examples: Local, UTC, America/New_York, Europe/London, Asia/Tokyo").
 				Value(&fm.Timezone).
 				Validate(func(s string) error {
-					if s == "" || s == "Local" {
-						return nil
-					}
-					_, err := time.LoadLocation(s)
-					if err != nil {
+					if !utils.ValidateTimezone(s) {
 						return fmt.Errorf("invalid timezone name")
 					}
 					return nil
