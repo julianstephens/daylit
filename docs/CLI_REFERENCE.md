@@ -32,20 +32,20 @@ The TUI provides a dashboard with seven main views:
 
 **Key Bindings:**
 
--   `Tab` / `Shift+Tab`: Switch between tabs.
--   `h` / `l`: Switch between tabs (Vim style).
--   `j` / `k`: Navigate up/down in lists.
--   `g`: Generate plan (in Plan tab).
--   `a`: Add task (in Tasks tab), habit (in Habits tab), or alert (in Alerts tab).
--   `e`: Edit task (in Tasks tab), OT (in OT tab), or settings (in Settings tab).
--   `d`: Delete task (in Tasks tab), habit (in Habits tab), or alert (in Alerts tab).
--   `m`: Mark habit as done (in Habits tab).
--   `u`: Unmark habit (in Habits tab).
--   `x`: Archive habit (in Habits tab).
--   `r`: Restore deleted task/habit.
--   `f`: Give feedback on last task.
--   `?`: Toggle help.
--   `q` / `Ctrl+C`: Quit.
+- `Tab` / `Shift+Tab`: Switch between tabs.
+- `h` / `l`: Switch between tabs (Vim style).
+- `j` / `k`: Navigate up/down in lists.
+- `g`: Generate plan (in Plan tab).
+- `a`: Add task (in Tasks tab), habit (in Habits tab), or alert (in Alerts tab).
+- `e`: Edit task (in Tasks tab), OT (in OT tab), or settings (in Settings tab).
+- `d`: Delete task (in Tasks tab), habit (in Habits tab), or alert (in Alerts tab).
+- `m`: Mark habit as done (in Habits tab).
+- `u`: Unmark habit (in Habits tab).
+- `x`: Archive habit (in Habits tab).
+- `r`: Restore deleted task/habit.
+- `f`: Give feedback on last task.
+- `?`: Toggle help.
+- `q` / `Ctrl+C`: Quit.
 
 ## `daylit task`
 
@@ -161,6 +161,7 @@ daylit plan [date]
 - `date`: Date to plan, either `today` or in `YYYY-MM-DD` format (default: `today`)
 
 The command will:
+
 1. Show the proposed plan
 2. Ask if you want to accept it
 3. If accepted, save the plan as committed
@@ -242,6 +243,7 @@ daylit feedback --rating RATING [flags]
 - `--note STRING`: Optional note about the task
 
 The feedback helps `daylit` adjust future plans:
+
 - `on_track`: Task duration was appropriate
 - `too_much`: Task was too ambitious, will reduce duration in future
 - `unnecessary`: Task wasn't needed, will reduce frequency
@@ -271,6 +273,7 @@ daylit optimize [flags]
 **How it works:**
 
 The optimizer analyzes feedback patterns:
+
 - **Too much feedback (>50%)**: Suggests reducing duration by 25% for longer tasks, or splitting shorter tasks (30 minutes or less)
 - **Unnecessary feedback (≥3 instances or >40%)**: Suggests reducing frequency or removing the task
 - **Mixed feedback**: No optimization suggested; task is performing acceptably
@@ -380,6 +383,7 @@ daylit backup list
 ```
 
 Shows:
+
 - Timestamp of each backup
 - Filename
 - File size
@@ -400,6 +404,7 @@ daylit backup restore <backup-file>
   - Full path to a backup file
 
 **Safety:**
+
 - Prompts for confirmation before restoring
 - Automatically creates a backup of the current database before restoring
 - Verifies backup file integrity before restoring
@@ -420,11 +425,13 @@ daylit backup restore /path/to/backup/daylit-20250130-1230.db
 **Automatic Backups:**
 
 The application automatically creates backups:
+
 - When launching the TUI (`daylit tui` or `daylit`)
 - When generating a plan (`daylit plan`)
 - Before restoring from a backup
 
 Backup retention:
+
 - Keeps the 14 most recent backups
 - Automatically deletes older backups
 
@@ -500,6 +507,7 @@ daylit doctor
 6. **Clock/timezone sanity**: Verifies system time is reasonable
 
 **Exit codes:**
+
 - `0`: All checks passed (warnings are acceptable)
 - `1`: One or more critical checks failed
 
@@ -521,6 +529,7 @@ All diagnostics passed!
 ```
 
 **When to use:**
+
 - After upgrading daylit to verify compatibility
 - When experiencing unexpected behavior
 - Before submitting bug reports
@@ -535,6 +544,7 @@ daylit validate
 ```
 
 This command checks for:
+
 - Overlapping fixed appointments
 - Invalid time ranges
 - Logical inconsistencies in task definitions
@@ -559,6 +569,7 @@ daylit debug db-path
 ```
 
 **Output:**
+
 ```json
 {
   "path": "/home/user/.config/daylit/daylit.db"
@@ -574,9 +585,11 @@ daylit debug dump-plan <date>
 ```
 
 **Arguments:**
+
 - `date`: Date in `YYYY-MM-DD` format, or `today`
 
 **Example:**
+
 ```bash
 # Dump today's plan
 daylit debug dump-plan today
@@ -586,6 +599,7 @@ daylit debug dump-plan 2025-01-15
 ```
 
 **Output:**
+
 ```json
 {
   "date": "2025-01-15",
@@ -603,6 +617,7 @@ daylit debug dump-plan 2025-01-15
 ```
 
 **Error handling:**
+
 - Returns non-zero exit code if plan doesn't exist
 - Validates date format before querying
 
@@ -615,14 +630,17 @@ daylit debug dump-task <id>
 ```
 
 **Arguments:**
+
 - `id`: Task UUID
 
 **Example:**
+
 ```bash
 daylit debug dump-task abc-123-def-456
 ```
 
 **Output:**
+
 ```json
 {
   "id": "abc-123-def-456",
@@ -643,10 +661,12 @@ daylit debug dump-task abc-123-def-456
 ```
 
 **Error handling:**
+
 - Returns non-zero exit code if task doesn't exist
 - Provides clear error messages for invalid IDs
 
 **Use cases for debug commands:**
+
 - Inspecting plan structure for debugging
 - Exporting data for analysis or backup
 - Scripting and automation
@@ -665,6 +685,7 @@ daylit habit add <name>
 ```
 
 **Arguments:**
+
 - `name`: Name of the habit (e.g., "Morning meditation", "Evening reading")
 
 **Example:**
@@ -684,6 +705,7 @@ daylit habit list [flags]
 ```
 
 **Flags:**
+
 - `--archived`: Include archived habits in the list
 - `--deleted`: Include soft-deleted habits in the list
 
@@ -711,9 +733,11 @@ daylit habit mark <name> [flags]
 ```
 
 **Arguments:**
+
 - `name`: Name of the habit to mark
 
 **Flags:**
+
 - `--date DATE`: Date in YYYY-MM-DD format (default: today)
 - `--note TEXT`: Optional note about this completion
 
@@ -742,6 +766,7 @@ daylit habit today
 ```
 
 Shows:
+
 - `[x]` for habits marked today
 - `[ ]` for habits not yet marked today
 - Summary of recorded habits (e.g., "Recorded: 2/3")
@@ -768,10 +793,12 @@ daylit habit log [flags]
 ```
 
 **Flags:**
+
 - `--days N`: Number of days to show (default: 14)
 - `--habit NAME`: Show log for specific habit only
 
 Shows a visual grid where:
+
 - `x` indicates the habit was completed that day
 - `.` indicates the habit was not completed that day
 
@@ -795,8 +822,8 @@ Habit log (last 7 days):
 
 Habit                12/25 12/26 12/27 12/28 12/29 12/30 12/31
 --------------------------------------------------------------
-Morning meditation    x     x     .     x     x     .     x   
-Daily exercise        .     x     x     .     .     x     x   
+Morning meditation    x     x     .     x     x     .     x
+Daily exercise        .     x     x     .     .     x     x
 Reading before bed    x     .     x     x     x     x     .
 ```
 
@@ -809,9 +836,11 @@ daylit habit archive <name> [flags]
 ```
 
 **Arguments:**
+
 - `name`: Name of the habit to archive
 
 **Flags:**
+
 - `--unarchive`: Unarchive the habit instead
 
 **Example:**
@@ -833,6 +862,7 @@ daylit habit delete <name>
 ```
 
 **Arguments:**
+
 - `name`: Name of the habit to delete
 
 **Example:**
@@ -850,6 +880,7 @@ daylit habit restore <name>
 ```
 
 **Arguments:**
+
 - `name`: Name of the deleted habit to restore
 
 **Example:**
@@ -857,7 +888,6 @@ daylit habit restore <name>
 ```bash
 daylit habit restore "Obsolete habit"
 ```
-
 
 ## `daylit alert`
 
@@ -872,9 +902,11 @@ daylit alert add MESSAGE --time TIME [flags]
 ```
 
 **Arguments:**
+
 - `MESSAGE`: The alert message to display
 
 **Flags:**
+
 - `--time STRING` (required): Time for the alert in HH:MM format
 - `--date STRING`: Date for one-time alert in YYYY-MM-DD format
 - `--recurrence STRING`: Recurrence type for recurring alerts: `daily`, `weekly`, or `n_days`
@@ -927,6 +959,7 @@ daylit alert delete <id>
 ```
 
 **Arguments:**
+
 - `id`: The alert ID (shown in `daylit alert list`)
 
 **Example:**
@@ -955,6 +988,7 @@ daylit ot init
 ```
 
 Creates the OT settings with defaults:
+
 - `prompt_on_empty`: true (prompts when no OT set)
 - `strict_mode`: true (requires title when setting OT)
 - `default_log_days`: 14 (days to show in log view)
@@ -974,6 +1008,7 @@ daylit ot settings [flags]
 ```
 
 **Flags:**
+
 - `--prompt-on-empty BOOL`: Enable/disable prompt when OT is empty
 - `--strict-mode BOOL`: Enable/disable strict mode (require title)
 - `--default-log-days N`: Set default number of days for log view
@@ -1010,6 +1045,7 @@ daylit ot set --title TEXT [flags]
 ```
 
 **Flags:**
+
 - `--title TEXT` (required): The day's intention or focus
 - `--day DATE`: Date in YYYY-MM-DD format (default: today)
 - `--note TEXT`: Optional additional note
@@ -1041,6 +1077,7 @@ daylit ot show [flags]
 ```
 
 **Flags:**
+
 - `--day DATE`: Specific date in YYYY-MM-DD format (default: today)
 - `--days N`: Show last N days instead of single day
 - `--deleted`: Include deleted entries in date range
@@ -1103,6 +1140,7 @@ daylit ot doctor
 ```
 
 **Checks performed:**
+
 - OT settings exist
 - Date formats are valid (YYYY-MM-DD)
 - No duplicate days (only one active entry per day)
@@ -1131,6 +1169,7 @@ daylit ot delete [flags]
 ```
 
 **Flags:**
+
 - `--day DATE`: Date in YYYY-MM-DD format (default: today)
 
 **Example:**
@@ -1152,6 +1191,7 @@ daylit ot restore [flags]
 ```
 
 **Flags:**
+
 - `--day DATE`: Date in YYYY-MM-DD format (default: today)
 
 **Example:**
@@ -1173,6 +1213,7 @@ daylit settings [flags]
 ```
 
 **Flags:**
+
 - `--list`: List all current settings
 - `--timezone STRING`: Set timezone (IANA name, e.g., 'America/New_York', 'Europe/London', or 'Local' for system timezone)
 - `--notifications-enabled BOOL`: Enable or disable notifications
@@ -1237,15 +1278,18 @@ daylit settings --ot-default-log-days=30
 ### Timezone Configuration
 
 The timezone setting controls how daylit interprets dates and times. This is particularly useful when:
+
 - You travel frequently and want daylit to respect your current timezone
 - You want to schedule tasks in a specific timezone different from your system timezone
 - You need consistent behavior across devices in different timezones
 
 **Supported values:**
+
 - `Local` (default): Uses your system's local timezone
 - IANA timezone names: `America/New_York`, `Europe/London`, `Asia/Tokyo`, `UTC`, etc.
 
 **Important notes:**
+
 - This setting is stored for future use in timezone-aware scheduling and notifications
 - Currently, the application uses your system's local timezone for date/time operations
 - Future updates will integrate this setting to affect how "today" is determined and when notifications are triggered

@@ -1,6 +1,6 @@
 # daylit-cli (Developer Guide)
 
-This document contains technical details for developers working on the `daylit-cli` component. For user documentation, see the [root README](../README.md) and the `docs/` directory.
+This document contains technical details for developers working on the `daylit-cli` component. For user documentation, see the [root README](../README.md) and the [`..docs/` directory](../docs/).
 
 ## Development Setup
 
@@ -71,7 +71,3 @@ To run integration tests (including PostgreSQL tests), set the environment varia
 export POSTGRES_TEST_URL="postgres://user:pass@localhost:5432/daylit_test?sslmode=disable"
 go test ./internal/storage/... -v
 ```
-
-## Roadmap
-
-See the [root README](../README.md) for the project roadmap.
