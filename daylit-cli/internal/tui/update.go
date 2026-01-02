@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"database/sql"
 	"fmt"
 	"strconv"
 	"strings"
@@ -360,9 +361,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				// Reload entry from storage to get a fresh copy
 				updatedEntry, err := m.store.GetOTEntry(today)
-				if err == nil {
-					entryPtr := &updatedEntry
-					m.otModel.SetEntry(entryPtr)
+				if err != nil {
+					// Fallback to using the data we just saved if reload fails
+					m.otModel.SetEntry(&existingEntry)
+				} else {
+					m.otModel.SetEntry(&updatedEntry)
 				}
 			} else {
 				// Create new entry
@@ -382,9 +385,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				// Reload entry from storage to get a fresh copy
 				savedEntry, err := m.store.GetOTEntry(today)
-				if err == nil {
-					entryPtr := &savedEntry
-					m.otModel.SetEntry(entryPtr)
+				if err != nil {
+					// Fallback to using the data we just created if reload fails
+					m.otModel.SetEntry(&newEntry)
+				} else {
+					m.otModel.SetEntry(&savedEntry)
 				}
 			}
 			m.formError = "" // Clear any previous errors
@@ -853,18 +858,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		today := time.Now().Format(constants.DateFormat)
 		existingEntry, err := m.store.GetOTEntry(today)
 
-		// Handle error explicitly - distinguish between "not found" and actual errors
+		// Handle database errors differently from "not found"
 		if err != nil {
-			// If it's not a "not found" error, we might have a database issue
-			// For now, we'll initialize with empty values but could add error handling
-			existingEntry = models.OTEntry{}
+			// Check if it's a "not found" error (sql.ErrNoRows)
+			if err == sql.ErrNoRows {
+				// Entry not found - initialize with empty values
+				existingEntry = models.OTEntry{}
+			} else {
+				// Actual database error - show error to user
+				m.formError = fmt.Sprintf("Error loading OT: %v", err)
+				// Still allow editing with empty form
+				existingEntry = models.OTEntry{}
+			}
 		}
 
 		m.otForm = &OTFormModel{
 			Title: existingEntry.Title,
 			Note:  existingEntry.Note,
 		}
-		m.formError = "" // Clear any previous form errors
+		// Don't clear formError here if we just set it above
+		if err != sql.ErrNoRows && err == nil {
+			m.formError = "" // Clear any previous form errors only if no error occurred
+		}
 		m.form = newOTForm(m.otForm)
 		m.state = StateEditOT
 		return m, m.form.Init()

@@ -133,11 +133,10 @@ func NewModel(store storage.Provider, sched *scheduler.Scheduler) Model {
 
 	// Initialize OT
 	otEntry, _ := store.GetOTEntry(today)
-	var otEntryPtr *models.OTEntry
+	om := ot.New(nil, 0, 0)
 	if otEntry.ID != "" {
-		otEntryPtr = &otEntry
+		om = ot.New(&otEntry, 0, 0)
 	}
-	om := ot.New(otEntryPtr, 0, 0)
 
 	// Initialize settings
 	currentSettings, _ := store.GetSettings()
