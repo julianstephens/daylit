@@ -135,6 +135,8 @@ func FormatRecurrence(rec models.Recurrence) string {
 			occStr = "4th"
 		case 5:
 			occStr = "5th"
+		default:
+			occStr = fmt.Sprintf("occurrence %d", rec.WeekOccurrence)
 		}
 		return fmt.Sprintf("monthly on %s %s", occStr, rec.DayOfWeekInMonth.String())
 	case constants.RecurrenceYearly:
