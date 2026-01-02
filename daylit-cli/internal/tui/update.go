@@ -339,7 +339,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case huh.StateCompleted:
 			// Save or update OT entry
 			today := time.Now().Format(constants.DateFormat)
-			
+
 			// Check if entry exists for today
 			existingEntry, err := m.store.GetOTEntry(today)
 			if err == nil && existingEntry.ID != "" {
@@ -833,7 +833,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ot.EditOTMsg:
 		today := time.Now().Format(constants.DateFormat)
 		existingEntry, _ := m.store.GetOTEntry(today)
-		
+
 		m.otForm = &OTFormModel{
 			Title: existingEntry.Title,
 			Note:  existingEntry.Note,
