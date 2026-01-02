@@ -121,7 +121,7 @@ func FormatRecurrence(rec models.Recurrence) string {
 	case constants.RecurrenceMonthlyDate:
 		return fmt.Sprintf("monthly on day %d", rec.MonthDay)
 	case constants.RecurrenceMonthlyDay:
-		occStr := "?"
+		var occStr string
 		switch rec.WeekOccurrence {
 		case -1:
 			occStr = "last"
