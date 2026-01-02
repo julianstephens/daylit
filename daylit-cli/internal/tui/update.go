@@ -870,15 +870,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// Still allow editing with empty form
 				existingEntry = models.OTEntry{}
 			}
+		} else {
+			// Clear any previous form errors only if no error occurred
+			m.formError = ""
 		}
 
 		m.otForm = &OTFormModel{
 			Title: existingEntry.Title,
 			Note:  existingEntry.Note,
-		}
-		// Don't clear formError here if we just set it above
-		if err != sql.ErrNoRows && err == nil {
-			m.formError = "" // Clear any previous form errors only if no error occurred
 		}
 		m.form = newOTForm(m.otForm)
 		m.state = StateEditOT
