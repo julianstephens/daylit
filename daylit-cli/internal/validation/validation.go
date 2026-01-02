@@ -2,6 +2,7 @@ package validation
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"time"
 
@@ -567,8 +568,8 @@ func taskScheduledOnDate(task models.Task, date time.Time) bool {
 		if err != nil {
 			return false
 		}
-		// Calculate days since last done
-		daysSince := int(date.Sub(lastDone).Hours() / 24)
+		// Use date-based arithmetic to avoid DST issues with explicit rounding
+		daysSince := int(math.Round(date.Sub(lastDone).Hours() / 24))
 		return daysSince >= task.Recurrence.IntervalDays
 	case models.RecurrenceAdHoc:
 		return false // Ad-hoc tasks are not automatically scheduled
