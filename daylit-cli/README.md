@@ -21,6 +21,8 @@ This document contains technical details for developers working on the `daylit-c
 
 ## Project Structure
 
+See the [architecture doc](docs/ARCHITECTURE.md) for up-to-date package descriptions.
+
 ```
 daylit/
 ├── cmd/

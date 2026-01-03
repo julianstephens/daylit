@@ -6,7 +6,7 @@ import (
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/migration"
-	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
+	"github.com/julianstephens/daylit/daylit-cli/internal/storage/sqlite"
 	"github.com/julianstephens/daylit/daylit-cli/migrations"
 )
 
@@ -16,7 +16,7 @@ func (c *MigrateCmd) Run(ctx *cli.Context) error {
 	defer ctx.Store.Close()
 
 	// Get database connection for SQLite stores
-	sqliteStore, ok := ctx.Store.(*storage.SQLiteStore)
+	sqliteStore, ok := ctx.Store.(*sqlite.Store)
 	if !ok {
 		return fmt.Errorf("migrate command only supports SQLite storage")
 	}

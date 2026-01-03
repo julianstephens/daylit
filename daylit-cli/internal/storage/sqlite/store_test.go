@@ -1,4 +1,4 @@
-package storage
+package sqlite
 
 import (
 	"database/sql"
@@ -7,11 +7,11 @@ import (
 )
 
 // setupMinimalTestStore creates a SQLite store without running migrations
-func setupMinimalTestStore(t *testing.T) (*SQLiteStore, func()) {
+func setupMinimalTestStore(t *testing.T) (*Store, func()) {
 	tempDir := t.TempDir()
 	dbPath := filepath.Join(tempDir, "test.db")
 
-	store := NewSQLiteStore(dbPath)
+	store := NewStore(dbPath)
 
 	// Open the database manually without running Init (which runs migrations)
 	db, err := sql.Open("sqlite", dbPath)
@@ -169,7 +169,7 @@ func TestTableExists(t *testing.T) {
 		// Use the full setup that runs migrations
 		tempDir := t.TempDir()
 		dbPath := filepath.Join(tempDir, "test.db")
-		store := NewSQLiteStore(dbPath)
+		store := NewStore(dbPath)
 
 		if err := store.Init(); err != nil {
 			t.Fatalf("failed to initialize store: %v", err)

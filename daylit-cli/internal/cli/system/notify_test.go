@@ -10,14 +10,14 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
-	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
+	"github.com/julianstephens/daylit/daylit-cli/internal/storage/sqlite"
 )
 
-func setupTestStore(t *testing.T) (*storage.SQLiteStore, func()) {
+func setupTestStore(t *testing.T) (*sqlite.Store, func()) {
 	tempDir := t.TempDir()
 	dbPath := filepath.Join(tempDir, "test.db")
 
-	store := storage.NewSQLiteStore(dbPath)
+	store := sqlite.NewStore(dbPath)
 	if err := store.Init(); err != nil {
 		t.Fatalf("failed to initialize test store: %v", err)
 	}

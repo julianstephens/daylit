@@ -25,6 +25,7 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/scheduler"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage/postgres"
+	"github.com/julianstephens/daylit/daylit-cli/internal/storage/sqlite"
 )
 
 type CLI struct {
@@ -165,7 +166,7 @@ func (c *CLI) AfterApply(ctx *kong.Context) error {
 	} else {
 		// Default to SQLite
 		logger.Debug("Using SQLite storage backend", "path", configToUse)
-		store = storage.NewSQLiteStore(configToUse)
+		store = sqlite.NewStore(configToUse)
 	}
 
 	c.store = store

@@ -10,6 +10,7 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage/postgres"
+	"github.com/julianstephens/daylit/daylit-cli/internal/storage/sqlite"
 )
 
 type InitCmd struct {
@@ -82,7 +83,7 @@ func (c *InitCmd) migrateData(ctx *cli.Context, sourcePath string) error {
 		sourceStore = postgres.New(sourcePath)
 	} else {
 		// Default to SQLite for file paths
-		sourceStore = storage.NewSQLiteStore(sourcePath)
+		sourceStore = sqlite.NewStore(sourcePath)
 	}
 
 	// Load the source store

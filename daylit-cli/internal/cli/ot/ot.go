@@ -9,7 +9,7 @@ import (
 
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
-	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
+	"github.com/julianstephens/daylit/daylit-cli/internal/storage/sqlite"
 )
 
 type OTCmd struct {
@@ -274,7 +274,7 @@ func (c *OTDoctorCmd) Run(ctx *cli.Context) error {
 	}
 
 	// Check 2: Check for invalid dates
-	sqliteStore, ok := ctx.Store.(*storage.SQLiteStore)
+	sqliteStore, ok := ctx.Store.(*sqlite.Store)
 	if !ok {
 		fmt.Println("⊘ Date validation: SKIPPED (not SQLite)")
 	} else {
@@ -298,7 +298,7 @@ func (c *OTDoctorCmd) Run(ctx *cli.Context) error {
 	}
 
 	// Check 3: Check for duplicate days
-	if sqliteStore, ok := ctx.Store.(*storage.SQLiteStore); ok {
+	if sqliteStore, ok := ctx.Store.(*sqlite.Store); ok {
 		db := sqliteStore.GetDB()
 		var duplicateCount int
 		err := db.QueryRow(`
@@ -325,7 +325,7 @@ func (c *OTDoctorCmd) Run(ctx *cli.Context) error {
 	}
 
 	// Check 4: Check for corrupted timestamps
-	if sqliteStore, ok := ctx.Store.(*storage.SQLiteStore); ok {
+	if sqliteStore, ok := ctx.Store.(*sqlite.Store); ok {
 		db := sqliteStore.GetDB()
 		var corruptedCount int
 		err := db.QueryRow(`
@@ -404,7 +404,7 @@ func (c *OTRestoreCmd) Run(ctx *cli.Context) error {
 
 // Ensure storage is SQLite for OT commands
 func ensureSQLiteStoreOT(ctx *cli.Context) error {
-	if _, ok := ctx.Store.(*storage.SQLiteStore); !ok {
+	if _, ok := ctx.Store.(*sqlite.Store); !ok {
 		return fmt.Errorf("OT is only supported with SQLite storage (not JSON)")
 	}
 	return nil
