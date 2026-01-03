@@ -20,6 +20,7 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli/system"
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli/tasks"
 	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
+	clierrors "github.com/julianstephens/daylit/daylit-cli/internal/errors"
 	"github.com/julianstephens/daylit/daylit-cli/internal/keyring"
 	"github.com/julianstephens/daylit/daylit-cli/internal/logger"
 	"github.com/julianstephens/daylit/daylit-cli/internal/scheduler"
@@ -150,13 +151,12 @@ func (c *CLI) AfterApply(ctx *kong.Context) error {
 		hasPasswordError := err != nil && errors.Is(err, postgres.ErrEmbeddedCredentials)
 
 		if !configFromEnv && !configFromKeyring && hasPasswordError {
-			fmt.Fprintf(os.Stderr, "❌ Error: PostgreSQL connection strings with embedded credentials are NOT allowed via command line flags.\n")
-			fmt.Fprintf(os.Stderr, "       Use one of these secure alternatives:\n")
-			fmt.Fprintf(os.Stderr, "       1. Environment:   export DAYLIT_CONFIG=\"postgresql://user:your_password@host:5432/daylit\"\n")
-			fmt.Fprintf(os.Stderr, "       2. .pgpass file:  Create ~/.pgpass with credentials\n")
-			fmt.Fprintf(os.Stderr, "       3. OS keyring:    daylit keyring set \"postgresql://user:your_password@host:5432/daylit\"\n")
-			fmt.Fprintf(os.Stderr, "\n       For more information, see docs/user-guides/POSTGRES_SETUP.md\n")
-			os.Exit(1)
+			clierrors.Fatalf("PostgreSQL connection strings with embedded credentials are NOT allowed via command line flags.\n"+
+				"       Use one of these secure alternatives:\n"+
+				"       1. Environment:   export DAYLIT_CONFIG=\"postgresql://user:your_password@host:5432/daylit\"\n"+
+				"       2. .pgpass file:  Create ~/.pgpass with credentials\n"+
+				"       3. OS keyring:    daylit keyring set \"postgresql://user:your_password@host:5432/daylit\"\n"+
+				"\n       For more information, see docs/user-guides/POSTGRES_SETUP.md")
 		} else if configFromEnv && hasPasswordError {
 			// Warn user about embedded credentials in environment variable
 			logger.Warn("Using embedded credentials in DAYLIT_CONFIG environment variable. Consider using a .pgpass file or OS keyring for better security.")
@@ -199,8 +199,5 @@ func main() {
 	}
 
 	err := ctx.Run(appCtx)
-	if err != nil {
-		logger.Error("Command execution failed", "error", err)
-		os.Exit(1)
-	}
+	clierrors.Fatal(err)
 }
