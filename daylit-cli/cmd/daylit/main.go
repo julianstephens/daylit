@@ -151,12 +151,14 @@ func (c *CLI) AfterApply(ctx *kong.Context) error {
 		hasPasswordError := err != nil && errors.Is(err, postgres.ErrEmbeddedCredentials)
 
 		if !configFromEnv && !configFromKeyring && hasPasswordError {
-			clierrors.Fatalf("❌ PostgreSQL connection strings with embedded credentials are NOT allowed via command line flags.\n\n" +
-				"       Use one of these secure alternatives:\n" +
-				"         1. Environment:   export DAYLIT_CONFIG=\"postgresql://user:your_password@host:5432/daylit\"\n" +
-				"         2. .pgpass file:  Create ~/.pgpass with credentials\n" +
-				"         3. OS keyring:    daylit keyring set \"postgresql://user:your_password@host:5432/daylit\"\n" +
-				"\n       For more information, see docs/user-guides/POSTGRES_SETUP.md")
+			clierrors.Fatalf(`❌ PostgreSQL connection strings with embedded credentials are NOT allowed via command line flags.
+
+       Use one of these secure alternatives:
+         1. Environment:   export DAYLIT_CONFIG="postgresql://user:your_password@host:5432/daylit"
+         2. .pgpass file:  Create ~/.pgpass with credentials
+         3. OS keyring:    daylit keyring set "postgresql://user:your_password@host:5432/daylit"
+
+       For more information, see docs/user-guides/POSTGRES_SETUP.md`)
 		} else if configFromEnv && hasPasswordError {
 			// Warn user about embedded credentials in environment variable
 			logger.Warn("Using embedded credentials in DAYLIT_CONFIG environment variable. Consider using a .pgpass file or OS keyring for better security.")
