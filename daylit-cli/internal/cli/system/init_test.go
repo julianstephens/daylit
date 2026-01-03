@@ -11,13 +11,14 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/scheduler"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
+	"github.com/julianstephens/daylit/daylit-cli/internal/storage/sqlite"
 )
 
 func setupTestInitDB(t *testing.T) (*cli.Context, string, func()) {
 	tempDir := t.TempDir()
 	dbPath := filepath.Join(tempDir, "test.db")
 
-	store := storage.NewSQLiteStore(dbPath)
+	store := sqlite.NewStore(dbPath)
 
 	ctx := &cli.Context{
 		Store:     store,
@@ -197,7 +198,7 @@ func TestInitCmd_MigrationFromSQLiteToSQLite(t *testing.T) {
 
 	// Create and populate source database
 	sourceDBPath := filepath.Join(tempDir, "source.db")
-	sourceStore := storage.NewSQLiteStore(sourceDBPath)
+	sourceStore := sqlite.NewStore(sourceDBPath)
 	if err := sourceStore.Init(); err != nil {
 		t.Fatalf("failed to init source store: %v", err)
 	}
@@ -222,7 +223,7 @@ func TestInitCmd_MigrationFromSQLiteToSQLite(t *testing.T) {
 
 	// Create destination database
 	destDBPath := filepath.Join(tempDir, "dest.db")
-	destStore := storage.NewSQLiteStore(destDBPath)
+	destStore := sqlite.NewStore(destDBPath)
 
 	ctx := &cli.Context{
 		Store:     destStore,
@@ -265,7 +266,7 @@ func TestInitCmd_MigrationPreventsSourceDestinationConflict(t *testing.T) {
 	dbPath := filepath.Join(tempDir, "test.db")
 
 	// Create a database
-	store := storage.NewSQLiteStore(dbPath)
+	store := sqlite.NewStore(dbPath)
 	if err := store.Init(); err != nil {
 		t.Fatalf("failed to init store: %v", err)
 	}
@@ -273,7 +274,7 @@ func TestInitCmd_MigrationPreventsSourceDestinationConflict(t *testing.T) {
 
 	// Try to migrate to the same location with force - should fail
 	ctx := &cli.Context{
-		Store:     storage.NewSQLiteStore(dbPath),
+		Store:     sqlite.NewStore(dbPath),
 		Scheduler: scheduler.New(),
 	}
 
@@ -294,7 +295,7 @@ func TestInitCmd_MigrationWithNonExistentSource(t *testing.T) {
 	destDBPath := filepath.Join(tempDir, "dest.db")
 	nonExistentSource := filepath.Join(tempDir, "nonexistent.db")
 
-	destStore := storage.NewSQLiteStore(destDBPath)
+	destStore := sqlite.NewStore(destDBPath)
 	ctx := &cli.Context{
 		Store:     destStore,
 		Scheduler: scheduler.New(),
@@ -315,7 +316,7 @@ func TestInitCmd_MigrationWithTasksAndPlans(t *testing.T) {
 
 	// Create and populate source database with actual data
 	sourceDBPath := filepath.Join(tempDir, "source.db")
-	sourceStore := storage.NewSQLiteStore(sourceDBPath)
+	sourceStore := sqlite.NewStore(sourceDBPath)
 	if err := sourceStore.Init(); err != nil {
 		t.Fatalf("failed to init source store: %v", err)
 	}
@@ -336,7 +337,7 @@ func TestInitCmd_MigrationWithTasksAndPlans(t *testing.T) {
 
 	// Create destination database
 	destDBPath := filepath.Join(tempDir, "dest.db")
-	destStore := storage.NewSQLiteStore(destDBPath)
+	destStore := sqlite.NewStore(destDBPath)
 
 	ctx := &cli.Context{
 		Store:     destStore,

@@ -11,6 +11,7 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/constants"
 	"github.com/julianstephens/daylit/daylit-cli/internal/models"
 	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
+	"github.com/julianstephens/daylit/daylit-cli/internal/storage/sqlite"
 )
 
 type HabitCmd struct {
@@ -368,7 +369,7 @@ func (c *HabitRestoreCmd) Run(ctx *cli.Context) error {
 
 // Helper function to check if storage is SQLite
 func isSQLiteStore(store storage.Provider) bool {
-	_, ok := store.(*storage.SQLiteStore)
+	_, ok := store.(*sqlite.Store)
 	return ok
 }
 

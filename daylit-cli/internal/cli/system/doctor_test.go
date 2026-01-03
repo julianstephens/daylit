@@ -9,7 +9,7 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/migration"
 	"github.com/julianstephens/daylit/daylit-cli/internal/scheduler"
-	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
+	"github.com/julianstephens/daylit/daylit-cli/internal/storage/sqlite"
 	"github.com/julianstephens/daylit/daylit-cli/migrations"
 )
 
@@ -17,7 +17,7 @@ func setupTestDoctorDB(t *testing.T) (*cli.Context, func()) {
 	tempDir := t.TempDir()
 	dbPath := filepath.Join(tempDir, "test.db")
 
-	store := storage.NewSQLiteStore(dbPath)
+	store := sqlite.NewStore(dbPath)
 	if err := store.Init(); err != nil {
 		t.Fatalf("failed to initialize store: %v", err)
 	}
@@ -65,7 +65,7 @@ func TestDoctorCmd_BrokenSchema(t *testing.T) {
 	defer cleanup()
 
 	// Corrupt the schema version
-	sqliteStore, ok := ctx.Store.(*storage.SQLiteStore)
+	sqliteStore, ok := ctx.Store.(*sqlite.Store)
 	if !ok {
 		t.Fatal("expected SQLiteStore")
 	}
@@ -119,7 +119,7 @@ func TestCheckMigrationsComplete_Incomplete(t *testing.T) {
 	defer cleanup()
 
 	// Downgrade schema version to simulate incomplete migrations
-	sqliteStore, ok := ctx.Store.(*storage.SQLiteStore)
+	sqliteStore, ok := ctx.Store.(*sqlite.Store)
 	if !ok {
 		t.Fatal("expected SQLiteStore")
 	}

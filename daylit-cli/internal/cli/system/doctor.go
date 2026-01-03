@@ -8,7 +8,7 @@ import (
 	"github.com/julianstephens/daylit/daylit-cli/internal/backup"
 	"github.com/julianstephens/daylit/daylit-cli/internal/cli"
 	"github.com/julianstephens/daylit/daylit-cli/internal/migration"
-	"github.com/julianstephens/daylit/daylit-cli/internal/storage"
+	"github.com/julianstephens/daylit/daylit-cli/internal/storage/sqlite"
 	"github.com/julianstephens/daylit/daylit-cli/migrations"
 )
 
@@ -169,7 +169,7 @@ func checkDBReachable(ctx *cli.Context) error {
 	}
 
 	// For SQLite, also try a simple query
-	if sqliteStore, ok := ctx.Store.(*storage.SQLiteStore); ok {
+	if sqliteStore, ok := ctx.Store.(*sqlite.Store); ok {
 		db := sqliteStore.GetDB()
 		if db == nil {
 			return fmt.Errorf("database connection is nil")
@@ -184,7 +184,7 @@ func checkDBReachable(ctx *cli.Context) error {
 }
 
 func checkSchemaVersion(ctx *cli.Context) error {
-	sqliteStore, ok := ctx.Store.(*storage.SQLiteStore)
+	sqliteStore, ok := ctx.Store.(*sqlite.Store)
 	if !ok {
 		// JSON store doesn't have schema version
 		return nil
@@ -221,7 +221,7 @@ func checkSchemaVersion(ctx *cli.Context) error {
 }
 
 func checkMigrationsComplete(ctx *cli.Context) error {
-	sqliteStore, ok := ctx.Store.(*storage.SQLiteStore)
+	sqliteStore, ok := ctx.Store.(*sqlite.Store)
 	if !ok {
 		// JSON store doesn't have migrations
 		return nil
@@ -308,7 +308,7 @@ func checkClockTimezone() error {
 }
 
 func checkHabitsIntegrity(ctx *cli.Context) error {
-	sqliteStore, ok := ctx.Store.(*storage.SQLiteStore)
+	sqliteStore, ok := ctx.Store.(*sqlite.Store)
 	if !ok {
 		return nil // Not SQLite, skip
 	}
@@ -337,7 +337,7 @@ func checkHabitsIntegrity(ctx *cli.Context) error {
 }
 
 func checkHabitEntriesDuplicates(ctx *cli.Context) error {
-	sqliteStore, ok := ctx.Store.(*storage.SQLiteStore)
+	sqliteStore, ok := ctx.Store.(*sqlite.Store)
 	if !ok {
 		return nil // Not SQLite, skip
 	}
@@ -370,7 +370,7 @@ func checkHabitEntriesDuplicates(ctx *cli.Context) error {
 }
 
 func checkOTSettings(ctx *cli.Context) error {
-	sqliteStore, ok := ctx.Store.(*storage.SQLiteStore)
+	sqliteStore, ok := ctx.Store.(*sqlite.Store)
 	if !ok {
 		return nil // Not SQLite, skip
 	}
@@ -394,7 +394,7 @@ func checkOTSettings(ctx *cli.Context) error {
 }
 
 func checkOTEntriesDates(ctx *cli.Context) error {
-	sqliteStore, ok := ctx.Store.(*storage.SQLiteStore)
+	sqliteStore, ok := ctx.Store.(*sqlite.Store)
 	if !ok {
 		return nil // Not SQLite, skip
 	}
@@ -435,7 +435,7 @@ func checkOTEntriesDates(ctx *cli.Context) error {
 }
 
 func checkTimestampIntegrity(ctx *cli.Context) error {
-	sqliteStore, ok := ctx.Store.(*storage.SQLiteStore)
+	sqliteStore, ok := ctx.Store.(*sqlite.Store)
 	if !ok {
 		return nil // Not SQLite, skip
 	}
