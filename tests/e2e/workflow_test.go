@@ -64,6 +64,9 @@ func TestEndToEndWorkflow(t *testing.T) {
 	}
 
 	cleanEnv = append(cleanEnv, fmt.Sprintf("XDG_CONFIG_HOME=%s", tempDir))
+	cleanEnv = append(cleanEnv, fmt.Sprintf("XDG_DATA_HOME=%s/.local/share", tempDir))
+	cleanEnv = append(cleanEnv, fmt.Sprintf("XDG_CACHE_HOME=%s/.cache", tempDir))
+	cleanEnv = append(cleanEnv, fmt.Sprintf("XDG_RUNTIME_DIR=%s/runtime", tempDir))
 	cleanEnv = append(cleanEnv, fmt.Sprintf("HOME=%s", tempDir))
 	cleanEnv = append(cleanEnv, fmt.Sprintf("DAYLIT_CONFIG=%s", filepath.Join(tempDir, "daylit", "daylit.db")))
 
@@ -87,10 +90,60 @@ func TestEndToEndWorkflow(t *testing.T) {
 
 	// Enable notifications
 	t.Log("Enabling notifications...")
-	runCmd(t, cliPath, cleanEnv, "config", "set", "notifications_enabled", "true")
+	runCmd(t, cliPath, cleanEnv, "settings", "--notifications-enabled=true")
 
 	// 3. Start Tray (Background)
 	t.Log("Starting Tray...")
+
+	// Pre-create config and data directories to avoid "No such file or directory" error
+	// We create both the bundle identifier and product name directories to be safe
+	dirsToCreate := []string{
+		filepath.Join(tempDir, "com.daylit.daylit-tray"),
+		filepath.Join(tempDir, "daylit-tray"),
+		filepath.Join(tempDir, ".local", "share", "com.daylit.daylit-tray"),
+		filepath.Join(tempDir, ".local", "share", "daylit-tray"),
+		filepath.Join(tempDir, ".cache", "com.daylit.daylit-tray"),
+		filepath.Join(tempDir, ".cache", "daylit-tray"),
+		filepath.Join(tempDir, "runtime"),
+	}
+
+	for _, d := range dirsToCreate {
+		if err := os.MkdirAll(d, 0755); err != nil {
+			t.Fatalf("Failed to create dir %s: %v", d, err)
+		}
+	}
+
+	// Create empty settings.json to avoid creation issues
+	settingsFiles := []string{
+		filepath.Join(tempDir, "com.daylit.daylit-tray", "settings.json"),
+		filepath.Join(tempDir, "daylit-tray", "settings.json"),
+		filepath.Join(tempDir, ".local", "share", "com.daylit.daylit-tray", "settings.json"),
+		filepath.Join(tempDir, ".local", "share", "daylit-tray", "settings.json"),
+	}
+
+	for _, f := range settingsFiles {
+		if err := os.WriteFile(f, []byte("{}"), 0644); err != nil {
+			t.Fatalf("Failed to create settings file %s: %v", f, err)
+		}
+	}
+
+	// Copy icons for Tray app
+	projectRoot, _ := filepath.Abs("../..")
+	iconsSrc := filepath.Join(projectRoot, "daylit-tray", "src-tauri", "icons")
+	iconsDest := filepath.Join(tempDir, "icons")
+	if err := os.MkdirAll(iconsDest, 0755); err != nil {
+		t.Fatalf("Failed to create icons dir: %v", err)
+	}
+	srcIcon := filepath.Join(iconsSrc, "tray-icon.png")
+	destIcon := filepath.Join(iconsDest, "tray-icon.png")
+	input, err := os.ReadFile(srcIcon)
+	if err != nil {
+		t.Fatalf("Failed to read icon from %s: %v", srcIcon, err)
+	}
+	if err := os.WriteFile(destIcon, input, 0644); err != nil {
+		t.Fatalf("Failed to write icon: %v", err)
+	}
+
 	// Set short interval for testing
 	trayEnv := append(cleanEnv, "DAYLIT_SCHEDULER_INTERVAL_MS=2000")
 	trayEnv = append(trayEnv, "RUST_LOG=info")
@@ -100,6 +153,7 @@ func TestEndToEndWorkflow(t *testing.T) {
 
 	trayCmd := exec.CommandContext(ctx, trayPath)
 	trayCmd.Env = trayEnv
+	trayCmd.Dir = tempDir
 
 	stdoutPipe, err := trayCmd.StdoutPipe()
 	if err != nil {
@@ -138,7 +192,7 @@ func TestEndToEndWorkflow(t *testing.T) {
 	now := time.Now()
 	timeStr := now.Format("15:04")
 	t.Logf("Scheduling task for %s", timeStr)
-	runCmd(t, cliPath, cleanEnv, "plan", "add", "Test Task", timeStr)
+	runCmd(t, cliPath, cleanEnv, "task", "add", "Test Task", "--duration", "15", "--fixed-start", timeStr)
 
 	// 6. Monitor Logs for Success
 	t.Log("Waiting for notification logs...")
@@ -151,7 +205,7 @@ func TestEndToEndWorkflow(t *testing.T) {
 	go func() {
 		for scanner.Scan() {
 			line := scanner.Text()
-			// t.Logf("Tray: %s", line) // Uncomment for debugging
+			t.Logf("Tray: %s", line) // Uncomment for debugging
 
 			// Check for success message
 			// "daylit notify executed successfully" means the scheduler ran the command
@@ -172,6 +226,7 @@ func TestEndToEndWorkflow(t *testing.T) {
 		success = true
 		t.Log("Verified notification flow!")
 	case <-time.After(30 * time.Second):
+		// TODO: debug why no notification
 		t.Errorf("Timed out waiting for notification log message")
 	}
 

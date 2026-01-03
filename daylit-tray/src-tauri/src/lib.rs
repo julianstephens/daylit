@@ -61,8 +61,33 @@ pub fn run() {
             }
         })
         .setup(|app| {
+            // Debugging path
+            eprintln!(
+                "Env XDG_CONFIG_HOME: {:?}",
+                std::env::var("XDG_CONFIG_HOME")
+            );
+            eprintln!("Env XDG_DATA_HOME: {:?}", std::env::var("XDG_DATA_HOME"));
+
+            match app.path().app_config_dir() {
+                Ok(path) => eprintln!("App config dir: {:?}", path),
+                Err(e) => eprintln!("Failed to get app config dir: {:?}", e),
+            }
+
+            match app.path().app_data_dir() {
+                Ok(path) => eprintln!("App data dir: {:?}", path),
+                Err(e) => eprintln!("Failed to get app data dir: {:?}", e),
+            }
+
             // --- State and Store Setup ---
-            let store = app.store("settings.json")?;
+            eprintln!("Before store creation");
+            let store = match app.store("settings.json") {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("Store creation failed: {:?}", e);
+                    return Err(e.into());
+                }
+            };
+            eprintln!("After store creation");
             if store.get("settings").is_none() {
                 store.set(
                     "settings",

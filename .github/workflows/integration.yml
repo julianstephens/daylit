@@ -1,0 +1,37 @@
+name: Integration Tests
+on: [push, pull_request]
+
+jobs:
+  e2e-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev xvfb dbus-x11
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with: { go-version: "1.21" }
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build CLI
+        run: |
+          mkdir -p bin
+          cd daylit-cli && go build -o ../bin/daylit ./cmd/daylit
+
+      - name: Build Tray
+        run: |
+          cd daylit-tray
+          npm install
+          npm run tauri build
+          cp src-tauri/target/release/daylit-tray ../bin/
+
+      - name: Run E2E Test
+        run: |
+          cd tests/e2e
+          xvfb-run dbus-launch --exit-with-session go test -v .
