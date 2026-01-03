@@ -33,6 +33,6 @@ func Fatal(err error) {
 func Fatalf(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
 	logger.Error("Command execution failed", "error", msg)
-	fmt.Fprintf(os.Stderr, "Error: %s\n", msg)
+	fmt.Fprintf(os.Stderr, "%s\n", Formatf(format, args...))
 	os.Exit(1)
 }
