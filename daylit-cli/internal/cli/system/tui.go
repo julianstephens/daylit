@@ -2,7 +2,6 @@ package system
 
 import (
 	"fmt"
-	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -18,8 +17,7 @@ func (c *TuiCmd) Run(ctx *cli.Context) error {
 
 	p := tea.NewProgram(tui.NewModel(ctx.Store, ctx.Scheduler), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
-		fmt.Printf("Alas, there's been an error: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("TUI error: %w", err)
 	}
 	return nil
 }
