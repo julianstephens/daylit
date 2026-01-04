@@ -27,6 +27,9 @@ tauri-plugin-autostart = "2"
 rand = "0.8"
 subtle = "2.6"
 
+[dev-dependencies]
+serial_test = "3.2"
+
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
 custom-protocol = ["tauri/custom-protocol"]

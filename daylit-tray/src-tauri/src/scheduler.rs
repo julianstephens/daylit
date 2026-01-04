@@ -89,6 +89,7 @@ pub fn start_scheduler_thread(app_handle: AppHandle) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
     use std::cell::RefCell;
 
     struct MockCommandRunner {
@@ -172,6 +173,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_get_scheduler_interval_default() {
         // Ensure env var is unset
         // Note: This might affect other tests running in parallel if they rely on this var,
@@ -179,54 +181,40 @@ mod tests {
         // We use a lock or just run sequentially if needed, but for now this is simple.
         // To be safe, we can save the old value and restore it.
         let old_val = std::env::var("DAYLIT_SCHEDULER_INTERVAL_MS");
-        unsafe {
-            std::env::remove_var("DAYLIT_SCHEDULER_INTERVAL_MS");
-        }
+        std::env::remove_var("DAYLIT_SCHEDULER_INTERVAL_MS");
 
         assert_eq!(get_scheduler_interval(), 60000);
 
         if let Ok(v) = old_val {
-            unsafe {
-                std::env::set_var("DAYLIT_SCHEDULER_INTERVAL_MS", v);
-            }
+            std::env::set_var("DAYLIT_SCHEDULER_INTERVAL_MS", v);
         }
     }
 
     #[test]
+    #[serial]
     fn test_get_scheduler_interval_custom() {
         let old_val = std::env::var("DAYLIT_SCHEDULER_INTERVAL_MS");
-        unsafe {
-            std::env::set_var("DAYLIT_SCHEDULER_INTERVAL_MS", "500");
-        }
+        std::env::set_var("DAYLIT_SCHEDULER_INTERVAL_MS", "500");
 
         assert_eq!(get_scheduler_interval(), 500);
 
-        unsafe {
-            std::env::remove_var("DAYLIT_SCHEDULER_INTERVAL_MS");
-        }
+        std::env::remove_var("DAYLIT_SCHEDULER_INTERVAL_MS");
         if let Ok(v) = old_val {
-            unsafe {
-                std::env::set_var("DAYLIT_SCHEDULER_INTERVAL_MS", v);
-            }
+            std::env::set_var("DAYLIT_SCHEDULER_INTERVAL_MS", v);
         }
     }
 
     #[test]
+    #[serial]
     fn test_get_scheduler_interval_invalid() {
         let old_val = std::env::var("DAYLIT_SCHEDULER_INTERVAL_MS");
-        unsafe {
-            std::env::set_var("DAYLIT_SCHEDULER_INTERVAL_MS", "invalid");
-        }
+        std::env::set_var("DAYLIT_SCHEDULER_INTERVAL_MS", "invalid");
 
         assert_eq!(get_scheduler_interval(), 60000);
 
-        unsafe {
-            std::env::remove_var("DAYLIT_SCHEDULER_INTERVAL_MS");
-        }
+        std::env::remove_var("DAYLIT_SCHEDULER_INTERVAL_MS");
         if let Ok(v) = old_val {
-            unsafe {
-                std::env::set_var("DAYLIT_SCHEDULER_INTERVAL_MS", v);
-            }
+            std::env::set_var("DAYLIT_SCHEDULER_INTERVAL_MS", v);
         }
     }
 }
