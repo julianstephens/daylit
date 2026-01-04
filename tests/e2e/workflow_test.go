@@ -202,7 +202,7 @@ func TestEndToEndWorkflow(t *testing.T) {
 	t.Logf("Scheduling task for %s", timeStr)
 	runCmd(t, cliPath, cleanEnv, "task", "add", "Test Task", "--duration", "15", "--fixed-start", timeStr, "--fixed-end", endTimeStr, "--recurrence", "daily")
 
-	// 5b. Generate and Accept Plan
+	// 5. Generate and Accept Plan
 	t.Log("Generating and accepting plan...")
 	planCmd := exec.Command(cliPath, "plan")
 	planCmd.Env = cleanEnv
