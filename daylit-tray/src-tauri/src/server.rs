@@ -156,60 +156,79 @@ pub fn start_webhook_server(app_handle: AppHandle) {
                     .lock()
                     .expect("Failed to acquire payload lock") = Some(payload.clone());
 
-                info!("Received webhook payload. Scheduling on main thread.");
-                let app_handle_clone = app_handle.clone();
-                if let Err(e) = app_handle.run_on_main_thread(move || {
-                    info!("Running on main thread.");
-                    // --- Re-use or Create Window Logic ---
-                    if let Some(existing_window) =
-                        app_handle_clone.get_webview_window("notification_dialog")
+                // Check if we should use native notifications
+                let settings = Settings::load(&state.settings);
+                
+                if settings.use_native_notifications {
+                    // Use native system notifications
+                    info!("Using native notification");
+                    use tauri_plugin_notification::NotificationExt;
+                    if let Err(e) = app_handle
+                        .notification()
+                        .builder()
+                        .title("Daylit")
+                        .body(&payload.text)
+                        .show()
                     {
-                        info!("Dialog exists. Re-using and sending new data.");
-                        if let Err(e) = existing_window.set_focus() {
-                            error!("Failed to set window focus: {}", e);
-                        }
-                        if let Err(e) = existing_window.emit(
-                            "update_notification",
-                            &UpdatePayload {
-                                text: payload.text,
-                                duration_ms: payload.duration_ms,
-                            },
-                        ) {
-                            error!("Failed to emit update notification: {}", e);
-                        }
-                    } else {
-                        info!("Dialog does not exist. Creating a new one.");
-                        if let Some(main_window) = app_handle_clone.get_webview_window("main") {
-                            if let Ok(Some(monitor)) = main_window.primary_monitor() {
-                                let monitor_size = monitor.size();
-                                let dialog_width = 1000.0;
-                                let dialog_height = 100.0;
-                                let pos_x = (monitor_size.width as f64 - dialog_width) / 2.0;
-                                let pos_y = 60.0;
-
-                                if let Err(e) = tauri::WebviewWindowBuilder::new(
-                                    &app_handle_clone,
-                                    "notification_dialog",
-                                    tauri::WebviewUrl::App("/notification".into()),
-                                )
-                                .inner_size(dialog_width, dialog_height)
-                                .position(pos_x, pos_y)
-                                .always_on_top(true)
-                                .decorations(false)
-                                .transparent(true)
-                                .build()
-                                {
-                                    error!("Failed to build notification dialog: {}", e);
-                                }
-                            } else {
-                                error!("Failed to get primary monitor");
+                        error!("Failed to show native notification: {}", e);
+                    }
+                } else {
+                    // Use custom window notification (existing behavior)
+                    info!("Received webhook payload. Scheduling on main thread.");
+                    let app_handle_clone = app_handle.clone();
+                    if let Err(e) = app_handle.run_on_main_thread(move || {
+                        info!("Running on main thread.");
+                        // --- Re-use or Create Window Logic ---
+                        if let Some(existing_window) =
+                            app_handle_clone.get_webview_window("notification_dialog")
+                        {
+                            info!("Dialog exists. Re-using and sending new data.");
+                            if let Err(e) = existing_window.set_focus() {
+                                error!("Failed to set window focus: {}", e);
+                            }
+                            if let Err(e) = existing_window.emit(
+                                "update_notification",
+                                &UpdatePayload {
+                                    text: payload.text,
+                                    duration_ms: payload.duration_ms,
+                                },
+                            ) {
+                                error!("Failed to emit update notification: {}", e);
                             }
                         } else {
-                            error!("Main window not found");
+                            info!("Dialog does not exist. Creating a new one.");
+                            if let Some(main_window) = app_handle_clone.get_webview_window("main") {
+                                if let Ok(Some(monitor)) = main_window.primary_monitor() {
+                                    let monitor_size = monitor.size();
+                                    let dialog_width = 1000.0;
+                                    let dialog_height = 100.0;
+                                    let pos_x = (monitor_size.width as f64 - dialog_width) / 2.0;
+                                    let pos_y = 60.0;
+
+                                    if let Err(e) = tauri::WebviewWindowBuilder::new(
+                                        &app_handle_clone,
+                                        "notification_dialog",
+                                        tauri::WebviewUrl::App("/notification".into()),
+                                    )
+                                    .inner_size(dialog_width, dialog_height)
+                                    .position(pos_x, pos_y)
+                                    .always_on_top(true)
+                                    .decorations(false)
+                                    .transparent(true)
+                                    .build()
+                                    {
+                                        error!("Failed to build notification dialog: {}", e);
+                                    }
+                                } else {
+                                    error!("Failed to get primary monitor");
+                                }
+                            } else {
+                                error!("Main window not found");
+                            }
                         }
+                    }) {
+                        error!("Failed to run on main thread: {}", e);
                     }
-                }) {
-                    error!("Failed to run on main thread: {}", e);
                 }
 
                 let response = Response::from_string("Dialog triggered");
