@@ -7,7 +7,7 @@ use tauri::{
     tray::TrayIconBuilder,
 };
 use tauri_plugin_autostart::MacosLauncher;
-use tauri_plugin_log::log::info;
+use tauri_plugin_log::log::{debug, info};
 use tauri_plugin_store::StoreExt;
 
 mod commands;
@@ -61,28 +61,28 @@ pub fn run() {
             }
         })
         .setup(|app| {
-            // Debugging path
-            eprintln!(
+            // Debug logging for configuration paths
+            debug!(
                 "Env XDG_CONFIG_HOME: {:?}",
                 std::env::var("XDG_CONFIG_HOME")
             );
-            eprintln!("Env XDG_DATA_HOME: {:?}", std::env::var("XDG_DATA_HOME"));
+            debug!("Env XDG_DATA_HOME: {:?}", std::env::var("XDG_DATA_HOME"));
 
             match app.path().app_config_dir() {
-                Ok(path) => eprintln!("App config dir: {:?}", path),
-                Err(e) => eprintln!("Failed to get app config dir: {:?}", e),
+                Ok(path) => debug!("App config dir: {:?}", path),
+                Err(e) => debug!("Failed to get app config dir: {:?}", e),
             }
 
             match app.path().app_data_dir() {
-                Ok(path) => eprintln!("App data dir: {:?}", path),
-                Err(e) => eprintln!("Failed to get app data dir: {:?}", e),
+                Ok(path) => debug!("App data dir: {:?}", path),
+                Err(e) => debug!("Failed to get app data dir: {:?}", e),
             }
 
             // --- State and Store Setup ---
             let store = match app.store("settings.json") {
                 Ok(s) => s,
                 Err(e) => {
-                    eprintln!("Store creation failed: {:?}", e);
+                    debug!("Store creation failed: {:?}", e);
                     return Err(e.into());
                 }
             };
