@@ -181,12 +181,16 @@ mod tests {
         // We use a lock or just run sequentially if needed, but for now this is simple.
         // To be safe, we can save the old value and restore it.
         let old_val = std::env::var("DAYLIT_SCHEDULER_INTERVAL_MS");
-        std::env::remove_var("DAYLIT_SCHEDULER_INTERVAL_MS");
+        unsafe {
+            std::env::remove_var("DAYLIT_SCHEDULER_INTERVAL_MS");
+        }
 
         assert_eq!(get_scheduler_interval(), 60000);
 
         if let Ok(v) = old_val {
-            std::env::set_var("DAYLIT_SCHEDULER_INTERVAL_MS", v);
+            unsafe {
+                std::env::set_var("DAYLIT_SCHEDULER_INTERVAL_MS", v);
+            }
         }
     }
 
@@ -194,13 +198,19 @@ mod tests {
     #[serial]
     fn test_get_scheduler_interval_custom() {
         let old_val = std::env::var("DAYLIT_SCHEDULER_INTERVAL_MS");
-        std::env::set_var("DAYLIT_SCHEDULER_INTERVAL_MS", "500");
+        unsafe {
+            std::env::set_var("DAYLIT_SCHEDULER_INTERVAL_MS", "500");
+        }
 
         assert_eq!(get_scheduler_interval(), 500);
 
-        std::env::remove_var("DAYLIT_SCHEDULER_INTERVAL_MS");
+        unsafe {
+            std::env::remove_var("DAYLIT_SCHEDULER_INTERVAL_MS");
+        }
         if let Ok(v) = old_val {
-            std::env::set_var("DAYLIT_SCHEDULER_INTERVAL_MS", v);
+            unsafe {
+                std::env::set_var("DAYLIT_SCHEDULER_INTERVAL_MS", v);
+            }
         }
     }
 
@@ -208,13 +218,19 @@ mod tests {
     #[serial]
     fn test_get_scheduler_interval_invalid() {
         let old_val = std::env::var("DAYLIT_SCHEDULER_INTERVAL_MS");
-        std::env::set_var("DAYLIT_SCHEDULER_INTERVAL_MS", "invalid");
+        unsafe {
+            std::env::set_var("DAYLIT_SCHEDULER_INTERVAL_MS", "invalid");
+        }
 
         assert_eq!(get_scheduler_interval(), 60000);
 
-        std::env::remove_var("DAYLIT_SCHEDULER_INTERVAL_MS");
+        unsafe {
+            std::env::remove_var("DAYLIT_SCHEDULER_INTERVAL_MS");
+        }
         if let Ok(v) = old_val {
-            std::env::set_var("DAYLIT_SCHEDULER_INTERVAL_MS", v);
+            unsafe {
+                std::env::set_var("DAYLIT_SCHEDULER_INTERVAL_MS", v);
+            }
         }
     }
 }
