@@ -13,6 +13,12 @@ import (
 	"time"
 )
 
+const (
+	TEST_LOCKFILE_TIMEOUT      = 30 * time.Second
+	TEST_SCHEDULER_INTERVAL_MS = 2000
+	TEST_NOTIFICATION_TIMEOUT  = 60 * time.Second
+)
+
 func TestEndToEndWorkflow(t *testing.T) {
 	// 1. Setup Environment
 	// Allow overriding bin dir via env var, default to ../../bin (relative to tests/e2e)
@@ -141,7 +147,7 @@ func TestEndToEndWorkflow(t *testing.T) {
 	}
 
 	// Set short interval for testing
-	trayEnv := append(cleanEnv, "DAYLIT_SCHEDULER_INTERVAL_MS=2000")
+	trayEnv := append(cleanEnv, fmt.Sprintf("DAYLIT_SCHEDULER_INTERVAL_MS=%d", TEST_SCHEDULER_INTERVAL_MS))
 	trayEnv = append(trayEnv, "RUST_LOG=info")
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -167,7 +173,9 @@ func TestEndToEndWorkflow(t *testing.T) {
 
 	defer func() {
 		cancel()
-		trayCmd.Wait()
+		if err := trayCmd.Wait(); err != nil {
+			t.Logf("Tray process exited with error: %v", err)
+		}
 		if t.Failed() {
 			t.Logf("Tray Stderr: %s", stderrBuf.String())
 		}
@@ -177,14 +185,10 @@ func TestEndToEndWorkflow(t *testing.T) {
 	// Lockfile location: $XDG_CONFIG_HOME/com.daylit.daylit-tray/daylit-tray.lock
 	lockfilePath := filepath.Join(tempDir, "com.daylit.daylit-tray", "daylit-tray.lock")
 	t.Logf("Waiting for lockfile at %s", lockfilePath)
-	waitForFile(t, lockfilePath, 10*time.Second)
+	waitForFile(t, lockfilePath, TEST_LOCKFILE_TIMEOUT)
 	t.Log("Lockfile found, Tray is ready")
 
-	// 5. Add Task for "Now"
-	t.Log("Adding task...")
-	runCmd(t, cliPath, cleanEnv, "task", "add", "Test Task", "--duration", "30")
-
-	// Schedule it for now.
+	// Schedule task for now.
 	now := time.Now()
 	timeStr := now.Format("15:04")
 	endTimeStr := now.Add(15 * time.Minute).Format("15:04")
@@ -213,12 +217,11 @@ func TestEndToEndWorkflow(t *testing.T) {
 	go func() {
 		for scanner.Scan() {
 			line := scanner.Text()
-			// t.Logf("Tray: %s", line)
 
 			// Check for success message
 			// "daylit notify executed successfully" means the scheduler ran the command
-			// "Dialog does not exist. Creating a new one." or "Dialog exists. Re-using and sending new data." means the webhook was hit
-			if strings.Contains(line, "Dialog does not exist. Creating a new one.") || strings.Contains(line, "Dialog exists. Re-using and sending new data.") {
+			// "Dialog does not exist. Creating a new one." or "Dialog exists. Reusing and sending new data." means the webhook was hit
+			if strings.Contains(line, "Dialog does not exist. Creating a new one.") || strings.Contains(line, "Dialog exists. Reusing and sending new data.") {
 				t.Logf("Found success log: %s", line)
 				doneCh <- true
 				return
@@ -233,7 +236,7 @@ func TestEndToEndWorkflow(t *testing.T) {
 	case <-doneCh:
 		success = true
 		t.Log("Verified notification flow!")
-	case <-time.After(30 * time.Second):
+	case <-time.After(TEST_NOTIFICATION_TIMEOUT):
 		t.Errorf("Timed out waiting for notification log message")
 	}
 

@@ -79,7 +79,6 @@ pub fn run() {
             }
 
             // --- State and Store Setup ---
-            eprintln!("Before store creation");
             let store = match app.store("settings.json") {
                 Ok(s) => s,
                 Err(e) => {
@@ -87,7 +86,6 @@ pub fn run() {
                     return Err(e.into());
                 }
             };
-            eprintln!("After store creation");
             if store.get("settings").is_none() {
                 store.set(
                     "settings",

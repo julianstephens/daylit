@@ -3,7 +3,7 @@ use std::time::Duration;
 use std::{process::Command, thread};
 use tauri::AppHandle;
 use tauri::Manager;
-use tauri_plugin_log::log::error;
+use tauri_plugin_log::log::{error, info};
 
 // --- Abstraction for testing ---
 pub struct CommandOutput {
@@ -32,7 +32,11 @@ impl CommandRunner for RealCommandRunner {
 fn run_notify_check<R: CommandRunner>(daylit_path: &str, runner: &R) {
     match runner.run(daylit_path, &["notify"]) {
         Ok(output) => {
-            if !output.success {
+            if output.success {
+                // Successfully ran 'daylit notify' with no errors
+                info!("daylit notify executed successfully");
+            } else {
+                // 'daylit notify' ran but returned a non-zero exit code
                 error!(
                     "daylit notify failed with status: {:?} stderr: {}",
                     output.status_code,
