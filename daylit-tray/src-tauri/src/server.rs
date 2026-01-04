@@ -162,6 +162,9 @@ pub fn start_webhook_server(app_handle: AppHandle) {
                 
                 if settings.use_native_notifications {
                     // Use native system notifications
+                    // Note: The duration_ms field from the payload is not used here as
+                    // native notification duration is controlled by the operating system.
+                    // Custom notifications (else branch) do respect the duration_ms setting.
                     info!("Using native notification");
                     if let Err(e) = app_handle
                         .notification()
