@@ -156,8 +156,10 @@ pub fn start_webhook_server(app_handle: AppHandle) {
                     .lock()
                     .expect("Failed to acquire payload lock") = Some(payload.clone());
 
+                info!("Received webhook payload. Scheduling on main thread.");
                 let app_handle_clone = app_handle.clone();
                 if let Err(e) = app_handle.run_on_main_thread(move || {
+                    info!("Running on main thread.");
                     // --- Re-use or Create Window Logic ---
                     if let Some(existing_window) =
                         app_handle_clone.get_webview_window("notification_dialog")

@@ -25,12 +25,9 @@ func TestEndToEndWorkflow(t *testing.T) {
 	if os.Getenv("DAYLIT_BIN_DIR") != "" {
 		binDir = os.Getenv("DAYLIT_BIN_DIR")
 	} else {
-		// Check if we are in root
 		if _, err := os.Stat(filepath.Join(cwd, "daylit-cli")); err == nil {
-			// We are in root
 			binDir = filepath.Join(cwd, "bin")
 		} else {
-			// Assume we are in tests/e2e
 			binDir = filepath.Join(cwd, "..", "..", "bin")
 		}
 	}
@@ -96,7 +93,6 @@ func TestEndToEndWorkflow(t *testing.T) {
 	t.Log("Starting Tray...")
 
 	// Pre-create config and data directories to avoid "No such file or directory" error
-	// We create both the bundle identifier and product name directories to be safe
 	dirsToCreate := []string{
 		filepath.Join(tempDir, "com.daylit.daylit-tray"),
 		filepath.Join(tempDir, "daylit-tray"),
@@ -191,8 +187,20 @@ func TestEndToEndWorkflow(t *testing.T) {
 	// Schedule it for now.
 	now := time.Now()
 	timeStr := now.Format("15:04")
+	endTimeStr := now.Add(15 * time.Minute).Format("15:04")
 	t.Logf("Scheduling task for %s", timeStr)
-	runCmd(t, cliPath, cleanEnv, "task", "add", "Test Task", "--duration", "15", "--fixed-start", timeStr)
+	runCmd(t, cliPath, cleanEnv, "task", "add", "Test Task", "--duration", "15", "--fixed-start", timeStr, "--fixed-end", endTimeStr, "--recurrence", "daily")
+
+	// 5b. Generate and Accept Plan
+	t.Log("Generating and accepting plan...")
+	planCmd := exec.Command(cliPath, "plan")
+	planCmd.Env = cleanEnv
+	planCmd.Stdin = strings.NewReader("y\n")
+	out, err := planCmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("Failed to generate plan: %v\nOutput: %s", err, out)
+	}
+	t.Logf("Plan output: %s", out)
 
 	// 6. Monitor Logs for Success
 	t.Log("Waiting for notification logs...")
@@ -205,12 +213,12 @@ func TestEndToEndWorkflow(t *testing.T) {
 	go func() {
 		for scanner.Scan() {
 			line := scanner.Text()
-			t.Logf("Tray: %s", line) // Uncomment for debugging
+			// t.Logf("Tray: %s", line)
 
 			// Check for success message
 			// "daylit notify executed successfully" means the scheduler ran the command
-			// "Received live update" or similar means the webhook was hit
-			if strings.Contains(line, "Received live update") || strings.Contains(line, "Notification received") {
+			// "Dialog does not exist. Creating a new one." or "Dialog exists. Re-using and sending new data." means the webhook was hit
+			if strings.Contains(line, "Dialog does not exist. Creating a new one.") || strings.Contains(line, "Dialog exists. Re-using and sending new data.") {
 				t.Logf("Found success log: %s", line)
 				doneCh <- true
 				return
@@ -226,7 +234,6 @@ func TestEndToEndWorkflow(t *testing.T) {
 		success = true
 		t.Log("Verified notification flow!")
 	case <-time.After(30 * time.Second):
-		// TODO: debug why no notification
 		t.Errorf("Timed out waiting for notification log message")
 	}
 
