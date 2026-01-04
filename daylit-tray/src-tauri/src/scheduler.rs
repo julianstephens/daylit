@@ -177,7 +177,6 @@ mod tests {
     #[serial]
     fn test_get_scheduler_interval_default() {
         // Test default interval when env var is not set
-        // Using temp_env to safely unset the environment variable for this test
         with_var("DAYLIT_SCHEDULER_INTERVAL_MS", None::<String>, || {
             assert_eq!(get_scheduler_interval(), 60000);
         });
@@ -187,7 +186,6 @@ mod tests {
     #[serial]
     fn test_get_scheduler_interval_custom() {
         // Test custom interval when env var is set
-        // Using temp_env to safely set and unset the environment variable
         with_var("DAYLIT_SCHEDULER_INTERVAL_MS", Some("500"), || {
             assert_eq!(get_scheduler_interval(), 500);
         });
@@ -197,7 +195,6 @@ mod tests {
     #[serial]
     fn test_get_scheduler_interval_invalid() {
         // Test that invalid values fall back to default
-        // Using temp_env to safely set and unset the environment variable
         with_var("DAYLIT_SCHEDULER_INTERVAL_MS", Some("invalid"), || {
             assert_eq!(get_scheduler_interval(), 60000);
         });
