@@ -10,6 +10,7 @@ use std::thread;
 use subtle::ConstantTimeEq;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_log::log::{error, info};
+use tauri_plugin_notification::NotificationExt;
 use tiny_http::{Header, Response, Server};
 
 fn validate_request(headers: &[Header], expected_secret: &str) -> bool {
@@ -162,7 +163,6 @@ pub fn start_webhook_server(app_handle: AppHandle) {
                 if settings.use_native_notifications {
                     // Use native system notifications
                     info!("Using native notification");
-                    use tauri_plugin_notification::NotificationExt;
                     if let Err(e) = app_handle
                         .notification()
                         .builder()
