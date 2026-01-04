@@ -6,7 +6,6 @@ use tauri::Manager;
 use tauri_plugin_log::log::{error, info};
 
 // --- Abstraction for testing ---
-
 pub struct CommandOutput {
     pub success: bool,
     pub status_code: Option<i32>,
@@ -34,8 +33,10 @@ fn run_notify_check<R: CommandRunner>(daylit_path: &str, runner: &R) {
     match runner.run(daylit_path, &["notify"]) {
         Ok(output) => {
             if output.success {
+                // Successfully ran 'daylit notify' with no errors
                 info!("daylit notify executed successfully");
             } else {
+                // 'daylit notify' ran but returned a non-zero exit code
                 error!(
                     "daylit notify failed with status: {:?} stderr: {}",
                     output.status_code,
@@ -52,12 +53,22 @@ fn run_notify_check<R: CommandRunner>(daylit_path: &str, runner: &R) {
     }
 }
 
+fn get_scheduler_interval() -> u64 {
+    std::env::var("DAYLIT_SCHEDULER_INTERVAL_MS")
+        .ok()
+        .and_then(|v| v.parse::<u64>().ok())
+        .unwrap_or(60000)
+}
+
 pub fn start_scheduler_thread(app_handle: AppHandle) {
     thread::spawn(move || {
         let runner = RealCommandRunner;
         loop {
-            // Run every minute to check for upcoming tasks
-            thread::sleep(Duration::from_secs(60));
+            // Determine sleep interval from env var or default to 60 seconds
+            let interval_ms = get_scheduler_interval();
+
+            // Run every minute (or configured interval) to check for upcoming tasks
+            thread::sleep(Duration::from_millis(interval_ms));
 
             // Get the configured daylit path or default to "daylit"
             let daylit_path = {
@@ -78,7 +89,9 @@ pub fn start_scheduler_thread(app_handle: AppHandle) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
     use std::cell::RefCell;
+    use temp_env::with_var;
 
     struct MockCommandRunner {
         expected_program: String,
@@ -158,5 +171,32 @@ mod tests {
 
         run_notify_check("daylit", &runner);
         assert!(*runner.called.borrow());
+    }
+
+    #[test]
+    #[serial]
+    fn test_get_scheduler_interval_default() {
+        // Test default interval when env var is not set
+        with_var("DAYLIT_SCHEDULER_INTERVAL_MS", None::<String>, || {
+            assert_eq!(get_scheduler_interval(), 60000);
+        });
+    }
+
+    #[test]
+    #[serial]
+    fn test_get_scheduler_interval_custom() {
+        // Test custom interval when env var is set
+        with_var("DAYLIT_SCHEDULER_INTERVAL_MS", Some("500"), || {
+            assert_eq!(get_scheduler_interval(), 500);
+        });
+    }
+
+    #[test]
+    #[serial]
+    fn test_get_scheduler_interval_invalid() {
+        // Test that invalid values fall back to default
+        with_var("DAYLIT_SCHEDULER_INTERVAL_MS", Some("invalid"), || {
+            assert_eq!(get_scheduler_interval(), 60000);
+        });
     }
 }

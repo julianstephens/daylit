@@ -10,7 +10,11 @@ lint-tray:
 	@cd daylit-tray && npm run format && npm run lint && npm run build
 	@cd daylit-tray/src-tauri && cargo clippy --workspace --all-targets --all-features -- -D warnings && cargo fmt --all -- --check
 
-lint: lint-cli lint-tray
+lint-test:
+	@echo "Linting e2e tests..."
+	@cd tests/e2e && golangci-lint run && go vet ./...
+
+lint: lint-cli lint-tray lint-test
 	@echo "All linting tasks completed."
 
 test-cli:
