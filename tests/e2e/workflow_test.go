@@ -130,7 +130,10 @@ func TestEndToEndWorkflow(t *testing.T) {
 	}
 
 	// Copy icons for Tray app
-	projectRoot, _ := filepath.Abs("../..")
+	projectRoot, err := filepath.Abs("../..")
+	if err != nil {
+		t.Fatalf("Failed to determine project root: %v", err)
+	}
 	iconsSrc := filepath.Join(projectRoot, "daylit-tray", "src-tauri", "icons")
 	iconsDest := filepath.Join(tempDir, "icons")
 	if err := os.MkdirAll(iconsDest, 0755); err != nil {
