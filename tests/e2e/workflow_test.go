@@ -38,7 +38,11 @@ func TestEndToEndWorkflow(t *testing.T) {
 		}
 	}
 
-	binDir, _ = filepath.Abs(binDir)
+	absBinDir, err := filepath.Abs(binDir)
+	if err != nil {
+		t.Fatalf("Failed to resolve absolute path for bin dir %q: %v", binDir, err)
+	}
+	binDir = absBinDir
 	t.Logf("Using bin dir: %s", binDir)
 
 	cliPath := filepath.Join(binDir, "daylit")
