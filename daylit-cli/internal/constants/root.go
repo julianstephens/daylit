@@ -21,7 +21,7 @@ const (
 	AppName            = "daylit"
 	DefaultKeyringUser = "database-connection"
 	DefaultConfigPath  = "~/.config/daylit/daylit.db"
-	Version            = "v0.5.0"
+	Version            = "v1.0.0"
 
 	// DateFormat is the standard date format used throughout the application (YYYY-MM-DD)
 	DateFormat = "2006-01-02"

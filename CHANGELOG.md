@@ -1,10 +1,17 @@
-## Unreleased
+## v1.0.0
 
 - Adds support for complex recurrence patterns:
   - Monthly by date (e.g., "15th of every month")
   - Monthly by day (e.g., "Last Friday of the month", "First Monday of the month")
   - Yearly (e.g., "Every year on January 1st")
   - Weekdays (e.g., "Every weekday Monday-Friday")
+- Adds toggle for custom vs native notifications in tray app
+- Adds improved timezone handling
+- Adds end-to-end integration tests
+- Improves error handling throughout the CLI
+- Improves logging across CLI and standardizes on charmbracelet/log
+- Refactors TUI update loop into handlers package
+- Removes deprecated SQLiteStore wrapper
 
 ## v0.5.0
 

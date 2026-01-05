@@ -1,6 +1,6 @@
 [package]
 name = "daylit-tray"
-version = "0.5.0"
+version = "1.0.0"
 description = "A lightweight system tray application for daylit notifications"
 authors = ["Julian Stephens <julian@julianstephens.net>"]
 edition = "2024"
