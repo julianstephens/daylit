@@ -284,4 +284,67 @@ mod tests {
         let headers = vec![Header::from_bytes("x-daylit-secret", "my_secret_token").unwrap()];
         assert!(validate_request(&headers, secret));
     }
+
+    #[test]
+    fn test_settings_defaults_to_custom_notifications() {
+        // Verify that the default Settings struct has use_native_notifications = false
+        // to ensure backward compatibility (custom notifications by default)
+        let settings = Settings::default();
+        assert_eq!(settings.use_native_notifications, false);
+    }
+
+    #[test]
+    fn test_settings_serialization_with_native_notifications() {
+        // Test that Settings with use_native_notifications can be serialized/deserialized
+        let settings = Settings {
+            font_size: "large".to_string(),
+            launch_at_login: true,
+            lockfile_dir: Some("/tmp/test".to_string()),
+            daylit_path: Some("/usr/bin/daylit".to_string()),
+            use_native_notifications: true,
+        };
+
+        let json = serde_json::to_string(&settings).unwrap();
+        let deserialized: Settings = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.use_native_notifications, true);
+        assert_eq!(deserialized.font_size, "large");
+    }
+
+    #[test]
+    fn test_settings_deserialization_without_native_notifications_field() {
+        // Test backward compatibility: old settings JSON without use_native_notifications
+        // should deserialize with the default value (false)
+        let json = r#"{
+            "font_size": "medium",
+            "launch_at_login": false,
+            "lockfile_dir": null,
+            "daylit_path": null
+        }"#;
+
+        let settings: Settings = serde_json::from_str(json).unwrap();
+        assert_eq!(settings.use_native_notifications, false);
+    }
+
+    #[test]
+    fn test_webhook_payload_serialization() {
+        // Verify WebhookPayload structure for notification handling
+        let payload = WebhookPayload {
+            text: "Test notification".to_string(),
+            duration_ms: 5000,
+        };
+
+        let json = serde_json::to_string(&payload).unwrap();
+        let deserialized: WebhookPayload = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.text, "Test notification");
+        assert_eq!(deserialized.duration_ms, 5000);
+    }
+
+    // Note: Integration tests for the actual notification delivery would require
+    // a running Tauri application context with AppHandle, which is not feasible
+    // in unit tests. The notification branching logic is tested indirectly through:
+    // 1. Settings tests ensuring use_native_notifications field works correctly
+    // 2. Manual testing with the running application
+    // 3. End-to-end tests in the integration test suite
 }
