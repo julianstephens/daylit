@@ -14,9 +14,9 @@ import (
 )
 
 const (
-	testLockfileTimeout      = 30 * time.Second
-	testSchedulerIntervalMs  = 2000
-	testNotificationTimeout  = 60 * time.Second
+	TEST_LOCKFILE_TIMEOUT      = 30 * time.Second
+	TEST_SCHEDULER_INTERVAL_MS = 2000
+	TEST_NOTIFICATION_TIMEOUT  = 60 * time.Second
 )
 
 func TestEndToEndWorkflow(t *testing.T) {
