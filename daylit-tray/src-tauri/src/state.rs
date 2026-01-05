@@ -12,6 +12,7 @@ pub struct Settings {
     pub launch_at_login: bool,
     pub lockfile_dir: Option<String>,
     pub daylit_path: Option<String>,
+    pub use_native_notifications: bool,
 }
 
 impl Default for Settings {
@@ -21,6 +22,7 @@ impl Default for Settings {
             launch_at_login: false,
             lockfile_dir: None,
             daylit_path: None,
+            use_native_notifications: false,
         }
     }
 }

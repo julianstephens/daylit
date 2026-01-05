@@ -10,6 +10,7 @@ interface Settings {
   launch_at_login: boolean;
   lockfile_dir: string | null;
   daylit_path: string | null;
+  use_native_notifications: boolean;
 }
 
 const SettingsPage = () => {
@@ -18,12 +19,14 @@ const SettingsPage = () => {
     launch_at_login: false,
     lockfile_dir: null,
     daylit_path: null,
+    use_native_notifications: false,
   });
   const [initialSettings, setInitialSettings] = useState<Settings>({
     font_size: "medium",
     launch_at_login: false,
     lockfile_dir: null,
     daylit_path: null,
+    use_native_notifications: false,
   });
   const [status, setStatus] = useState<{
     type: "success" | "error";
@@ -164,6 +167,26 @@ const SettingsPage = () => {
             />
             <span className="setting-label">Launch at Login</span>
           </label>
+        </div>
+        <div className="setting-item">
+          <label className="setting-checkbox-label">
+            <input
+              type="checkbox"
+              checked={settings.use_native_notifications}
+              onChange={(e) =>
+                setSettings((prev) => ({
+                  ...prev,
+                  use_native_notifications: e.target.checked,
+                }))
+              }
+              className="setting-checkbox"
+            />
+            <span className="setting-label">Use Native Notifications</span>
+          </label>
+          <p className="setting-hint">
+            When enabled, system notifications will be used instead of custom
+            notification windows.
+          </p>
         </div>
       </section>
 

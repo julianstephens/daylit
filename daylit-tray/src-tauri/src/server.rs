@@ -10,6 +10,7 @@ use std::thread;
 use subtle::ConstantTimeEq;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_log::log::{error, info};
+use tauri_plugin_notification::NotificationExt;
 use tiny_http::{Header, Response, Server};
 
 fn validate_request(headers: &[Header], expected_secret: &str) -> bool {
@@ -156,63 +157,84 @@ pub fn start_webhook_server(app_handle: AppHandle) {
                     .lock()
                     .expect("Failed to acquire payload lock") = Some(payload.clone());
 
-                info!("Received webhook payload. Scheduling on main thread.");
-                let app_handle_clone = app_handle.clone();
-                if let Err(e) = app_handle.run_on_main_thread(move || {
-                    info!("Running on main thread.");
-                    // --- Re-use or Create Window Logic ---
-                    if let Some(existing_window) =
-                        app_handle_clone.get_webview_window("notification_dialog")
+                // Check if we should use native notifications
+                let settings = Settings::load(&state.settings);
+                
+                if settings.use_native_notifications {
+                    // Use native system notifications
+                    // Note: The duration_ms field from the payload is not used here as
+                    // native notification duration is controlled by the operating system.
+                    // Custom notifications (else branch) do respect the duration_ms setting.
+                    info!("Using native notification");
+                    if let Err(e) = app_handle
+                        .notification()
+                        .builder()
+                        .title("Daylit")
+                        .body(&payload.text)
+                        .show()
                     {
-                        info!("Dialog exists. Re-using and sending new data.");
-                        if let Err(e) = existing_window.set_focus() {
-                            error!("Failed to set window focus: {}", e);
-                        }
-                        if let Err(e) = existing_window.emit(
-                            "update_notification",
-                            &UpdatePayload {
-                                text: payload.text,
-                                duration_ms: payload.duration_ms,
-                            },
-                        ) {
-                            error!("Failed to emit update notification: {}", e);
-                        }
-                    } else {
-                        info!("Dialog does not exist. Creating a new one.");
-                        if let Some(main_window) = app_handle_clone.get_webview_window("main") {
-                            if let Ok(Some(monitor)) = main_window.primary_monitor() {
-                                let monitor_size = monitor.size();
-                                let dialog_width = 1000.0;
-                                let dialog_height = 100.0;
-                                let pos_x = (monitor_size.width as f64 - dialog_width) / 2.0;
-                                let pos_y = 60.0;
-
-                                if let Err(e) = tauri::WebviewWindowBuilder::new(
-                                    &app_handle_clone,
-                                    "notification_dialog",
-                                    tauri::WebviewUrl::App("/notification".into()),
-                                )
-                                .inner_size(dialog_width, dialog_height)
-                                .position(pos_x, pos_y)
-                                .always_on_top(true)
-                                .decorations(false)
-                                .transparent(true)
-                                .build()
-                                {
-                                    error!("Failed to build notification dialog: {}", e);
-                                }
-                            } else {
-                                error!("Failed to get primary monitor");
+                        error!("Failed to show native notification: {}", e);
+                    }
+                } else {
+                    // Use custom window notification (existing behavior)
+                    info!("Received webhook payload. Scheduling on main thread.");
+                    let app_handle_clone = app_handle.clone();
+                    if let Err(e) = app_handle.run_on_main_thread(move || {
+                        info!("Running on main thread.");
+                        // --- Re-use or Create Window Logic ---
+                        if let Some(existing_window) =
+                            app_handle_clone.get_webview_window("notification_dialog")
+                        {
+                            info!("Dialog exists. Re-using and sending new data.");
+                            if let Err(e) = existing_window.set_focus() {
+                                error!("Failed to set window focus: {}", e);
+                            }
+                            if let Err(e) = existing_window.emit(
+                                "update_notification",
+                                &UpdatePayload {
+                                    text: payload.text,
+                                    duration_ms: payload.duration_ms,
+                                },
+                            ) {
+                                error!("Failed to emit update notification: {}", e);
                             }
                         } else {
-                            error!("Main window not found");
+                            info!("Dialog does not exist. Creating a new one.");
+                            if let Some(main_window) = app_handle_clone.get_webview_window("main") {
+                                if let Ok(Some(monitor)) = main_window.primary_monitor() {
+                                    let monitor_size = monitor.size();
+                                    let dialog_width = 1000.0;
+                                    let dialog_height = 100.0;
+                                    let pos_x = (monitor_size.width as f64 - dialog_width) / 2.0;
+                                    let pos_y = 60.0;
+
+                                    if let Err(e) = tauri::WebviewWindowBuilder::new(
+                                        &app_handle_clone,
+                                        "notification_dialog",
+                                        tauri::WebviewUrl::App("/notification".into()),
+                                    )
+                                    .inner_size(dialog_width, dialog_height)
+                                    .position(pos_x, pos_y)
+                                    .always_on_top(true)
+                                    .decorations(false)
+                                    .transparent(true)
+                                    .build()
+                                    {
+                                        error!("Failed to build notification dialog: {}", e);
+                                    }
+                                } else {
+                                    error!("Failed to get primary monitor");
+                                }
+                            } else {
+                                error!("Main window not found");
+                            }
                         }
+                    }) {
+                        error!("Failed to run on main thread: {}", e);
                     }
-                }) {
-                    error!("Failed to run on main thread: {}", e);
                 }
 
-                let response = Response::from_string("Dialog triggered");
+                let response = Response::from_string("Notification triggered");
                 if let Err(e) = request.respond(response) {
                     error!("Failed to respond to webhook request: {}", e);
                 }
@@ -262,4 +284,67 @@ mod tests {
         let headers = vec![Header::from_bytes("x-daylit-secret", "my_secret_token").unwrap()];
         assert!(validate_request(&headers, secret));
     }
+
+    #[test]
+    fn test_settings_defaults_to_custom_notifications() {
+        // Verify that the default Settings struct has use_native_notifications = false
+        // to ensure backward compatibility (custom notifications by default)
+        let settings = Settings::default();
+        assert_eq!(settings.use_native_notifications, false);
+    }
+
+    #[test]
+    fn test_settings_serialization_with_native_notifications() {
+        // Test that Settings with use_native_notifications can be serialized/deserialized
+        let settings = Settings {
+            font_size: "large".to_string(),
+            launch_at_login: true,
+            lockfile_dir: Some("/tmp/test".to_string()),
+            daylit_path: Some("/usr/bin/daylit".to_string()),
+            use_native_notifications: true,
+        };
+
+        let json = serde_json::to_string(&settings).unwrap();
+        let deserialized: Settings = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.use_native_notifications, true);
+        assert_eq!(deserialized.font_size, "large");
+    }
+
+    #[test]
+    fn test_settings_deserialization_without_native_notifications_field() {
+        // Test backward compatibility: old settings JSON without use_native_notifications
+        // should deserialize with the default value (false)
+        let json = r#"{
+            "font_size": "medium",
+            "launch_at_login": false,
+            "lockfile_dir": null,
+            "daylit_path": null
+        }"#;
+
+        let settings: Settings = serde_json::from_str(json).unwrap();
+        assert_eq!(settings.use_native_notifications, false);
+    }
+
+    #[test]
+    fn test_webhook_payload_serialization() {
+        // Verify WebhookPayload structure for notification handling
+        let payload = WebhookPayload {
+            text: "Test notification".to_string(),
+            duration_ms: 5000,
+        };
+
+        let json = serde_json::to_string(&payload).unwrap();
+        let deserialized: WebhookPayload = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.text, "Test notification");
+        assert_eq!(deserialized.duration_ms, 5000);
+    }
+
+    // Note: Integration tests for the actual notification delivery would require
+    // a running Tauri application context with AppHandle, which is not feasible
+    // in unit tests. The notification branching logic is tested indirectly through:
+    // 1. Settings tests ensuring use_native_notifications field works correctly
+    // 2. Manual testing with the running application
+    // 3. End-to-end tests in the integration test suite
 }
