@@ -234,7 +234,7 @@ pub fn start_webhook_server(app_handle: AppHandle) {
                     }
                 }
 
-                let response = Response::from_string("Dialog triggered");
+                let response = Response::from_string("Notification triggered");
                 if let Err(e) = request.respond(response) {
                     error!("Failed to respond to webhook request: {}", e);
                 }
